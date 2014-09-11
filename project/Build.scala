@@ -1,1 +1,1 @@
-object HealthBuild extends sbt.Build with Modules
+object AwsScalaBuild extends sbt.Build with Modules
