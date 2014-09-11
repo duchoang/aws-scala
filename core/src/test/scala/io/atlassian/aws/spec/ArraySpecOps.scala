@@ -4,7 +4,7 @@ import java.io.InputStream
 
 import scalaz.syntax.id._
 
-trait ArraySpecOps {
+object ArraySpecOps {
   def toByteArray(is: InputStream): Array[Byte] =
     Array.canBuildFrom[Byte].apply() |> {
       build =>

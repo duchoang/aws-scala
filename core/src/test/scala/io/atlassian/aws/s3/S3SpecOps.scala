@@ -9,7 +9,8 @@ import kadai.Invalid
 import org.specs2.matcher.{MustMatchers, Expectable, Matcher}
 import scala.collection.JavaConverters._
 
-trait S3SpecOps extends MustMatchers with S3Arbitraries with ArraySpecOps {
+trait S3SpecOps extends MustMatchers with S3Arbitraries {
+  import ArraySpecOps._
 
   def createTestFolder(bucket: Bucket, testFolder: String)(implicit client: SDKS3Client) =
     runS3Action(S3.createFolder(bucket, testFolder))
