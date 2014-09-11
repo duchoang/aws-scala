@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- http://logging.apache.org/log4j/2.x/manual/configuration.html -->
+<configuration status="OFF" packages="kadai.log.log4j">
+    <appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <!-- http://logging.apache.org/log4j/2.x/manual/layouts.html -->
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %host{1} %-5level [%-20logger{1}] %x %msg%n"/>
+            <!-- alternate pattern with ANSI colours
+            <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %host{1} %-5level [%-60logger{36}] %x %msg%n}"/>
+             -->
+        </Console>
+    </appenders>
+    <loggers>
+        <logger name="com.amazonaws" level="warn" additivity="false">
+            <appender-ref ref="Console"/>
+        </logger>
+        <root level="info">
+            <appender-ref ref="Console"/>
+        </root>
+    </loggers>
+</configuration>
