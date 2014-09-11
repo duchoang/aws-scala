@@ -37,10 +37,23 @@ The `io.atlassian.aws.AmazonClient` object has some useful functions for creatin
 
 `AmazonClientConnectionDef` can be created programmatically or loaded via `kadai-config`. There is an `Accessor` already, so you just need to `import AmazonClientConnectionDef._` e.g.:
 
+Config settings:
+
+      aws-client {             # Connection settings for all AWS Clients used in the server. Can be overridden with specific settings for relevant components
+        connection-timeout-ms = # Connection timeout in ms
+        region =               # aws region name.
+        proxy-host =           # Proxy host to go through to access AWS resources
+        proxy-port =           # Port of proxy host to go through to access AWS resources
+        socket-timeout-ms =    # com.amazonaws.ClientConfiguration#setSocketTimeout
+        max-error-retry =      # com.amazonaws.ClientConfiguration#setMaxErrorRetry
+        max-connections =      # com.amazonaws.ClientConfiguration#setMaxConnections
+      }
+
     import AmazonClientConnectionDef._
     import kadai.config.Configuration
     
-    val foo = Configuration.load("path/to/config/file").option[AmazonClientConnectionDef]("aws-config")
+    val foo = Configuration.load("path/to/config/file").option[AmazonClientConnectionDef]("aws-client")
+    
     
 There is also some useful bits in `io.atlassian.aws.AmazonRegion` and an `Accessor` too in `io.atlassian.aws.AmazonRegionDef` if you need a region e.g. you want to set the region on a client.
 
