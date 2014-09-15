@@ -31,4 +31,18 @@ trait S3Arbitraries {
         folders <- Gen.listOfN(numFolders, Gen.uuid.map { _.toString })
       } yield S3Folders(folders)
     )
+
+  implicit val ArbitraryRangeTuple: Arbitrary[Option[(Long, Long)]] =
+    Arbitrary {
+      val positiveLongGenerator = Gen.chooseNum(0, Long.MaxValue)
+      val rangeTupleGenerator = Gen.zip(positiveLongGenerator, positiveLongGenerator)
+      Gen.option(rangeTupleGenerator)
+    }
+
+  implicit class OrderPlusSyntax[F](self: F)(implicit ord: Order[F]) {
+    def sort(other: F): (F, F) =
+      if (ord.lessThanOrEqual(self, other))
+        self -> other
+      else other -> self
+  }
 }

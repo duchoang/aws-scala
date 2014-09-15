@@ -15,11 +15,13 @@ object S3 {
 
   import S3Key._
 
-  def get(location: ContentLocation): S3Action[S3Object] =
-    S3Action.withClient(_.getObject(new GetObjectRequest(location.bucket, location.key)))
+  def get(location: ContentLocation, range : Option[(Long, Long)] = None): S3Action[S3Object] = {
+    val request: GetObjectRequest = new GetObjectRequest(location.bucket, location.key) <| { req => range.foreach { case (from: Long, to: Long) => req.setRange(from, to) } }
+    S3Action.withClient(_.getObject(request))
+  }
 
-  def safeGet(location: ContentLocation): S3Action[Option[S3Object]] =
-    get(location).map { some }.handle {
+  def safeGet(location: ContentLocation, range : Option[(Long, Long)] = None): S3Action[Option[S3Object]] =
+    get(location, range).map { some }.handle {
       case Invalid.Err(e: AmazonS3Exception) if e.getStatusCode == 404 => Attempt.ok(None)
     }
 
