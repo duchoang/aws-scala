@@ -1,4 +1,5 @@
-package io.atlassian.aws.s3
+package io.atlassian.aws
+package s3
 
 import scalaz.{ @@, Tag }
 import scalaz.syntax.std.list._
@@ -6,17 +7,11 @@ import scalaz.syntax.std.list._
 trait Types {
   sealed trait BucketMarker
   type Bucket = String @@ BucketMarker
-  object Bucket {
-    def apply(name: String): Bucket =
-      Tag(name)
-  }
+  object Bucket extends Tagger[String, BucketMarker]
 
   sealed trait S3KeyMarker
   type S3Key = String @@ S3KeyMarker
-  object S3Key {
-    def apply(key: String): S3Key =
-      Tag(key)
-
+  object S3Key extends Tagger[String, S3KeyMarker] {
     def apply(folders: List[String], key: S3Key): S3Key =
       Tag(s"${folders.mkString("/")}/$key")
 

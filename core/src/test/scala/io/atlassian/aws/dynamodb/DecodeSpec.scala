@@ -1,12 +1,9 @@
 package io.atlassian.aws
 package dynamodb
 
-import io.atlassian.aws.spec.ScalaCheckSpec
+import spec.ScalaCheckSpec
 import org.junit.runner.RunWith
-import org.scalacheck.{Arbitrary, Prop}
-import Arbitrary._
 import scalaz.syntax.id._
-import org.joda.time.DateTime
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class DecodeSpec extends ScalaCheckSpec {
