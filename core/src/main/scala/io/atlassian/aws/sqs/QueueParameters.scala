@@ -12,7 +12,7 @@ case class QueueParameters(name: String,
                            receiveMessageWaitTime: Option[Duration] = None,
                            visibilityTimeout: Option[Duration] = None) {
 
-  private [sqs] val attributes: java.util.Map[String, String] = {
+  private [sqs] lazy val attributes: java.util.Map[String, String] = {
     (delay.map { v => "DelaySeconds" -> v.toSeconds.toString} ::
       maxMessageSizeKb.map { v => "MaximumMessageSize" -> v.toString} ::
       messageRetentionPeriod.map { v => "MessageRetentionPeriod" -> v.toSeconds.toString} ::
