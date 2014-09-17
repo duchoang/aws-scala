@@ -25,5 +25,6 @@ object Dependencies {
     "org.specs2"     %% "specs2"     % "2.3.11"   % "test"
   , "org.scalacheck" %% "scalacheck" % "1.11.3"   % "test"
   , "junit"          %  "junit"      % "4.11"     % "test"
+  , "org.scalaz"     %% "scalaz-scalacheck-binding" % SCALAZ_VERSION % "test"
   )
 }

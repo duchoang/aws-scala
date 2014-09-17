@@ -3,6 +3,7 @@ package io.atlassian.aws
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.metrics.RequestMetricCollector
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
+import com.amazonaws.services.sqs.AmazonSQSClient
 import com.amazonaws.{ AmazonWebServiceClient, ClientConfiguration }
 import scalaz.syntax.id._
 import com.amazonaws.services.s3.AmazonS3Client
@@ -72,6 +73,11 @@ object AmazonClient extends AmazonClientOps {
   implicit object CFClient extends AmazonClient[AmazonCloudFormationClient](
     constructor = new AmazonCloudFormationClient(awsCredentialsProvider, _, _),
     serviceName = ServiceAbbreviations.CloudFormation
+  )
+
+  implicit object SQSClient extends AmazonClient[AmazonSQSClient](
+    constructor = new AmazonSQSClient(awsCredentialsProvider, _, _),
+    serviceName = ServiceAbbreviations.SQS
   )
 
   private lazy val awsCredentialsProvider = new DefaultAWSCredentialsProviderChain
