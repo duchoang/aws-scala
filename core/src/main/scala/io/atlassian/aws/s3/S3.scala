@@ -3,6 +3,7 @@ package s3
 
 import com.amazonaws.services.s3.model._
 import java.io.{ ByteArrayInputStream, InputStream }
+import io.atlassian.aws.AmazonExceptions.ServiceException
 import kadai.Invalid
 
 import scalaz.std.list._
@@ -20,7 +21,7 @@ object S3 {
 
   def safeGet(location: ContentLocation): S3Action[Option[S3Object]] =
     get(location).map { some }.handle {
-      case Invalid.Err(e: AmazonS3Exception) if e.getStatusCode == 404 => Attempt.ok(None)
+      case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => Attempt.ok(None)
     }
 
   def putStream(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[PutObjectResult] = {
