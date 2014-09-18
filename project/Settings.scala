@@ -15,7 +15,7 @@ object Settings {
         organization := "io.atlassian.aws-scala"
       , scalaVersion := "2.11.1"
       , crossScalaVersions := Seq("2.10.4", "2.11.1")
-      , scalacOptions := Seq("-deprecation", "-unchecked", "-feature", "-language:_", "-Xfatal-warnings", "-Xlog-free-terms", "-target:jvm-1.6", "-Xlint", "-Yno-adapted-args", "-Ywarn-all", "-Ywarn-dead-code", "-Ywarn-numeric-widen", "-Ywarn-value-discard")
+      , scalacOptions := Seq("-deprecation", "-unchecked", "-feature", "-language:_", "-Xfatal-warnings", "-Xlog-free-terms", "-target:jvm-1.6", "-Xlint", "-Yno-adapted-args", "-Ywarn-dead-code", "-Ywarn-numeric-widen", "-Ywarn-value-discard")
       , javacOptions ++= Seq("-encoding", "UTF-8", "-source", "1.6", "-target", "1.6")
       , javacOptions in doc := Seq("-encoding", "UTF-8")
       , resolvers ++= Seq(
