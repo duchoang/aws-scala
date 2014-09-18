@@ -9,7 +9,7 @@ object Dependencies {
 
   lazy val AWS_SDK_VERSION = "1.8.9"
 
-  lazy val KADAI_VERSION = "2.0.4"
+  lazy val KADAI_VERSION = "2.0.7"
 
   lazy val common = Seq(
     libraryDependencies ++= Seq(
