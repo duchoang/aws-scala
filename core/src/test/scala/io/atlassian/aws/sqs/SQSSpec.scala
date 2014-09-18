@@ -21,6 +21,8 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
   val IS_LOCAL = !arguments.commandLine.contains("aws-integration")
   val REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
 
+  implicit val CLIENT = AmazonClient.default[AmazonSQSClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
+
   def is = skipAllIf(IS_LOCAL) ^ stopOnFail ^
     s2"""
        This specification tests SQS functionality
@@ -34,8 +36,6 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
     """
 
   lazy val TEST_QUEUE_NAME = s"sqs-test-${System.currentTimeMillis}"
-
-  implicit val CLIENT = AmazonClient.default[AmazonSQSClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
 
   def normalFlow = Prop.forAll {
     req: RetriedMessage[Replicate] =>
