@@ -5,11 +5,11 @@ object Dependencies {
 
   lazy val SCALAZ_VERSION = "7.0.6"
 
-  lazy val ARGONAUT_VERSION = "6.0.3"
+  lazy val ARGONAUT_VERSION = "6.0.4"
 
   lazy val AWS_SDK_VERSION = "1.8.9"
 
-  lazy val KADAI_VERSION = "2.0.4"
+  lazy val KADAI_VERSION = "2.0.7"
 
   lazy val common = Seq(
     libraryDependencies ++= Seq(

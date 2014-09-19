@@ -38,7 +38,7 @@ object Encoder {
       else new AttributeValue().withS(s).some
     }
 
-  implicit def DateTimeEncode: Encoder[DateTime] =
+  implicit val DateTimeEncode: Encoder[DateTime] =
     attribute { d => _.withN(d.withZone(DateTimeZone.UTC).toInstant.getMillis.toString) }
 
   implicit def OptionEncode[A](implicit e: Encoder[A]): Encoder[Option[A]] =

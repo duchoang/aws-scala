@@ -6,8 +6,9 @@ Dealing with the Java AWS SDK is messy. This library attempts to make it less me
  * Providing a nicer syntax for AWS SDK calls by wrapping them in a monad (no thrown exceptions, and sequencing!)
  * Tries to provide Options where null can be returned
  * Provides a nice 'ORM' for DynamoDB table access. Dealing with `AttributeValue`s is ugly, real ugly.
+ * Also provide a nice 'ORM' for SQS message marshalling/unmarshalling.
 
-Currently the library has basic support for S3, DynamoDB and CloudFormation. Feel free to add more as you need it.
+Currently the library has basic support for S3, DynamoDB, CloudFormation and SQS. Feel free to add more as you need it.
 
 ## Usage
 
@@ -93,12 +94,35 @@ You'll need to:
       to clobber other values. e.g. `ThingValueDynamoStoreValue` sets the `deletedTimestamp` value only upon a `delete` operation.
       There are useful combinators on `StoreValue` e.g. `StoreValue.newFromValues` just to put all the values.
 
+#### SQS message marshallers and unmarshallers
+
+To use the `send` and `receive` functions in SQS, you need to provide a `Marshaller` and `Unmarshaller` for your message class. Check out `io.atlassian.aws.sqs.Examples` for an example. You will basically need to:
+
+   * Provide a way of encoding/decoding your message body. JSON is a good way using Argonaut.
+   * Providing a `Marshaller` and an `Unmarshaller`, using the combinators in the `Marshaller` and `Unmarshaller`. Typically there needs to be a way of encoding/decoding both the message body and optionally message 'headers'.
+   
+There is a wrapper `RetriedMessage` case class that adds a `retryCount` to messages, which is stored as a message attribute i.e. header. That provides a nice example of how marshallers/unmarshallers can be combined.
+
 #### Using test helpers
 
 The `test` JAR includes a few useful helpers:
 
    * `io.atlassian.aws.S3SpecOps` - Has a bunch of useful functions for creating and deleting temporary buckets for testing. Check out `S3Spec` to see how to use it.
-   * `io.atlassian.aws.DynamoDBSpecOps` - Has a bunch of useful functions for creating and deleting temporary tables for testing, and also spinning up a local DynamoDB. Check out `DynamoDBSpec` to see how to use it.
+   * `io.atlassian.aws.DynamoDBSpecOps` and `io.atlassian.aws.LocalDynamoDBSpec` - Has a bunch of useful functions for creating and deleting temporary tables for testing, and also spinning up a local DynamoDB. Check out `DynamoDBSpec` to see how to use it. 
+      If you want to use `LocalDynamoDBSpec`, the key things to do are:
+          * Extend the trait
+          * Copy the scripts in the `scripts` directory for installing, starting and stopping local Dynamo.
+          * Add a `arguments` constructor argument to your spec class i.e. `(val arguments: org.specs2.main.Arguments)`
+          * Add an implicit value pointing to the client factory function i.e. `implicit val DYNAMO_CLIENT = dynamoClient`
+          * Override the `scriptDirectory` function to point to where you store your scripts. e.g. `override val scriptDirectory = "../scripts"`. It is a relative path from the root of the module typically.
+          * In your spec list, ensure you have steps to start local dynamo, create a test table, delete the test table and stop dynamo i.e.
+            
+                  ${Step(startLocalDynamoDB)}
+                  ${Step(createTestTable)}
+                  ${Step(deleteTestTable)}
+                  ${Step(stopLocalDynamoDB)}
+          
+   * `io.atlassian.aws.SQSSpecOps` - Has a bunch of useful functions for creating and deleting temporary queues for testing. Check out `SQSSpec` to see how to use it.
    
 If you want to spin up a local DynamoDB, you'll need to copy the `scripts` directory in this repository into your project. You'll need `gtimeout` on your box that is running the scripts (e.g. via `brew install coreutils` on Mac OS X).
 

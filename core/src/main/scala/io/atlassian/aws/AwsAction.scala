@@ -17,7 +17,7 @@ case class AwsAction[R, A](private val unsafeRun: R => Attempt[A]) {
     }
 
   def run(r: R): Attempt[A] =
-    Attempt.safe(unsafeRun(r)).join
+    Attempt.safe(unsafeRun(r)).join.lift { _.leftMap(AmazonExceptions.transformException) }
 
   def recover(f: Invalid => Attempt[A]): AwsAction[R, A] =
     AwsAction[R, A] {

@@ -153,7 +153,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         firstPut <- DynamoDB.put[ThingKey, ThingValue](thingKey, thingValue)
         firstGet <- DynamoDB.get[ThingKey, ThingValue](thingKey)
         secondPut <- DynamoDB.put[ThingKey, ThingValue](thingKey, thingValue2, OverwriteMode.NoOverwrite)
-      } yield firstPut) must returnException[Option[ThingValue], ConditionalCheckFailedException]
+      } yield firstPut) must returnException[Option[ThingValue], AmazonExceptions.ServiceException]
   }.set(minTestsOk = NUM_TESTS)
 
   def describeTableWorks =

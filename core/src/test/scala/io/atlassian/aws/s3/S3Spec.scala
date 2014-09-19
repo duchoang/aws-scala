@@ -217,7 +217,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       val location = ContentLocation(BUCKET, key)
 
       S3.safeGet(location, range) must returnResult { _.isEmpty }
-  }
+  }.set(minTestsOk = 5)
 
   def safeGetWorksIfThereIsObject = Prop.forAll {
     (data: ObjectToStore, range: Option[(Long, Long)]) => {

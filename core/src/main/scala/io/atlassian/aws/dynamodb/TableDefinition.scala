@@ -6,7 +6,7 @@ import com.amazonaws.services.dynamodbv2.model._
 case class TableDefinition[A, B](
   name: String,
   attributeDefinitions: List[AttributeDefinition],
-  /** Schema definition representing this key */
+  // Schema definition representing this key
   schemaElements: List[KeySchemaElement],
   provisionedThroughput: ProvisionedThroughput)
 
