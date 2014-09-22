@@ -1,6 +1,7 @@
 package io.atlassian.aws
 package s3
 
+import com.amazonaws.regions.Region
 import org.junit.runner.RunWith
 import org.specs2.ScalaCheck
 import org.specs2.SpecificationWithJUnit
@@ -36,6 +37,8 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       have a metaData function that errors if there is no object $metaDataErrorsIfNoObject
       have a safeGet that doesn't fail if the object doesn't exist $safeGetWorksIfNoObject
       have a safeGet that returns the object                $safeGetWorksIfThereIsObject
+      have a function to get the region for a bucket        $regionForWorks
+      have a function to get the region for a non-existent bucket work        $regionForWorksForNonExistentBucket
                                                             ${Step(deleteTestFolder(BUCKET, TEST_FOLDER))}
   """
 
@@ -233,4 +236,11 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
     }
   }.set(minTestsOk = 10)
 
+  def regionForWorks =
+    S3.regionFor(BUCKET) must returnResult { (r: Region) =>
+      S3_CLIENT.getBucketLocation(BUCKET) === r.getName
+    }
+
+  def regionForWorksForNonExistentBucket =
+    S3.regionFor(Bucket(java.util.UUID.randomUUID().toString)) must fail
 }
