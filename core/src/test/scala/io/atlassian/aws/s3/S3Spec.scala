@@ -212,7 +212,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
   }.set(minTestsOk = 5)
 
   def safeGetWorksIfNoObject = Prop.forAll {
-    (s3key: S3Key, range: Option[(Long, Long)]) =>
+    (s3key: S3Key, range: Range) =>
       val key = S3Key(s"$TEST_FOLDER/$s3key")
       val location = ContentLocation(BUCKET, key)
 
@@ -220,7 +220,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
   }.set(minTestsOk = 5)
 
   def safeGetWorksIfThereIsObject = Prop.forAll {
-    (data: ObjectToStore, range: Option[(Long, Long)]) => {
+    (data: ObjectToStore, range: Range) => {
       val dataStream = new ByteArrayInputStream(data.data)
       val key = S3Key(s"$TEST_FOLDER/${data.key}")
       val location = ContentLocation(BUCKET, key)

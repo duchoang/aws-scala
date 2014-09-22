@@ -22,8 +22,8 @@ object Dependencies {
   )
 
   lazy val test = libraryDependencies ++= Seq(
-    "org.specs2"     %% "specs2"     % "2.3.11"   % "test"
-  , "org.scalacheck" %% "scalacheck" % "1.11.3"   % "test"
+    "org.specs2"     %% "specs2"     % "2.3.13"   % "test"
+  , "org.scalacheck" %% "scalacheck" % "1.11.5"   % "test"
   , "junit"          %  "junit"      % "4.11"     % "test"
   )
 }
