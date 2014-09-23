@@ -1,0 +1,1 @@
+name := "aws-scala-s3"
