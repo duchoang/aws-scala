@@ -6,9 +6,6 @@ buildInfoKeys := Seq[BuildInfoKey](name,
   version,
   scalaVersion,
   sbtVersion,
-  BuildInfoKey.action("buildTime") {
-    System.currentTimeMillis
-  },
   GitKeys.gitHeadCommit
 )
 

@@ -1,8 +1,10 @@
 package io.atlassian.aws
 
 import com.amazonaws.AmazonServiceException
-import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException
 import kadai.Invalid
+import scalaz.syntax.id._
+import scalaz.syntax.std.option._
+import scalaz.std.option._
 
 object AmazonExceptions {
   sealed trait ExceptionType
@@ -11,31 +13,27 @@ object AmazonExceptions {
     case object Unauthenticated extends ExceptionType
     case object Forbidden extends ExceptionType
     case object AmazonServerIssue extends ExceptionType
-    case object ConditionalCheckFailed extends ExceptionType
 
-    def unapply(e: AmazonServiceException): ExceptionType =
-      e match {
-        case c: ConditionalCheckFailedException => ConditionalCheckFailed
-        case _ =>
-          e.getStatusCode match {
-            case 404 => NotFound
-            case 401 => Unauthenticated
-            case 403 => Forbidden
-            case _ => AmazonServerIssue
-          }
+    def unapply(e: AmazonServiceException): Option[ExceptionType] =
+      e.getStatusCode match {
+        case 404 => NotFound.some
+        case 401 => Unauthenticated.some
+        case 403 => Forbidden.some
+        case _ => None
       }
   }
 
-  case class ServiceException(exceptionType: ExceptionType, e: AmazonServiceException) extends Exception
+  case class ServiceException(exceptionType: ExceptionType, e: AmazonServiceException) extends Exception(e)
 
   object ServiceException {
-    def apply(e: AmazonServiceException): ServiceException =
-      ServiceException(ExceptionType.unapply(e), e)
+    def from(e: AmazonServiceException): Option[ServiceException] =
+      ExceptionType.unapply(e).map { t => ServiceException(t, e) }
   }
 
   private [aws] def transformException(i: Invalid): Invalid =
     i match {
-      case Invalid.Err(e: AmazonServiceException) => Invalid.Err(AmazonExceptions.ServiceException(e))
+      case Invalid.Err(e: AmazonServiceException) =>
+        AmazonExceptions.ServiceException.from(e).getOrElse(e) |> Invalid.Err
       case _ => i
     }
 }

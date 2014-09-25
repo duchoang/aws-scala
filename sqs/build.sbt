@@ -1,0 +1,1 @@
+name := "aws-scala-sqs"

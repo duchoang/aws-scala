@@ -1,8 +1,9 @@
 package io.atlassian.aws
 package s3
 
-import com.amazonaws.services.s3.model._
 import java.io.{ ByteArrayInputStream, InputStream }
+import com.amazonaws.regions.Region
+import com.amazonaws.services.s3.model.{AmazonS3Exception, CopyObjectRequest, CopyObjectResult, DeleteObjectRequest, ObjectListing, PutObjectResult, ObjectMetadata, GetObjectRequest, S3Object}
 import io.atlassian.aws.AmazonExceptions.ServiceException
 import kadai.Invalid
 
@@ -17,7 +18,7 @@ object S3 {
 
   import S3Key._
 
-  def get(location: ContentLocation, range: Range = Range.All): S3Action[S3Object] = 
+  def get(location: ContentLocation, range: Range = Range.All): S3Action[S3Object] =
     S3Action.withClient {
       _ getObject new GetObjectRequest(location.bucket, location.key) <| {
         req => range.get.foreach { case (from: Long, to: Long) => req.setRange(from, to) }
@@ -90,21 +91,12 @@ object S3 {
     } yield result
 
   def safeMetaData(location: ContentLocation): S3Action[Option[ObjectMetadata]] =
-    S3Action { client =>
-      Attempt.safe {
-        try {
-          client.getObjectMetadata(location.bucket, location.key).some
-        } catch {
-          case e: AmazonS3Exception if e.getStatusCode == 404 => None
-        }
-      }
+    metaData(location).map { some }.handle {
+      case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => Attempt.ok(None)
     }
 
   def metaData(location: ContentLocation): S3Action[ObjectMetadata] =
-    safeMetaData(location).flatMap {
-      case Some(o) => S3Action.ok(o)
-      case None    => S3Action.fail(s"No object exists at $location")
-    }
+    S3Action.withClient { _.getObjectMetadata(location.bucket, location.key) }
 
   def exists(location: ContentLocation): S3Action[Boolean] =
     safeMetaData(location).map { _.isDefined }
@@ -127,6 +119,14 @@ object S3 {
   def exists(bucket: Bucket): S3Action[Boolean] =
     S3Action.withClient {
       _.doesBucketExist(bucket)
+    }
+
+  def regionFor(bucket: Bucket): S3Action[Region] =
+    S3Action.withClient { _.getBucketLocation(bucket) }.flatMap { region =>
+      region match {
+        case AmazonRegion(r) => S3Action.ok(r)
+        case _ => S3Action.fail(s"Could not parse region $region")
+      }
     }
 
   def ServerSideEncryption: ObjectMetadata =

@@ -9,7 +9,7 @@ import scala.collection.JavaConverters._
 
 /**
  * Contains functions that perform operations on a DynamoDB table. Functions return a DynamoDBAction that can be run by
- * providing an instance of an AmazonDynamoDBClient (see [[AmazonClient]] for
+ * providing an instance of an AmazonDynamoDBClient (see AmazonClient for
  * convenient constructor functions).
  *
  * Tables are represented as key-value mappings, so you need classes to represent the key and the value. In addition,
