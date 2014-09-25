@@ -1,6 +1,6 @@
 package io.atlassian.aws.s3
 
-import org.scalacheck.{Arbitrary, Gen}
+import org.scalacheck.{ Arbitrary, Gen }
 import Arbitrary._
 import scalaz._
 
@@ -31,4 +31,31 @@ trait S3Arbitraries {
         folders <- Gen.listOfN(numFolders, Gen.uuid.map { _.toString })
       } yield S3Folders(folders)
     )
+
+  implicit val ArbitraryRange: Arbitrary[Range] =
+    Arbitrary {
+      val pos = Gen.posNum[Long]
+      val all = Gen.const(Range.All)
+      val from = pos.map(Range.From(_))
+      val to = pos.map(Range.To(_))
+      val interval = Gen.zip(pos, pos).map {
+        case (s, e) if s < e => Range.Interval(s, e)
+        case (e, s)          => Range.Interval(s, e)
+      }
+      Gen.choose(0, 3).flatMap {
+        _ match {
+          case 0 => all
+          case 1 => from
+          case 2 => to
+          case 3 => interval
+        }
+      }
+    }
+
+  implicit class OrderPlusSyntax[F](self: F)(implicit ord: Order[F]) {
+    def sort(other: F): (F, F) =
+      if (ord.lessThanOrEqual(self, other))
+        self -> other
+      else other -> self
+  }
 }

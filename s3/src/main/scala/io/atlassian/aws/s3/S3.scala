@@ -8,35 +8,39 @@ import io.atlassian.aws.AmazonExceptions.ServiceException
 import kadai.Invalid
 
 import scalaz.std.list._
+import scalaz.std.option._
 import scalaz.syntax.id._
 import scalaz.syntax.traverse._
 import scalaz.syntax.std.boolean._
-import scalaz.std.option._
+import scalaz.syntax.std.option._
 
 object S3 {
 
   import S3Key._
 
-  def get(location: ContentLocation): S3Action[S3Object] =
-    S3Action.withClient(_.getObject(new GetObjectRequest(location.bucket, location.key)))
+  def get(location: ContentLocation, range: Range = Range.All): S3Action[S3Object] =
+    S3Action.withClient {
+      _ getObject new GetObjectRequest(location.bucket, location.key) <| {
+        req => range.get.foreach { case (from: Long, to: Long) => req.setRange(from, to) }
+      }
+    }
 
-  def safeGet(location: ContentLocation): S3Action[Option[S3Object]] =
-    get(location).map { some }.handle {
+  def safeGet(location: ContentLocation, range: Range = Range.All): S3Action[Option[S3Object]] =
+    get(location, range).map { some }.handle {
       case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => Attempt.ok(None)
     }
 
-  def putStream(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[PutObjectResult] = {
-    length.foreach(metaData.setContentLength)
-
+  def putStream(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[PutObjectResult] =
     for {
       _ <- createFolders.whenM(S3.createFoldersFor(location))
+      _ = length.foreach(metaData.setContentLength)
       putResult <- S3Action.withClient(_.putObject(location.bucket, location.key, stream, metaData))
     } yield putResult
 
-  }
-
   def createFoldersFor(location: ContentLocation): S3Action[List[PutObjectResult]] =
-    location.key.foldersWithLeadingPaths.traverse[S3Action, PutObjectResult] { folder => S3.createFolder(location.bucket, folder) }
+    location.key.foldersWithLeadingPaths.traverse[S3Action, PutObjectResult] { 
+      folder => S3.createFolder(location.bucket, folder) 
+    }
 
   /**
    * Creates a folder in an S3 bucket. A folder is just an empty 'file' with a / on the end of the name. However, if you
@@ -54,40 +58,36 @@ object S3 {
 
   /**
    * Copy contents at the oldBucket and oldKey to a newBucket and newKey.
-   * @param oldLocation The source bucket and key
-   * @param newLocation The destination bucket and key
-   * @param newMetaData The function will copy the existing metadata of the source object unless you specify newMetaData which will be used instead.
+   * @param from The source bucket and key
+   * @param to The destination bucket and key
+   * @param meta The function will copy the existing metadata of the source object unless you specify newMetaData which will be used instead.
    * @param createFolders Set to true if you want to create any folders referenced in the ContentLocation as part of the copy process.
    * @param overwrite Set to Overwrite if you want to overwrite whatever is in the destination location. Set to NoOverwrite to return without
    *                  overwriting the destination location.
    * @return S3Action with CopyResult (either Copied if it was copied, or NotCopied if the destination location already has content and
    *         NoOverwrite was specified).
    */
-  def copy(oldLocation: ContentLocation,
-           newLocation: ContentLocation,
-           newMetaData: Option[ObjectMetadata] = None,
-           createFolders: Boolean = true,
-           overwrite: OverwriteMode = OverwriteMode.Overwrite): S3Action[Option[CopyObjectResult]] =
+  def copy(from: ContentLocation,
+    to: ContentLocation,
+    meta: Option[ObjectMetadata] = None,
+    createFolders: Boolean = true,
+    overwrite: OverwriteMode = OverwriteMode.Overwrite): S3Action[Option[CopyObjectResult]] =
     for {
       doCopy <- overwrite match {
         case OverwriteMode.Overwrite   => S3Action.ok(true)
-        case OverwriteMode.NoOverwrite => exists(newLocation).map { !_ }
+        case OverwriteMode.NoOverwrite => exists(to).map { !_ }
       }
       result <- if (doCopy)
-        forceCopy(oldLocation, newLocation, newMetaData, createFolders).map { some }
+        forceCopy(from, to, meta, createFolders).map { some }
       else
         S3Action.ok(none[CopyObjectResult])
     } yield result
 
-  private def forceCopy(oldLocation: ContentLocation, newLocation: ContentLocation, newMetaData: Option[ObjectMetadata], createFolders: Boolean): S3Action[CopyObjectResult] =
+  private def forceCopy(from: ContentLocation, to: ContentLocation, newMetaData: Option[ObjectMetadata], createFolders: Boolean): S3Action[CopyObjectResult] =
     for {
-      _ <- createFolders.whenM { S3.createFoldersFor(newLocation) }
-      metaData <- newMetaData.fold { metaData(oldLocation) } { S3Action.ok }
-      result <- S3Action.withClient {
-        _.copyObject(
-          new CopyObjectRequest(oldLocation.bucket, oldLocation.key, newLocation.bucket, newLocation.key).withNewObjectMetadata(metaData)
-        )
-      }
+      _ <- createFolders.whenM { S3.createFoldersFor(to) }
+      metaData <- newMetaData.fold { metaData(from) } { S3Action.ok }
+      result <- S3Action.withClient { _ copyObject new CopyObjectRequest(from.bucket, from.key, to.bucket, to.key).withNewObjectMetadata(metaData) }
     } yield result
 
   def safeMetaData(location: ContentLocation): S3Action[Option[ObjectMetadata]] =

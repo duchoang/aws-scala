@@ -57,8 +57,8 @@ trait S3SpecOps extends MustMatchers with S3Arbitraries {
   def returnS3Object(o: ObjectToStore)(implicit client: SDKS3Client) =
     new S3ObjectMatcher[S3Object](o, identity)
 
-  def returnS3Object[A](o: ObjectToStore, f: A => S3Object)(implicit client: SDKS3Client) =
-    new S3ObjectMatcher[A](o, f)
+  def returnS3Object[A](o: ObjectToStore, f: A => S3Object, range: Range = Range.All)(implicit client: SDKS3Client) =
+    new S3ObjectMatcher[A](o, f, range)
 
   def fail[A](implicit client: SDKS3Client) =
     new ServiceMatcher[A]({
@@ -77,12 +77,19 @@ trait S3SpecOps extends MustMatchers with S3Arbitraries {
     }
   }
 
-  class S3ObjectMatcher[A](o: ObjectToStore, f: A => S3Object)(implicit client: SDKS3Client) extends Matcher[S3Action[A]] {
-    def apply[S <: S3Action[A]](s: Expectable[S]) = {
+  class S3ObjectMatcher[A](o: ObjectToStore, f: A => S3Object, range: Range = Range.All)(implicit client: SDKS3Client) extends Matcher[S3Action[A]] {
+    def apply[S <: S3Action[A]](s: Expectable[S]) =
       runS3Action(s.value) match {
-        case -\/(f) => result(false, s"Expected value, but was failure $f", s"Expected value, but was failure $f", s)
-        case \/-(v) => result(matchData(o.data)(f(v)), s)
+        case -\/(failure) => result(test = false, s"Expected value, but was failure $f", s"Expected value, but was failure $failure", s)
+        case \/-(v) => result(matchData(stripData(o.data, range))(f(v)), s)
       }
-    }
   }
+
+  def stripData(b: Array[Byte], range: Range) =
+    range match {
+      case Range.All => b
+      case Range.From(s) => b.slice(s.toInt, Int.MaxValue)
+      case Range.To(e) => b.slice(0, (e + 1).toInt)                 // Dang you exclusive end index
+      case Range.Interval(s, e) => b.slice(s.toInt, (e + 1).toInt)
+    }
 }
