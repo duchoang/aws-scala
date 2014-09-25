@@ -58,9 +58,9 @@ object S3 {
 
   /**
    * Copy contents at the oldBucket and oldKey to a newBucket and newKey.
-   * @param oldLocation The source bucket and key
-   * @param newLocation The destination bucket and key
-   * @param newMetaData The function will copy the existing metadata of the source object unless you specify newMetaData which will be used instead.
+   * @param from The source bucket and key
+   * @param to The destination bucket and key
+   * @param meta The function will copy the existing metadata of the source object unless you specify newMetaData which will be used instead.
    * @param createFolders Set to true if you want to create any folders referenced in the ContentLocation as part of the copy process.
    * @param overwrite Set to Overwrite if you want to overwrite whatever is in the destination location. Set to NoOverwrite to return without
    *                  overwriting the destination location.
