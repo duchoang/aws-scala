@@ -228,7 +228,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       (for {
         _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
         result <- S3.safeGet(location, range)
-      } yield result) must returnS3Object(data, _.get)
+      } yield result) must returnS3Object(data, _.get, range)
 
     }
   }.set(minTestsOk = 10)
