@@ -27,11 +27,11 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
     s2"""
        This specification tests SQS functionality
 
-         Create a test queue          ${Step(createTestQueue(TEST_QUEUE_NAME))}
+         Create a test queue                                   ${Step(createTestQueue(TEST_QUEUE_NAME))}
 
-         Send, receive and delete a message $normalFlow
+         Send, receive, change visibility and delete a message $normalFlow
 
-         Delete test queue            ${Step(deleteTestQueue(TEST_QUEUE_NAME))}
+         Delete test queue                                     ${Step(deleteTestQueue(TEST_QUEUE_NAME))}
 
     """
 
@@ -45,6 +45,7 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
           sent <- SQS.send(url, req)
           recv <- SQS.receive[RetriedMessage[Replicate]](url, ReceiveMessageParameters(numMessages = 10, waitTime = Some(Duration(5, TimeUnit.SECONDS))))
           handles = recv.map { a => a.map { _.receiptHandle }.toOption }.flatten
+          _ <- handles.headOption.map { h => SQS.changeVisibility(url, h, Duration(5, TimeUnit.SECONDS)) } getOrElse SQSAction.ok(())
           _ <- SQS.delete(url, handles)
         } yield (sent, recv)) must returnResult { case (sent, recv) =>
           recv.length === 1 and
