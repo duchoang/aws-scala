@@ -2,10 +2,15 @@ package io.atlassian.aws
 package s3
 
 import java.io.{ ByteArrayInputStream, InputStream }
+import java.util.ArrayList
+
 import com.amazonaws.regions.Region
-import com.amazonaws.services.s3.model.{AmazonS3Exception, CopyObjectRequest, CopyObjectResult, DeleteObjectRequest, ObjectListing, PutObjectResult, ObjectMetadata, GetObjectRequest, S3Object}
+import com.amazonaws.services.s3.model.{AmazonS3Exception, CopyObjectRequest, CopyObjectResult, DeleteObjectRequest, ObjectListing, PutObjectResult, ObjectMetadata, GetObjectRequest, S3Object, InitiateMultipartUploadRequest, UploadPartRequest, PartETag, CompleteMultipartUploadRequest, CompleteMultipartUploadResult}
 import io.atlassian.aws.AmazonExceptions.ServiceException
 import kadai.Invalid
+
+import scala.collection.immutable.List
+import scala.collection.JavaConverters._
 
 import scalaz.std.list._
 import scalaz.std.option._
@@ -15,6 +20,8 @@ import scalaz.syntax.std.boolean._
 import scalaz.syntax.std.option._
 
 object S3 {
+
+  val MultipartChunkSize = 5 * 1024 * 1024
 
   import S3Key._
 
@@ -36,6 +43,43 @@ object S3 {
       _ = length.foreach(metaData.setContentLength)
       putResult <- S3Action.withClient(_.putObject(location.bucket, location.key, stream, metaData))
     } yield putResult
+
+  private def putChunks(location: ContentLocation, stream: InputStream, uploadId: String, parts: List[PartETag], length: Long, buffer: Array[Byte]): S3Action[(List[PartETag], Long)] =
+    for {
+      rn <- S3Action.value { stream.read(buffer) }
+      result <- rn match {
+        case -1 => S3Action.value((parts, length))
+        case _  => for {
+          partResult <- S3Action.withClient {
+            _.uploadPart(new UploadPartRequest()
+              .withBucketName(location.bucket).withKey(location.key)
+              .withUploadId(uploadId).withPartNumber(parts.length + 1)
+              .withInputStream(new ByteArrayInputStream(buffer, 0, rn))
+              .withPartSize(rn.toLong))
+          }
+          putNextChunk <- putChunks(location, stream, uploadId, parts :+ partResult.getPartETag, length + rn.toLong, buffer)
+        } yield putNextChunk
+      }
+    } yield result
+
+  def putStream2(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[Long] =
+    length match {
+      case Some(contentLength) => for {
+        _ <- putStream(location, stream, length, metaData, createFolders)
+      } yield contentLength
+      case None => for {
+        _ <- createFolders.whenM(S3.createFoldersFor(location))
+        initResult <- S3Action.withClient {
+          _.initiateMultipartUpload(new InitiateMultipartUploadRequest(location.bucket, location.key, metaData))
+        }
+        putResult <- putChunks(location, stream, initResult.getUploadId, List(), 0, new Array[Byte](MultipartChunkSize))
+        (parts, contentLength) = putResult
+        compResult <- S3Action.withClient {
+          // We need to convert `parts` to a mutable java.util.List, because the AWS SDK will sort the list internally.
+          _.completeMultipartUpload(new CompleteMultipartUploadRequest(location.bucket, location.key, initResult.getUploadId, new ArrayList(parts.asJava)))
+        }
+      } yield contentLength
+    }
 
   def createFoldersFor(location: ContentLocation): S3Action[List[PutObjectResult]] =
     location.key.foldersWithLeadingPaths.traverse[S3Action, PutObjectResult] { 
