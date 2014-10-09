@@ -4,6 +4,7 @@ package sqs
 import com.amazonaws.services.sqs.model._
 import kadai.Invalid
 import scala.concurrent.duration._
+import scalaz.{NaturalTransformation, ~>, Functor, \/}
 import scalaz.std.list._
 import scalaz.syntax.traverse._
 import scalaz.syntax.id._
@@ -42,7 +43,8 @@ object SQS {
       ) |> { res => SendResult(MessageId(res.getMessageId))}
     }
 
-  def receive[A: Unmarshaller](url: QueueURL, params: ReceiveMessageParameters = ReceiveMessageParameters()): SQSAction[List[Attempt[ReceivedMessage[A]]]] = {
+  def attemptToReceive[A: Unmarshaller, B](url: QueueURL, params: ReceiveMessageParameters = ReceiveMessageParameters(),
+    onInvalid: (Message, Invalid) => B = (m: Message, i: Invalid) => i): SQSAction[List[B \/ ReceivedMessage[A]]] =
     SQSAction.withClient { client =>
       val req = new ReceiveMessageRequest(url)
         .withMaxNumberOfMessages(params.numMessages)
@@ -52,10 +54,12 @@ object SQS {
           params.waitTime.foreach { t => r.setWaitTimeSeconds(t.toSeconds.toInt) }
         }
       client.receiveMessage(req).getMessages.asScala.toList.map { m =>
-        Unmarshaller.receivedMessage[A].unmarshall(m)
+        Unmarshaller.receivedMessage[A].unmarshall(m).toOr.leftMap(onInvalid(m, _))
       }
     }
-  }
+
+  def receive[A: Unmarshaller](url: QueueURL, params: ReceiveMessageParameters = ReceiveMessageParameters()): SQSAction[List[Attempt[ReceivedMessage[A]]]] =
+    attemptToReceive[A, Invalid](url, params).map(_.map(Attempt.AttemptIso.from(_)))
 
   def delete(url: QueueURL, handle: ReceiptHandle): SQSAction[Unit] =
     SQSAction.withClient {
