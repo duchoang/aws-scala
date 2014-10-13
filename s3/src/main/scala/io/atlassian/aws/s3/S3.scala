@@ -5,7 +5,8 @@ import java.io.{ ByteArrayInputStream, InputStream }
 import java.util.ArrayList
 
 import com.amazonaws.regions.Region
-import com.amazonaws.services.s3.model.{AmazonS3Exception, CopyObjectRequest, CopyObjectResult, DeleteObjectRequest, ObjectListing, PutObjectResult, ObjectMetadata, GetObjectRequest, S3Object, InitiateMultipartUploadRequest, UploadPartRequest, PartETag, CompleteMultipartUploadRequest, CompleteMultipartUploadResult}
+import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.model.{UploadPartResult, AbortMultipartUploadRequest, AmazonS3Exception, CopyObjectRequest, CopyObjectResult, DeleteObjectRequest, ObjectListing, PutObjectResult, ObjectMetadata, GetObjectRequest, S3Object, InitiateMultipartUploadRequest, UploadPartRequest, PartETag, CompleteMultipartUploadRequest, CompleteMultipartUploadResult}
 import io.atlassian.aws.AmazonExceptions.ServiceException
 import kadai.Invalid
 
@@ -46,22 +47,34 @@ object S3 {
 
   private def putChunks(location: ContentLocation, stream: InputStream, uploadId: String, parts: List[PartETag], length: Long, buffer: Array[Byte]): S3Action[(List[PartETag], Long)] =
     for {
-      rn <- S3Action.value { stream.read(buffer) }
+      rn <- S3Action.safe { stream.read(buffer) }
       result <- rn match {
         case -1 => S3Action.value((parts, length))
         case _  => for {
-          partResult <- S3Action.withClient {
-            _.uploadPart(new UploadPartRequest()
-              .withBucketName(location.bucket).withKey(location.key)
-              .withUploadId(uploadId).withPartNumber(parts.length + 1)
-              .withInputStream(new ByteArrayInputStream(buffer, 0, rn))
-              .withPartSize(rn.toLong))
+          // TODO - Dirty hack to get the abort working. Need to add a combinator to AwsAction for this
+          partResult <- AwsAction.apply[AmazonS3Client, UploadPartResult] { client =>
+            try {
+              Attempt.ok(client.uploadPart(new UploadPartRequest()
+                .withBucketName(location.bucket).withKey(location.key)
+                .withUploadId(uploadId).withPartNumber(parts.length + 1)
+                .withInputStream(new ByteArrayInputStream(buffer, 0, rn))
+                .withPartSize(rn.toLong)))
+            } catch {
+              case t: Throwable =>
+                client.abortMultipartUpload(new AbortMultipartUploadRequest(location.bucket, location.key, uploadId))
+                Attempt.exception(t)
+            }
           }
           putNextChunk <- putChunks(location, stream, uploadId, parts :+ partResult.getPartETag, length + rn.toLong, buffer)
         } yield putNextChunk
       }
     } yield result
 
+  /**
+   * EXPERIMENTAL!!!
+   * First cut at uploaded content of unknown length to S3 (thanks @sreis!)
+   * TODO - abort multipart upload upon error
+   */
   def putStream2(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[Long] =
     length match {
       case Some(contentLength) => for {
