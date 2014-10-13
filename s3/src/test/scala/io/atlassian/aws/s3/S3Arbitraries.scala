@@ -58,4 +58,20 @@ trait S3Arbitraries {
         self -> other
       else other -> self
   }
+
+  sealed trait LargeMarker
+  type LargeObjectToStore = ObjectToStore @@ LargeMarker
+  object LargeObjectToStore {
+    def apply(key: S3Key, data: Array[Byte]): LargeObjectToStore =
+      Tag(ObjectToStore(key, data))
+  }
+
+  implicit val LargeObjectToStoreArbitrary: Arbitrary[LargeObjectToStore] =
+    Arbitrary(
+      for {
+        dataLength <- Gen.choose(5*1024*1024 + 1, 11 * 1024 * 1024)
+        key <- arbitrary[S3Key]
+        data <- Gen.listOfN(dataLength, arbitrary[Byte]).map(_.toArray)
+      } yield LargeObjectToStore(key, data))
+
 }

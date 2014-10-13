@@ -5,6 +5,9 @@ import com.amazonaws.services.s3.{ AmazonS3Client => SDKS3Client }
 import kadai.Attempt
 
 object S3Action {
+  def safe[A](v: => A): S3Action[A] =
+    S3Action { _ => Attempt.safe(v) }
+
   def value[A](v: => A): S3Action[A] =
     S3Action(_ => Attempt.ok(v))
 

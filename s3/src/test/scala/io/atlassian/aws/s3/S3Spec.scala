@@ -39,6 +39,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       have a safeGet that returns the object                $safeGetWorksIfThereIsObject
       have a function to get the region for a bucket        $regionForWorks
       have a function to get the region for a non-existent bucket work        $regionForWorksForNonExistentBucket
+      have a working multipart upload                       $multipartUploadWorks
                                                             ${Step(deleteTestFolder(BUCKET, TEST_FOLDER))}
   """
 
@@ -243,4 +244,18 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
 
   def regionForWorksForNonExistentBucket =
     S3.regionFor(Bucket(java.util.UUID.randomUUID().toString)) must fail
+
+  def multipartUploadWorks = Prop.forAll {
+    data: LargeObjectToStore => {
+      val dataStream = new ByteArrayInputStream(data.data)
+      val key = S3Key(s"$TEST_FOLDER/${data.key}")
+      val location = ContentLocation(BUCKET, key)
+
+      (for {
+        _ <- S3.putStream2(location, dataStream)
+        result <- S3.get(location)
+      } yield result) must returnS3Object(data)
+
+    }
+  }.set(minTestsOk = 5)
 }
