@@ -44,13 +44,13 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
           url <- SQS.queueURL(TEST_QUEUE_NAME)
           sent <- SQS.send(url, req)
           recv <- SQS.receive[RetriedMessage[Replicate]](url, ReceiveMessageParameters(numMessages = 10, waitTime = Some(Duration(5, TimeUnit.SECONDS))))
-          handles = recv.map { a => a.map { _.receiptHandle }.toOption }.flatten
+          handles = recv.map (_.receiptHandle)
           _ <- handles.headOption.map { h => SQS.changeVisibility(url, h, Duration(5, TimeUnit.SECONDS)) } getOrElse SQSAction.ok(())
           _ <- SQS.delete(url, handles)
         } yield (sent, recv)) must returnResult { case (sent, recv) =>
           recv.length === 1 and
             (recv.head.toOr.toEither must beRight.like {
-              case ReceivedMessage(_, _, _, r) => r === req
+              case ValidReceivedMessage(_, _, _, r) => r === req
             })
 
         }

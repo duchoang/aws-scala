@@ -23,14 +23,14 @@ object Unmarshaller {
    * Generates an Unmarshaller for a ReceivedMessage[A], basically a wrapper of your type A with
    * standard attributes such as received count, and sent time.
    */
-  def receivedMessage[A: Unmarshaller]: Unmarshaller[ReceivedMessage[A]] =
+  def receivedMessage[A: Unmarshaller]: Unmarshaller[ValidReceivedMessage[A]] =
     from {
       for {
         stdAttributes <- standardAttributes
         a <- Unmarshaller[A].unmarshall
         msgId <- messageId
         handle <- receiptHandle
-      } yield ReceivedMessage(msgId, handle, stdAttributes, a)
+      } yield ValidReceivedMessage(msgId, handle, stdAttributes, a)
     }
 
   def from[A](f: Operation[A]) =
