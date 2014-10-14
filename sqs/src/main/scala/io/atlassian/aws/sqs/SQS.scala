@@ -53,7 +53,7 @@ object SQS {
           params.waitTime.foreach { t => r.setWaitTimeSeconds(t.toSeconds.toInt) }
         }
       client.receiveMessage(req).getMessages.asScala.toList.map { m =>
-        Unmarshaller.receivedMessage[A].unmarshall(m).toOr.valueOr(InvalidReceivedMessage[A](m, _))
+        Unmarshaller.receivedMessage[A].unmarshall(m).toOr.valueOr(InvalidReceivedMessage(m, _))
       }
     }
 
