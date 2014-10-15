@@ -29,7 +29,7 @@ object S3 {
   def get(location: ContentLocation, range: Range = Range.All): S3Action[S3Object] =
     S3Action.withClient {
       _ getObject new GetObjectRequest(location.bucket, location.key) <| {
-        req => range.get.foreach { case (from: Long, to: Long) => req.setRange(from, to) }
+        req => range.get.foreach { case (from, to) => req.setRange(from, to) }
       }
     }
 
