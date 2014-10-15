@@ -55,4 +55,23 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
 
         }
   }.set(minTestsOk = 10)
+
+  def abnormalFlow = Prop.forAll {
+    req: Person =>
+
+      (for {
+        url <- SQS.queueURL(TEST_QUEUE_NAME)
+        sent <- SQS.send(url, req)
+        recv <- SQS.receive[RetriedMessage[Replicate]](url, ReceiveMessageParameters(numMessages = 10, waitTime = Some(Duration(5, TimeUnit.SECONDS))))
+        handles = recv.map (_.receiptHandle)
+        _ <- handles.headOption.map { h => SQS.changeVisibility(url, h, Duration(5, TimeUnit.SECONDS)) } getOrElse SQSAction.ok(())
+        _ <- SQS.delete(url, handles)
+      } yield (sent, recv)) must returnResult { case (sent, recv) =>
+        recv.length === 1 and
+          (recv.head.toOr.toEither must beLeft.like {
+            case InvalidReceivedMessage(m, _) => m.getBody === PersonMarshaller.body(req)
+          })
+
+      }
+  }.set(minTestsOk = 10)
 }

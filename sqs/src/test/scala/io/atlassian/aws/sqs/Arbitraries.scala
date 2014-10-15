@@ -1,6 +1,6 @@
 package io.atlassian.aws.sqs
 
-import io.atlassian.aws.sqs.Examples.Replicate
+import io.atlassian.aws.sqs.Examples.{Person, Replicate}
 import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary._
 import scalaz.syntax.apply._
@@ -21,5 +21,13 @@ object Arbitraries {
         c <- arbitrary[Int]
         a <- arbitrary[A]
       } yield RetriedMessage(c, a)
+    }
+
+  implicit val PersonArbitrary: Arbitrary[Person] =
+    Arbitrary {
+      for {
+        s <- arbitrary[String]
+        i <- arbitrary[Int]
+      } yield Person(s, i)
     }
 }
