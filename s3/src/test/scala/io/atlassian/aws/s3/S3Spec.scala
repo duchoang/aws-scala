@@ -227,7 +227,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       val dataStream = new ByteArrayInputStream(data.data)
       val key = S3Key(s"$TEST_FOLDER/${data.key}")
       val location = ContentLocation(BUCKET, key)
-
+      
       (for {
         _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
         result <- S3.safeGet(location, range)
