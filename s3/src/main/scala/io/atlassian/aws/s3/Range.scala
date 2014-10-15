@@ -1,8 +1,6 @@
 package io.atlassian.aws.s3
 
 import scalaz.syntax.std.option._
-import scala.collection.generic.CanBuildFrom
-import scala.collection.GenTraversableLike
 import scala.collection.generic.IsTraversableLike
 
 /**
