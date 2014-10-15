@@ -81,15 +81,7 @@ trait S3SpecOps extends MustMatchers with S3Arbitraries {
     def apply[S <: S3Action[A]](s: Expectable[S]) =
       runS3Action(s.value) match {
         case -\/(failure) => result(test = false, s"Expected value, but was failure $f", s"Expected value, but was failure $failure", s)
-        case \/-(v) => result(matchData(stripData(o.data, range))(f(v)), s)
+        case \/-(v) => result(matchData { range.slice[Byte, Array](o.data) } (f(v)), s)
       }
   }
-
-  def stripData(b: Array[Byte], range: Range) =
-    range match {
-      case Range.All => b
-      case Range.From(s) => b.slice(s.toInt, Int.MaxValue)
-      case Range.To(e) => b.slice(0, (e + 1).toInt)                 // Dang you exclusive end index
-      case Range.Interval(s, e) => b.slice(s.toInt, (e + 1).toInt)
-    }
 }
