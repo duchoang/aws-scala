@@ -79,4 +79,15 @@ object SQS {
 
     handles.grouped(10).map { deleteBatch }.toList.sequence.map { _.flatten }.map { l => DeleteResult(handles, l) }
   }
+
+  def changeVisibility(url: QueueURL, handle: ReceiptHandle, newVisibilityFromNow: Duration): SQSAction[Unit] = {
+    SQSAction.withClient {
+      _.changeMessageVisibility(
+        new ChangeMessageVisibilityRequest()
+          .withQueueUrl(url)
+          .withReceiptHandle(handle)
+          .withVisibilityTimeout(newVisibilityFromNow.toSeconds.toInt)
+      )
+    }
+  }
 }
