@@ -27,9 +27,12 @@ sealed trait Range {
     this match {
       case All            => coll
       case From(s)        => (fr conversion coll).drop(s.toInt)
-      case To(e)          => (fr conversion coll).take(e.toInt + 1)
-      case Interval(s, e) => (fr conversion coll).slice(s.toInt, e.toInt + 1)
+      case To(e)          => (fr conversion coll).take(incr(e))
+      case Interval(s, e) => (fr conversion coll).slice(s.toInt, incr(e))
     }
+
+  private def incr(i: Long): Int =
+    if (i >= Int.MaxValue) Int.MaxValue else i.toInt + 1
 }
 
 object Range {
