@@ -13,13 +13,14 @@ object AmazonExceptions {
     case object Unauthenticated extends ExceptionType
     case object Forbidden extends ExceptionType
     case object AmazonServerIssue extends ExceptionType
-    case object 
+    case object RangeRequestedNotSatisfiable extends ExceptionType
 
     def unapply(e: AmazonServiceException): Option[ExceptionType] =
       e.getStatusCode match {
         case 404 => NotFound.some
         case 401 => Unauthenticated.some
         case 403 => Forbidden.some
+        case 416 => RangeRequestedNotSatisfiable.some
         case _ => None
       }
   }

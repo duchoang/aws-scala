@@ -66,6 +66,12 @@ trait S3SpecOps extends MustMatchers with S3Arbitraries {
       case \/-(v) => (false, s"Expected failure, but got value $v")
     })
 
+  def failWithInvalid[A](check: PartialFunction[Invalid, Boolean])(implicit client: SDKS3Client) =
+    new ServiceMatcher[A]({
+      case -\/(f) => ((check orElse[Invalid, Boolean] { case _ => false} )(f), s"Expected failure, but match failed. Got $f")
+      case \/-(v) => (false, s"Expected failure, but got value $v")
+    })
+
   def matchData(expected: Array[Byte]) =
     { (o: S3Object) => toByteArray(o.getObjectContent) must matchByteContent(expected) and o.getObjectMetadata.getContentLength === expected.length}
 
