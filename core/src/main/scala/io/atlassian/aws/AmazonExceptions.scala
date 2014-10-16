@@ -13,6 +13,7 @@ object AmazonExceptions {
     case object Unauthenticated extends ExceptionType
     case object Forbidden extends ExceptionType
     case object AmazonServerIssue extends ExceptionType
+    case object 
 
     def unapply(e: AmazonServiceException): Option[ExceptionType] =
       e.getStatusCode match {
