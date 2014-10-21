@@ -2,6 +2,9 @@ package io.atlassian.aws
 package s3
 
 import com.amazonaws.regions.Region
+import io.atlassian.aws.AmazonExceptions.ExceptionType.RangeRequestedNotSatisfiable
+import io.atlassian.aws.AmazonExceptions.ServiceException
+import kadai.Invalid
 import org.junit.runner.RunWith
 import org.specs2.ScalaCheck
 import org.specs2.SpecificationWithJUnit
@@ -39,6 +42,8 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       have a safeGet that returns the object                $safeGetWorksIfThereIsObject
       have a function to get the region for a bucket        $regionForWorks
       have a function to get the region for a non-existent bucket work        $regionForWorksForNonExistentBucket
+      have a working multipart upload                       $multipartUploadWorks
+      bail if an invalid range is requested                 $invalidRangeRequestGivesCorrectError
                                                             ${Step(deleteTestFolder(BUCKET, TEST_FOLDER))}
   """
 
@@ -227,7 +232,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       val dataStream = new ByteArrayInputStream(data.data)
       val key = S3Key(s"$TEST_FOLDER/${data.key}")
       val location = ContentLocation(BUCKET, key)
-
+      
       (for {
         _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
         result <- S3.safeGet(location, range)
@@ -243,4 +248,34 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
 
   def regionForWorksForNonExistentBucket =
     S3.regionFor(Bucket(java.util.UUID.randomUUID().toString)) must fail
+
+  def multipartUploadWorks = Prop.forAll {
+    data: LargeObjectToStore => {
+      val dataStream = new ByteArrayInputStream(data.data)
+      val key = S3Key(s"$TEST_FOLDER/${data.key}")
+      val location = ContentLocation(BUCKET, key)
+
+      (for {
+        _ <- S3.putStream2(location, dataStream)
+        result <- S3.get(location)
+      } yield result) must returnS3Object(data)
+
+    }
+  }.set(minTestsOk = 5)
+
+  def invalidRangeRequestGivesCorrectError = Prop.forAll {
+    (data: ObjectToStore) => {
+      val dataStream = new ByteArrayInputStream(data.data)
+      val key = S3Key(s"$TEST_FOLDER/${data.key}")
+      val location = ContentLocation(BUCKET, key)
+      val invalidRange = Range.From(data.data.length.toLong + 1)
+      (for {
+        _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
+        result <- S3.safeGet(location, invalidRange)
+      } yield result) must failWithInvalid {
+        case Invalid.Err(ServiceException(RangeRequestedNotSatisfiable, _)) => true
+      }
+    }
+
+  }.set(minTestsOk = 5)
 }
