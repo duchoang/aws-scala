@@ -50,7 +50,7 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
         } yield (sent, recv)) must returnResult { case (sent, recv) =>
           recv.length === 1 and
             (recv.head.toOr.toEither must beRight.like {
-              case ValidReceivedMessage(_, _, _, r) => r === req
+              case ReceivedMessage.Valid(_, _, _, r) => r === req
             })
 
         }
@@ -69,7 +69,7 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
       } yield (sent, recv)) must returnResult { case (sent, recv) =>
         recv.length === 1 and
           (recv.head.toOr.toEither must beLeft.like {
-            case InvalidReceivedMessage(m, _) => m.getBody === PersonMarshaller.body(req)
+            case ReceivedMessage.Invalid(m, _) => m.getBody === PersonMarshaller.body(req)
           })
 
       }

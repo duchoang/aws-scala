@@ -2,45 +2,41 @@ package io.atlassian.aws
 package sqs
 
 import com.amazonaws.services.sqs.model.Message
-import kadai.Invalid
+import kadai.{ Invalid => KInvalid }
 import org.joda.time.DateTime
 
-import scalaz.{\/-, -\/, \/}
+import scalaz.{ \/-, -\/, \/ }
 
-/*
- * This is just a glorified InvalidReceivedMessage[A] \/ ValidReceivedMessage[A].
+/**
+ * May be valid or not.
  */
 sealed trait ReceivedMessage[+A] {
+  import ReceivedMessage._
+
   val messageId: MessageId
   val receiptHandle: ReceiptHandle
 
-  def toOr: InvalidReceivedMessage \/ ValidReceivedMessage[A] = this match {
-    case i: InvalidReceivedMessage => -\/(i)
-    case v: ValidReceivedMessage[A]   => \/-(v)
-  }
+  def toOr: Invalid \/ Valid[A] =
+    fold(-\/.apply, \/-.apply)
 
-  def fold[X](invalid: InvalidReceivedMessage => X, valid: ValidReceivedMessage[A] => X): X = this match {
-    case i: InvalidReceivedMessage => invalid(i)
-    case v: ValidReceivedMessage[A]   => valid(v)
+  def fold[X](invalid: Invalid => X, valid: Valid[A] => X): X =
+    this match {
+      case i @ Invalid(_, _)     => invalid(i)
+      case v @ Valid(_, _, _, _) => valid(v)
+    }
+}
+
+object ReceivedMessage {
+
+  case class Valid[+A](messageId: MessageId, receiptHandle: ReceiptHandle, attributes: StandardAttributes, message: A) extends ReceivedMessage[A]
+
+  case class Invalid(rawMessage: Message, failureReason: KInvalid) extends ReceivedMessage[Nothing] {
+    val messageId: MessageId = MessageId(rawMessage.getMessageId)
+    val receiptHandle: ReceiptHandle = ReceiptHandle(rawMessage.getReceiptHandle)
   }
 }
 
-case class StandardAttributes(approxFirstReceived: DateTime,
-                              approxReceiveCount: Int,
-                              senderId: String,
-                              sentTime: DateTime)
-
-case class ValidReceivedMessage[+A](messageId: MessageId,
-                                   receiptHandle: ReceiptHandle,
-                                   attributes: StandardAttributes,
-                                   message: A)
-  extends ReceivedMessage[A]
-
-case class InvalidReceivedMessage(rawMessage: Message,
-                                     failureReason: Invalid)
-  extends ReceivedMessage[Nothing] {
-
-  val messageId: MessageId = MessageId(rawMessage.getMessageId)
-  val receiptHandle: ReceiptHandle = ReceiptHandle(rawMessage.getReceiptHandle)
-
-}
+/**
+ * Note that received and receiveCount are approximate only.
+ */
+case class StandardAttributes(received: DateTime, receiveCount: Int, senderId: String, sentTime: DateTime)
