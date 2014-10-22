@@ -23,14 +23,14 @@ object Unmarshaller {
    * Generates an Unmarshaller for a ReceivedMessage[A], basically a wrapper of your type A with
    * standard attributes such as received count, and sent time.
    */
-  def receivedMessage[A: Unmarshaller]: Unmarshaller[ReceivedMessage[A]] =
+  def receivedMessage[A: Unmarshaller]: Unmarshaller[ReceivedMessage.Valid[A]] =
     from {
       for {
-        stdAttributes <- standardAttributes
+        attr <- standardAttributes
         a <- Unmarshaller[A].unmarshall
-        msgId <- messageId
+        id <- messageId
         handle <- receiptHandle
-      } yield ReceivedMessage(msgId, handle, stdAttributes, a)
+      } yield ReceivedMessage.Valid(id, handle, attr, a)
     }
 
   def from[A](f: Operation[A]) =
@@ -50,11 +50,11 @@ object Unmarshaller {
     import Unmarshaller.Operation._
     import FromString._
     for {
-      approxReceiveCount <- stdAttr[Int]("ApproximateReceiveCount")
-      approxFirstReceived <- stdAttr[DateTime]("ApproximateFirstReceiveTimestamp")
+      count <- stdAttr[Int]("ApproximateReceiveCount")
+      received <- stdAttr[DateTime]("ApproximateFirstReceiveTimestamp")
       senderId <- stdAttr[String]("SenderId")
       sentTime <- stdAttr[DateTime]("SentTimestamp")
-    } yield StandardAttributes(approxFirstReceived, approxReceiveCount, senderId, sentTime)
+    } yield StandardAttributes(received, count, senderId, sentTime)
   }
 
   val messageId: Operation[MessageId] =
@@ -93,9 +93,9 @@ object Unmarshaller {
      * Try to extract a value of type A from the 'standard' attributes available for every SQS message
      * e.g. approximate first received time, received count, sender ID and sent time.
      */
-    def stdAttr[A](name: String)(implicit decoder: FromString[A]): Operation[A] =
+    def stdAttr[A](name: String)(implicit decode: FromString[A]): Operation[A] =
       Operation { m =>
-        decoder(m.getAttributes.asScala.get(name)).lift {
+        decode(m.getAttributes.asScala.get(name)).lift {
           _.leftMap { _ |+| Invalid.Message(s"Cannot decode standard attribute field $name") }
         }
       }
@@ -104,9 +104,9 @@ object Unmarshaller {
      * Try to extract a value of type A from the message attributes. These are custom attributes that the
      * message sender may have added.
      */
-    def msgAttr[A](name: String)(implicit decoder: MessageAttributeDecoder[A]): Operation[A] =
+    def msgAttr[A](name: String)(implicit decode: MessageAttributeDecoder[A]): Operation[A] =
       Operation { m =>
-        (m.getMessageAttributes.asScala.get(name) |> decoder).lift {
+        (m.getMessageAttributes.asScala.get(name) |> decode).lift {
           _.leftMap { _ |+| Invalid.Message(s"Cannot decode header field $name") }
         }
       }
