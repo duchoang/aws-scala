@@ -17,7 +17,8 @@ object Dependencies {
     , "org.scalaz"        %% "scalaz-concurrent" % SCALAZ_VERSION
     , "io.argonaut"       %% "argonaut"          % ARGONAUT_VERSION
     , "com.amazonaws"     %  "aws-java-sdk"      % AWS_SDK_VERSION
-    , "io.atlassian"      %% "kadai"             % KADAI_VERSION
+    , "io.atlassian"      %% "kadai-core"        % KADAI_VERSION
+    , "io.atlassian"      %% "kadai-config"      % KADAI_VERSION
     )
   )
 
