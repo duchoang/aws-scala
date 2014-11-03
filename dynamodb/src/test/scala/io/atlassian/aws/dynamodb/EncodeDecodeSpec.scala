@@ -3,7 +3,7 @@ package dynamodb
 
 import io.atlassian.aws.spec.ScalaCheckSpec
 import org.junit.runner.RunWith
-import org.scalacheck.{Arbitrary, Prop}
+import org.scalacheck.{ Arbitrary, Prop }
 import Arbitrary._
 import scalaz.syntax.id._
 import org.joda.time.DateTime
@@ -47,9 +47,9 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
   def correctlyEncodeDecodeOptions = Prop.forAll {
     value: Option[String] =>
       value match {
-        case None => OptionEncode[String].run(value) must beNone
+        case None     => OptionEncode[String].run(value) must beNone
         case Some("") => OptionEncode[String].run(value) must beNone
-        case Some(v) => (OptionEncode[String].run(value) |> OptionDecode[String]) === Attempt.ok(value)
+        case Some(v)  => (OptionEncode[String].run(value) |> OptionDecode[String]) === Attempt.ok(value)
       }
   }
 }

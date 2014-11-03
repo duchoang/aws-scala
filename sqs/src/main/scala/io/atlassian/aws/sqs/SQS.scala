@@ -65,18 +65,18 @@ object SQS {
 
   def delete(url: QueueURL, handles: List[ReceiptHandle]): SQSAction[DeleteResult] = {
 
-      def deleteBatch(batch: List[ReceiptHandle]): SQSAction[List[FailedDelete]] =
-        SQSAction.withClient { client =>
+    def deleteBatch(batch: List[ReceiptHandle]): SQSAction[List[FailedDelete]] =
+      SQSAction.withClient { client =>
 
-          val batchWithId = batch.zipWithIndex.map { case (h, index) => index.toString -> h }
-          val batchRequestEntries = batchWithId.map { case (index, h) => new DeleteMessageBatchRequestEntry(index, h) }
-          val idToHandle = batchWithId.toMap
+        val batchWithId = batch.zipWithIndex.map { case (h, index) => index.toString -> h }
+        val batchRequestEntries = batchWithId.map { case (index, h) => new DeleteMessageBatchRequestEntry(index, h) }
+        val idToHandle = batchWithId.toMap
 
-          client.deleteMessageBatch(new DeleteMessageBatchRequest(url)
-            .withEntries(batchRequestEntries.asJava)).getFailed.asScala.map { entry =>
-            FailedDelete(idToHandle.get(entry.getId), entry.getSenderFault, entry.getMessage)
-          }.toList
-        }
+        client.deleteMessageBatch(new DeleteMessageBatchRequest(url)
+          .withEntries(batchRequestEntries.asJava)).getFailed.asScala.map { entry =>
+          FailedDelete(idToHandle.get(entry.getId), entry.getSenderFault, entry.getMessage)
+        }.toList
+      }
 
     handles.grouped(10).map { deleteBatch }.toList.sequence.map { _.flatten }.map { l => DeleteResult(handles, l) }
   }

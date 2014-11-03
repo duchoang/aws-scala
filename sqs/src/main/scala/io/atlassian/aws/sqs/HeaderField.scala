@@ -14,7 +14,7 @@ case class HeaderField[A](name: String) {
 }
 
 case class FieldType(main: FieldMainType, subType: Option[String]) {
-  private [sqs] def awsFieldType: String =
+  private[sqs] def awsFieldType: String =
     subType.fold(main.name) { s => s"${main.name}.$s" }
 }
 

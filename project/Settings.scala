@@ -1,6 +1,7 @@
 import sbt.Keys._
 import sbt._
-import sbtrelease._
+import com.typesafe.sbt.SbtScalariform._
+import scalariform.formatter.preferences._
 
 object Settings {
 
@@ -14,6 +15,7 @@ object Settings {
       testSettings ++
       Release.customReleaseSettings ++ // sbt-release
       net.virtualvoid.sbt.graph.Plugin.graphSettings ++ // dependency plugin settings
+      defaultScalariformSettings ++
       Seq[Def.Setting[_]] (
         organization := "io.atlassian.aws-scala"
       , scalaVersion := scala211
@@ -47,6 +49,11 @@ object Settings {
         file("LICENSE") -> "META-INF/LICENSE"
         , file("NOTICE")  -> "META-INF/NOTICE"
         )
+      , incOptions := incOptions.value.withNameHashing(true) // SBT 0.13.2 name hashing
+      , updateOptions := updateOptions.value.withConsolidatedResolution(true)
+      , ScalariformKeys.preferences := ScalariformKeys.preferences.value
+          .setPreference(AlignSingleLineCaseStatements, true)
+          .setPreference(AlignParameters, true)
       )
 
   lazy val standardSettingsAndDependencies =

@@ -1,7 +1,7 @@
 package io.atlassian.aws.s3
 
 import org.scalacheck.Prop
-import org.specs2.{ScalaCheck, SpecificationWithJUnit}
+import org.specs2.{ ScalaCheck, SpecificationWithJUnit }
 import scalaz.syntax.std.list._
 
 class S3KeySpec extends SpecificationWithJUnit with S3Arbitraries with ScalaCheck {

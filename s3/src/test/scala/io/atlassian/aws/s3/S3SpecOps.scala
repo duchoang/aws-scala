@@ -3,10 +3,10 @@ package io.atlassian.aws.s3
 import io.atlassian.aws.spec.ArraySpecOps
 
 import scalaz._
-import com.amazonaws.services.s3.model.{S3Object, S3ObjectSummary, ObjectListing}
-import com.amazonaws.services.s3.{AmazonS3Client => SDKS3Client}
+import com.amazonaws.services.s3.model.{ S3Object, S3ObjectSummary, ObjectListing }
+import com.amazonaws.services.s3.{ AmazonS3Client => SDKS3Client }
 import kadai.Invalid
-import org.specs2.matcher.{MustMatchers, Expectable, Matcher}
+import org.specs2.matcher.{ MustMatchers, Expectable, Matcher }
 import scala.collection.JavaConverters._
 
 trait S3SpecOps extends MustMatchers with S3Arbitraries {
@@ -30,7 +30,7 @@ trait S3SpecOps extends MustMatchers with S3Arbitraries {
               // get the next load
               if (l.isTruncated) {
                 S3.nextBatchOfKeys(l) |> runS3Action match {
-                  case -\/(e) => return_(Scalaz.none)
+                  case -\/(e)     => return_(Scalaz.none)
                   case \/-(nextL) => bar(Some(nextL))
                 }
               } else {
@@ -78,7 +78,7 @@ trait S3SpecOps extends MustMatchers with S3Arbitraries {
   }
 
   def matchData(expected: Array[Byte]) =
-    { (o: S3Object) => toByteArray(o.getObjectContent) must matchByteContent(expected) and o.getObjectMetadata.getContentLength === expected.length}
+    { (o: S3Object) => toByteArray(o.getObjectContent) must matchByteContent(expected) and o.getObjectMetadata.getContentLength === expected.length }
 
   class ServiceMatcher[A](check: \/[Invalid, A] => (Boolean, String))(implicit client: SDKS3Client) extends Matcher[S3Action[A]] {
     def apply[S <: S3Action[A]](s: Expectable[S]) = {
@@ -92,7 +92,7 @@ trait S3SpecOps extends MustMatchers with S3Arbitraries {
     def apply[S <: S3Action[A]](s: Expectable[S]) =
       runS3Action(s.value) match {
         case -\/(failure) => result(test = false, s"Expected value, but was failure $f", s"Expected value, but was failure $failure", s)
-        case \/-(v) => result(matchData { range.slice[Byte, Array](o.data) } (f(v)), s)
+        case \/-(v)       => result(matchData { range.slice[Byte, Array](o.data) }(f(v)), s)
       }
   }
 }

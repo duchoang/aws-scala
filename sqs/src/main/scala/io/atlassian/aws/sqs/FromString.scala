@@ -30,18 +30,18 @@ object FromString {
   def from[A](a: Attempt[A]): FromString[A] = FromString { _ => a }
 
   implicit val IntFromString: FromString[Int] =
-    mandatoryField( _.toInt, "Int")
+    mandatoryField(_.toInt, "Int")
 
   implicit val StringFromString: FromString[String] =
     mandatoryField(identity, "String")
 
   implicit val DateTimeFromString: FromString[DateTime] =
-    mandatoryField( _.toLong |> { i => new DateTime(i, DateTimeZone.UTC) }, "DateTime")
+    mandatoryField(_.toLong |> { i => new DateTime(i, DateTimeZone.UTC) }, "DateTime")
 
   def mandatoryField[A](f: String => A, label: String): FromString[A] =
     FromString { o =>
       o match {
-        case None => Attempt.fail(s"Could not decode $label value")
+        case None    => Attempt.fail(s"Could not decode $label value")
         case Some(v) => Attempt.safe(f(v))
       }
     }

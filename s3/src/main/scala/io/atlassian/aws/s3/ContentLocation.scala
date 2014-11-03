@@ -12,7 +12,7 @@ object ContentLocation {
     DecodeJson { c =>
       for {
         bucket <- (c --\ "bucket").as[String]
-        key    <- (c --\ "key").as[String]
+        key <- (c --\ "key").as[String]
       } yield ContentLocation(Bucket(bucket), S3Key(key))
     }
 }

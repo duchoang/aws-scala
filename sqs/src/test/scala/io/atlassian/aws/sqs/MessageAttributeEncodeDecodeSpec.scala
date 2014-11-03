@@ -44,9 +44,9 @@ class MessageAttributeEncodeDecodeSpec extends ScalaCheckSpec {
   def correctlyEncodeDecodeOptions = Prop.forAll {
     value: Option[String] =>
       value match {
-        case None => OptionEncode[String].run(value) must beNone
+        case None     => OptionEncode[String].run(value) must beNone
         case Some("") => OptionEncode[String].run(value) must beNone
-        case Some(v) => (OptionEncode[String].run(value) |> OptionMessageAttributeDecode[String]) === Attempt.ok(value)
+        case Some(v)  => (OptionEncode[String].run(value) |> OptionMessageAttributeDecode[String]) === Attempt.ok(value)
       }
   }
 }

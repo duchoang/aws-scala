@@ -12,13 +12,13 @@ case class QueueParameters(name: String,
                            receiveMessageWaitTime: Option[Duration] = None,
                            visibilityTimeout: Option[Duration] = None) {
 
-  private [sqs] lazy val attributes: java.util.Map[String, String] = {
-    (delay.map { v => "DelaySeconds" -> v.toSeconds.toString} ::
-      maxMessageSizeKb.map { v => "MaximumMessageSize" -> v.toString} ::
-      messageRetentionPeriod.map { v => "MessageRetentionPeriod" -> v.toSeconds.toString} ::
-      policy.map { v => "Policy" -> v.toString} ::
-      receiveMessageWaitTime.map { v => "ReceiveMessageWaitTimeSeconds" -> v.toSeconds.toString} ::
-      visibilityTimeout.map { v => "VisibilityTimeout" -> v.toSeconds.toString} ::
+  private[sqs] lazy val attributes: java.util.Map[String, String] = {
+    (delay.map { v => "DelaySeconds" -> v.toSeconds.toString } ::
+      maxMessageSizeKb.map { v => "MaximumMessageSize" -> v.toString } ::
+      messageRetentionPeriod.map { v => "MessageRetentionPeriod" -> v.toSeconds.toString } ::
+      policy.map { v => "Policy" -> v.toString } ::
+      receiveMessageWaitTime.map { v => "ReceiveMessageWaitTimeSeconds" -> v.toSeconds.toString } ::
+      visibilityTimeout.map { v => "VisibilityTimeout" -> v.toSeconds.toString } ::
       Nil).flatten.toMap.asJava
   }
 }

@@ -9,7 +9,7 @@ import org.junit.runner.RunWith
 import org.specs2.ScalaCheck
 import org.specs2.SpecificationWithJUnit
 import org.specs2.main.Arguments
-import com.amazonaws.services.s3.{AmazonS3Client => SDKS3Client}
+import com.amazonaws.services.s3.{ AmazonS3Client => SDKS3Client }
 import org.specs2.specification.Step
 import org.scalacheck.Prop
 import java.io.ByteArrayInputStream
@@ -52,94 +52,101 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
   val BUCKET = Bucket(arguments.commandLine.value("bucket").getOrElse("sawa-syd-dev"))
 
   def getWhatWasPut = Prop.forAll {
-    data: ObjectToStore => {
-      val dataStream = new ByteArrayInputStream(data.data)
-      val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val location = ContentLocation(BUCKET, key)
+    data: ObjectToStore =>
+      {
+        val dataStream = new ByteArrayInputStream(data.data)
+        val key = S3Key(s"$TEST_FOLDER/${data.key}")
+        val location = ContentLocation(BUCKET, key)
 
-      (for {
-        _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
-        result <- S3.get(location)
-      } yield result) must returnS3Object(data)
+        (for {
+          _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
+          result <- S3.get(location)
+        } yield result) must returnS3Object(data)
 
-    }
+      }
   }.set(minTestsOk = 10)
 
   def createFoldersWorks = Prop.forAll {
-    (folders: S3Folders, key: S3Key) => {
-      import scala.collection.JavaConversions._
-      val s3Key = S3Key(TEST_FOLDER :: folders.folders, key)
-      val s3KeyWithoutLastElement = s3Key.prefix
-      (for {
-        _ <- S3.createFoldersFor(ContentLocation(BUCKET, s3Key))
-        keys <- S3.listKeys(BUCKET, s3KeyWithoutLastElement)
-      } yield keys) must returnResult { keys =>
-        keys.getObjectSummaries.toList.map { _.getKey } must contain(s3KeyWithoutLastElement)
+    (folders: S3Folders, key: S3Key) =>
+      {
+        import scala.collection.JavaConversions._
+        val s3Key = S3Key(TEST_FOLDER :: folders.folders, key)
+        val s3KeyWithoutLastElement = s3Key.prefix
+        (for {
+          _ <- S3.createFoldersFor(ContentLocation(BUCKET, s3Key))
+          keys <- S3.listKeys(BUCKET, s3KeyWithoutLastElement)
+        } yield keys) must returnResult { keys =>
+          keys.getObjectSummaries.toList.map { _.getKey } must contain(s3KeyWithoutLastElement)
+        }
       }
-    }
   }.set(minTestsOk = 10)
 
   def putWithFoldersWorks = Prop.forAll {
-    (data: ObjectToStore, folders: S3Folders) => {
-      val dataStream = new ByteArrayInputStream(data.data)
-      val key = S3Key(s"$TEST_FOLDER/${folders.toPrefix}${data.key}")
-      val location = ContentLocation(BUCKET, key)
+    (data: ObjectToStore, folders: S3Folders) =>
+      {
+        val dataStream = new ByteArrayInputStream(data.data)
+        val key = S3Key(s"$TEST_FOLDER/${folders.toPrefix}${data.key}")
+        val location = ContentLocation(BUCKET, key)
 
-      (for {
-        _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
-        result <- S3.get(location)
-      } yield result) must returnS3Object(data)
-    }
+        (for {
+          _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
+          result <- S3.get(location)
+        } yield result) must returnS3Object(data)
+      }
   }.set(minTestsOk = 10)
 
   private def testCopy(overwrite: OverwriteMode) = Prop.forAll {
-    (data: ObjectToStore, newKey: S3Key) => newKey != data.key ==> {
-      val dataStream = new ByteArrayInputStream(data.data)
-      val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val newKeyNamespaced = S3Key(s"$TEST_FOLDER/${newKey}")
-      val oldLocation = ContentLocation(BUCKET, key)
-      val newLocation = ContentLocation(BUCKET, newKeyNamespaced)
+    (data: ObjectToStore, newKey: S3Key) =>
+      newKey != data.key ==> {
+        val dataStream = new ByteArrayInputStream(data.data)
+        val key = S3Key(s"$TEST_FOLDER/${data.key}")
+        val newKeyNamespaced = S3Key(s"$TEST_FOLDER/${newKey}")
+        val oldLocation = ContentLocation(BUCKET, key)
+        val newLocation = ContentLocation(BUCKET, newKeyNamespaced)
 
-      (for {
-        _ <- S3.putStream(oldLocation, dataStream, Some(data.data.length.toLong))
-        _ <- S3.copy(oldLocation, newLocation)
-        oldNotDeleted <- S3.exists(oldLocation)
-        result <- S3.get(newLocation)
-      } yield (oldNotDeleted, result)) must returnResult {
-        r => {
-          val (oldNotDeleted, result) = r
-          oldNotDeleted must beTrue and
-            (result must matchData(data.data))
+        (for {
+          _ <- S3.putStream(oldLocation, dataStream, Some(data.data.length.toLong))
+          _ <- S3.copy(oldLocation, newLocation)
+          oldNotDeleted <- S3.exists(oldLocation)
+          result <- S3.get(newLocation)
+        } yield (oldNotDeleted, result)) must returnResult {
+          r =>
+            {
+              val (oldNotDeleted, result) = r
+              oldNotDeleted must beTrue and
+                (result must matchData(data.data))
+            }
         }
       }
-    }
   }.set(minTestsOk = 10)
 
   def copyWithNoOverwriteDoesNotOverwrite = Prop.forAll {
-    (data: ObjectToStore, data2: ObjectToStore) => data2.key != data.key ==> {
-      val dataStream1 = new ByteArrayInputStream(data.data)
-      val dataStream2 = new ByteArrayInputStream(data2.data)
-      val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val newKeyNamespaced = S3Key(s"$TEST_FOLDER/${data2.key}")
-      val oldLocation = ContentLocation(BUCKET, key)
-      val newLocation = ContentLocation(BUCKET, newKeyNamespaced)
+    (data: ObjectToStore, data2: ObjectToStore) =>
+      data2.key != data.key ==> {
+        val dataStream1 = new ByteArrayInputStream(data.data)
+        val dataStream2 = new ByteArrayInputStream(data2.data)
+        val key = S3Key(s"$TEST_FOLDER/${data.key}")
+        val newKeyNamespaced = S3Key(s"$TEST_FOLDER/${data2.key}")
+        val oldLocation = ContentLocation(BUCKET, key)
+        val newLocation = ContentLocation(BUCKET, newKeyNamespaced)
 
-      (for {
-        _ <- S3.putStream(oldLocation, dataStream1, Some(data.data.length.toLong))
-        _ <- S3.putStream(newLocation, dataStream2, Some(data2.data.length.toLong))
-        copyResult <- S3.copy(oldLocation, newLocation, overwrite = OverwriteMode.NoOverwrite)
-        oldNotDeleted <- S3.exists(oldLocation)
-        result <- S3.get(newLocation)
-      } yield (oldNotDeleted, result, copyResult)) must returnResult {
-        r => {
-          val (oldNotDeleted, result, copyResult) = r
-          val is = result.getObjectContent
-          oldNotDeleted must beTrue and
-            (copyResult must beNone) and
-            (result must matchData(data2.data))
+        (for {
+          _ <- S3.putStream(oldLocation, dataStream1, Some(data.data.length.toLong))
+          _ <- S3.putStream(newLocation, dataStream2, Some(data2.data.length.toLong))
+          copyResult <- S3.copy(oldLocation, newLocation, overwrite = OverwriteMode.NoOverwrite)
+          oldNotDeleted <- S3.exists(oldLocation)
+          result <- S3.get(newLocation)
+        } yield (oldNotDeleted, result, copyResult)) must returnResult {
+          r =>
+            {
+              val (oldNotDeleted, result, copyResult) = r
+              val is = result.getObjectContent
+              oldNotDeleted must beTrue and
+                (copyResult must beNone) and
+                (result must matchData(data2.data))
+            }
         }
       }
-    }
   }.set(minTestsOk = 10)
 
   def copyWorks =
@@ -149,74 +156,80 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
     testCopy(OverwriteMode.NoOverwrite)
 
   def copyWithFoldersWorks = Prop.forAll {
-    (data: ObjectToStore, folders: S3Folders, newKey: S3Key) => newKey != data.key ==> {
-      val dataStream = new ByteArrayInputStream(data.data)
-      val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val newKeyNamespaced = S3Key(s"$TEST_FOLDER/${folders.toPrefix}${newKey}")
-      val oldLocation = ContentLocation(BUCKET, key)
-      val newLocation = ContentLocation(BUCKET, newKeyNamespaced)
+    (data: ObjectToStore, folders: S3Folders, newKey: S3Key) =>
+      newKey != data.key ==> {
+        val dataStream = new ByteArrayInputStream(data.data)
+        val key = S3Key(s"$TEST_FOLDER/${data.key}")
+        val newKeyNamespaced = S3Key(s"$TEST_FOLDER/${folders.toPrefix}${newKey}")
+        val oldLocation = ContentLocation(BUCKET, key)
+        val newLocation = ContentLocation(BUCKET, newKeyNamespaced)
 
-      (for {
-        _ <- S3.putStream(oldLocation, dataStream, Some(data.data.length.toLong))
-        _ <- S3.copy(oldLocation, newLocation)
-        oldNotDeleted <- S3.exists(oldLocation)
-        result <- S3.get(newLocation)
-      } yield (oldNotDeleted, result)) must returnResult {
-        r => {
-          val (oldNotDeleted, result) = r
-          val is = result.getObjectContent
-          oldNotDeleted must beTrue and
-            (result must matchData(data.data))
+        (for {
+          _ <- S3.putStream(oldLocation, dataStream, Some(data.data.length.toLong))
+          _ <- S3.copy(oldLocation, newLocation)
+          oldNotDeleted <- S3.exists(oldLocation)
+          result <- S3.get(newLocation)
+        } yield (oldNotDeleted, result)) must returnResult {
+          r =>
+            {
+              val (oldNotDeleted, result) = r
+              val is = result.getObjectContent
+              oldNotDeleted must beTrue and
+                (result must matchData(data.data))
+            }
         }
       }
-    }
   }.set(minTestsOk = 10)
 
   def existsReturnsTrueForSomethingThatExists = Prop.forAll {
-    data: ObjectToStore => {
-      val dataStream = new ByteArrayInputStream(data.data)
-      val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val location = ContentLocation(BUCKET, key)
+    data: ObjectToStore =>
+      {
+        val dataStream = new ByteArrayInputStream(data.data)
+        val key = S3Key(s"$TEST_FOLDER/${data.key}")
+        val location = ContentLocation(BUCKET, key)
 
-      (for {
-        _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
-        exists <- S3.exists(location)
-      } yield exists) must returnResult { identity }
-    }
+        (for {
+          _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
+          exists <- S3.exists(location)
+        } yield exists) must returnResult { identity }
+      }
   }.set(minTestsOk = 5)
 
   def existsReturnsFalseForSomethingThatNotExists = Prop.forAll {
-    s3key: S3Key => {
-      val key = S3Key(s"$TEST_FOLDER/$s3key")
-      val location = ContentLocation(BUCKET, key)
+    s3key: S3Key =>
+      {
+        val key = S3Key(s"$TEST_FOLDER/$s3key")
+        val location = ContentLocation(BUCKET, key)
 
-      (for {
-        exists <- S3.exists(location)
-      } yield exists) must returnResult { exists => exists === false }
-    }
+        (for {
+          exists <- S3.exists(location)
+        } yield exists) must returnResult { exists => exists === false }
+      }
   }.set(minTestsOk = 5)
 
   def metaDataReturnsMetaData = Prop.forAll {
-    (data: ObjectToStore) => {
-      val dataStream = new ByteArrayInputStream(data.data)
-      val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val location = ContentLocation(BUCKET, key)
-      val metaData = S3.DefaultObjectMetadata <| { _.addUserMetadata("foo", data.key) }
+    (data: ObjectToStore) =>
+      {
+        val dataStream = new ByteArrayInputStream(data.data)
+        val key = S3Key(s"$TEST_FOLDER/${data.key}")
+        val location = ContentLocation(BUCKET, key)
+        val metaData = S3.DefaultObjectMetadata <| { _.addUserMetadata("foo", data.key) }
 
-      (for {
-        _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong), metaData)
-        retrievedMetaData <- S3.metaData(location)
-      } yield retrievedMetaData) must returnResult { r => r.getUserMetadata.get("foo") === data.key }
-    }
+        (for {
+          _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong), metaData)
+          retrievedMetaData <- S3.metaData(location)
+        } yield retrievedMetaData) must returnResult { r => r.getUserMetadata.get("foo") === data.key }
+      }
   }.set(minTestsOk = 5)
 
   def metaDataErrorsIfNoObject = Prop.forAll {
-    s3key: S3Key => {
-      val key = S3Key(s"$TEST_FOLDER/$s3key")
-      val location = ContentLocation(BUCKET, key)
+    s3key: S3Key =>
+      {
+        val key = S3Key(s"$TEST_FOLDER/$s3key")
+        val location = ContentLocation(BUCKET, key)
 
-      S3.metaData(location) must fail
-    }
+        S3.metaData(location) must fail
+      }
   }.set(minTestsOk = 5)
 
   def safeGetWorksIfNoObject = Prop.forAll {
@@ -228,17 +241,18 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
   }.set(minTestsOk = 5)
 
   def safeGetWorksIfThereIsObject = Prop.forAll {
-    (data: ObjectToStore, range: Range) => {
-      val dataStream = new ByteArrayInputStream(data.data)
-      val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val location = ContentLocation(BUCKET, key)
-      
-      (for {
-        _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
-        result <- S3.safeGet(location, range)
-      } yield result) must returnS3Object(data, _.get, range)
+    (data: ObjectToStore, range: Range) =>
+      {
+        val dataStream = new ByteArrayInputStream(data.data)
+        val key = S3Key(s"$TEST_FOLDER/${data.key}")
+        val location = ContentLocation(BUCKET, key)
 
-    }
+        (for {
+          _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
+          result <- S3.safeGet(location, range)
+        } yield result) must returnS3Object(data, _.get, range)
+
+      }
   }.set(minTestsOk = 10)
 
   def regionForWorks =
@@ -250,32 +264,34 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
     S3.regionFor(Bucket(java.util.UUID.randomUUID().toString)) must fail
 
   def multipartUploadWorks = Prop.forAll {
-    data: LargeObjectToStore => {
-      val dataStream = new ByteArrayInputStream(data.data)
-      val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val location = ContentLocation(BUCKET, key)
+    data: LargeObjectToStore =>
+      {
+        val dataStream = new ByteArrayInputStream(data.data)
+        val key = S3Key(s"$TEST_FOLDER/${data.key}")
+        val location = ContentLocation(BUCKET, key)
 
-      (for {
-        _ <- S3.putStream2(location, dataStream)
-        result <- S3.get(location)
-      } yield result) must returnS3Object(data)
+        (for {
+          _ <- S3.putStream2(location, dataStream)
+          result <- S3.get(location)
+        } yield result) must returnS3Object(data)
 
-    }
+      }
   }.set(minTestsOk = 5)
 
   def invalidRangeRequestGivesCorrectError = Prop.forAll {
-    (data: ObjectToStore) => {
-      val dataStream = new ByteArrayInputStream(data.data)
-      val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val location = ContentLocation(BUCKET, key)
-      val invalidRange = Range.From(data.data.length.toLong + 1)
-      (for {
-        _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
-        result <- S3.safeGet(location, invalidRange)
-      } yield result) must failWithInvalid {
-        case Invalid.Err(ServiceException(RangeRequestedNotSatisfiable, _)) => true
+    (data: ObjectToStore) =>
+      {
+        val dataStream = new ByteArrayInputStream(data.data)
+        val key = S3Key(s"$TEST_FOLDER/${data.key}")
+        val location = ContentLocation(BUCKET, key)
+        val invalidRange = Range.From(data.data.length.toLong + 1)
+        (for {
+          _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
+          result <- S3.safeGet(location, invalidRange)
+        } yield result) must failWithInvalid {
+          case Invalid.Err(ServiceException(RangeRequestedNotSatisfiable, _)) => true
+        }
       }
-    }
 
   }.set(minTestsOk = 5)
 }

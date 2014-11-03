@@ -14,7 +14,7 @@ class RetriedMessageMarshallUnmarshallSpec extends ScalaCheckSpec {
   import Examples._
   import MessageAttributeEncoder._
   import Arbitraries._
-  
+
   def is = s2"""
     
   RetriedMessage should
@@ -24,17 +24,16 @@ class RetriedMessageMarshallUnmarshallSpec extends ScalaCheckSpec {
 
   """
 
-
   def marshallOnRetriedMessage = Prop.forAll {
     thing: RetriedMessage[Replicate] =>
       val M = Marshaller[RetriedMessage[Replicate]]
       val header = M.headerFlattened(thing)
       val body = M.body(thing)
-      
+
       body === thing.message.jencode.nospaces and
         (header.get("retry-count") === IntEncode(thing.retryCount))
   }
-  
+
   def marshalledAndUnmarshall = Prop.forAll {
     thing: RetriedMessage[Replicate] =>
       val M = Marshaller[RetriedMessage[Replicate]]
@@ -46,7 +45,7 @@ class RetriedMessageMarshallUnmarshallSpec extends ScalaCheckSpec {
 
       Unmarshaller[RetriedMessage[Replicate]].unmarshall(message) === Attempt.ok(thing)
   }
-  
+
   def unmarshallWithoutRetryCount = Prop.forAll {
     thing: Replicate =>
       val message =

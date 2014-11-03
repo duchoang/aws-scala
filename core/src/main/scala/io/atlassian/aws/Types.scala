@@ -16,15 +16,15 @@ trait Types {
 
     implicit val OverwriteModeEncodeJson: EncodeJson[OverwriteMode] =
       EncodeJson {
-        case Overwrite => jString("overwrite")
+        case Overwrite   => jString("overwrite")
         case NoOverwrite => jString("no-overwrite")
       }
 
     implicit val OverwriteModeDecodeJson: DecodeJson[OverwriteMode] =
       optionDecoder(_.string flatMap {
-        case "overwrite" => Some(Overwrite)
+        case "overwrite"    => Some(Overwrite)
         case "no-overwrite" => Some(NoOverwrite)
-        case _ => None
+        case _              => None
       }, "OverwriteMode")
   }
 }

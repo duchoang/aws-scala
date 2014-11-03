@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package spec
 
-import org.specs2.matcher.{Expectable, Matcher}
+import org.specs2.matcher.{ Expectable, Matcher }
 
 class NiceArrayMatcher[A](expected: Array[A]) extends Matcher[Array[A]] {
 

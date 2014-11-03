@@ -2,7 +2,7 @@ package io.atlassian.aws
 package sqs
 
 import com.amazonaws.services.sqs.model.MessageAttributeValue
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.{ DateTime, DateTimeZone }
 
 import scalaz.Contravariant
 import scalaz.syntax.id._

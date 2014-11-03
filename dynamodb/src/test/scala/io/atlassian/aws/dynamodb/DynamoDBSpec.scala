@@ -11,7 +11,7 @@ import org.scalacheck.Prop
 import org.specs2.main.Arguments
 import org.specs2.specification.Step
 
-import com.amazonaws.services.dynamodbv2.model.{ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest}
+import com.amazonaws.services.dynamodbv2.model.{ ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
 
 import java.util.UUID.randomUUID
 import scalaz.syntax.id._, scalaz.std.AllInstances._
@@ -34,7 +34,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   implicit val ThingDynamoMapping = thingDynamoMappingForTableName(s"my_things2_${System.currentTimeMillis.toString}")
 
   // TODO - These tests are sequential because of flakiness with integration tests.
-  def is = stopOnFail ^ sequential ^s2"""
+  def is = stopOnFail ^ sequential ^ s2"""
 
   This is a specification to test DynamoDB actions.
 
@@ -111,7 +111,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     (thingKey: ThingKey, thingValue: ThingValue) =>
       DynamoDB.put[ThingKey, ThingValue](thingKey, thingValue) must returnValue(None) and
         ((DYNAMO_CLIENT.getItem(ThingDynamoMapping.name, Marshaller[ThingKey].toFlattenedMap(thingKey).asJava).getItem.asScala.toMap |>
-        Unmarshaller[ThingValue].fromMap) must equal(Attempt.ok(thingValue)))
+          Unmarshaller[ThingValue].fromMap) must equal(Attempt.ok(thingValue)))
   }.set(minTestsOk = NUM_TESTS)
 
   def putReplaceWorks = Prop.forAll {
@@ -204,11 +204,12 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         _ <- DynamoDB.put(k2, v2)
         ascResult <- DynamoDB.query(queryAsc)
         descResult <- DynamoDB.query(queryDesc)
-      } yield (ascResult, descResult)) must returnResult { case (page1, page2) =>
-        page1.result must equal(List(v1, v2)) and
-          (page2.result must equal(List(v2, v1))) and
-          (page1.next must beNone) and
-          (page2.next must beNone)
+      } yield (ascResult, descResult)) must returnResult {
+        case (page1, page2) =>
+          page1.result must equal(List(v1, v2)) and
+            (page2.result must equal(List(v2, v1))) and
+            (page1.next must beNone) and
+            (page2.next must beNone)
       }
   }.set(minTestsOk = NUM_TESTS)
 

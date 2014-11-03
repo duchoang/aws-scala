@@ -6,7 +6,7 @@ import java.util.ArrayList
 
 import com.amazonaws.regions.Region
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{UploadPartResult, AbortMultipartUploadRequest, AmazonS3Exception, CopyObjectRequest, CopyObjectResult, DeleteObjectRequest, ObjectListing, PutObjectResult, ObjectMetadata, GetObjectRequest, S3Object, InitiateMultipartUploadRequest, UploadPartRequest, PartETag, CompleteMultipartUploadRequest, CompleteMultipartUploadResult}
+import com.amazonaws.services.s3.model.{ UploadPartResult, AbortMultipartUploadRequest, AmazonS3Exception, CopyObjectRequest, CopyObjectResult, DeleteObjectRequest, ObjectListing, PutObjectResult, ObjectMetadata, GetObjectRequest, S3Object, InitiateMultipartUploadRequest, UploadPartRequest, PartETag, CompleteMultipartUploadRequest, CompleteMultipartUploadResult }
 import io.atlassian.aws.AmazonExceptions.ServiceException
 import kadai.Invalid
 
@@ -50,7 +50,7 @@ object S3 {
       rn <- S3Action.safe { stream.read(buffer) }
       result <- rn match {
         case -1 => S3Action.value((parts, length))
-        case _  => for {
+        case _ => for {
           // TODO - Dirty hack to get the abort working. Need to add a combinator to AwsAction for this
           partResult <- AwsAction.apply[AmazonS3Client, UploadPartResult] { client =>
             try {
@@ -95,8 +95,8 @@ object S3 {
     }
 
   def createFoldersFor(location: ContentLocation): S3Action[List[PutObjectResult]] =
-    location.key.foldersWithLeadingPaths.traverse[S3Action, PutObjectResult] { 
-      folder => S3.createFolder(location.bucket, folder) 
+    location.key.foldersWithLeadingPaths.traverse[S3Action, PutObjectResult] {
+      folder => S3.createFolder(location.bucket, folder)
     }
 
   /**
@@ -125,10 +125,10 @@ object S3 {
    *         NoOverwrite was specified).
    */
   def copy(from: ContentLocation,
-    to: ContentLocation,
-    meta: Option[ObjectMetadata] = None,
-    createFolders: Boolean = true,
-    overwrite: OverwriteMode = OverwriteMode.Overwrite): S3Action[Option[CopyObjectResult]] =
+           to: ContentLocation,
+           meta: Option[ObjectMetadata] = None,
+           createFolders: Boolean = true,
+           overwrite: OverwriteMode = OverwriteMode.Overwrite): S3Action[Option[CopyObjectResult]] =
     for {
       doCopy <- overwrite match {
         case OverwriteMode.Overwrite   => S3Action.ok(true)
@@ -182,7 +182,7 @@ object S3 {
     S3Action.withClient { _.getBucketLocation(bucket) }.flatMap { region =>
       region match {
         case AmazonRegion(r) => S3Action.ok(r)
-        case _ => S3Action.fail(s"Could not parse region $region")
+        case _               => S3Action.fail(s"Could not parse region $region")
       }
     }
 

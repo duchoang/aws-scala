@@ -57,7 +57,6 @@ trait LocalDynamoDBSpec extends DynamoDBSpecOps with MoreEqualsInstances {
    */
   def scriptDirectory = "scripts"
 
-
   def IS_LOCAL = !arguments.commandLine.contains("aws-integration")
   def REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
   def LOCAL_DB_PORT = arguments.commandLine.int("db-port").getOrElse(defaultDbPort)
@@ -86,7 +85,7 @@ trait LocalDynamoDBSpec extends DynamoDBSpecOps with MoreEqualsInstances {
   }
 
   def runAttemptStep[A](attempt: Attempt[A]) =
-    attempt.run.fold(i => Failure(i.toString), _ => StandardResults.success )
+    attempt.run.fold(i => Failure(i.toString), _ => StandardResults.success)
 
   def withLocalDb(f: => org.specs2.execute.Result) =
     if (IS_LOCAL)
@@ -100,8 +99,7 @@ trait LocalDynamoDBSpec extends DynamoDBSpecOps with MoreEqualsInstances {
       val dynamoClient = new AmazonDynamoDBClient(new BasicAWSCredentials("FOO", "BAR"))
       dynamoClient.setEndpoint(s"http://localhost:$LOCAL_DB_PORT")
       dynamoClient
-    }
-    else {
+    } else {
       AmazonClient.default[AmazonDynamoDBClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
     }
 

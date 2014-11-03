@@ -7,7 +7,7 @@ import scalaz.syntax.id._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class DecodeSpec extends ScalaCheckSpec {
-  
+
   def is = s2"""
     Decoder should
       not fall over if it fails to decode long      $longDecodeHandlesExceptions

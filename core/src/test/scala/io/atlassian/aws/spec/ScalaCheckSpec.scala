@@ -1,9 +1,9 @@
 package io.atlassian.aws.spec
 
-import org.joda.time.{DateTime, DateTimeZone}
-import org.scalacheck.{Arbitrary, Gen}
-import org.specs2.matcher.{Expectable, MatchResult, Matcher}
-import org.specs2.{ScalaCheck, SpecificationWithJUnit}
+import org.joda.time.{ DateTime, DateTimeZone }
+import org.scalacheck.{ Arbitrary, Gen }
+import org.specs2.matcher.{ Expectable, MatchResult, Matcher }
+import org.specs2.{ ScalaCheck, SpecificationWithJUnit }
 
 import scalaz.Equal
 import scalaz.std.AllInstances._
@@ -20,7 +20,7 @@ trait Arbitraries {
 }
 
 trait ScalazEqualMatcher {
-  def equal[T : Equal](expected: T): Matcher[T] = new Matcher[T] {
+  def equal[T: Equal](expected: T): Matcher[T] = new Matcher[T] {
     def apply[S <: T](actual: Expectable[S]): MatchResult[S] = {
       val actualT = actual.value.asInstanceOf[T]
       def test = Equal[T].equal(expected, actualT)

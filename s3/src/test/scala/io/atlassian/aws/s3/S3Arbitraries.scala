@@ -69,7 +69,7 @@ trait S3Arbitraries {
   implicit val LargeObjectToStoreArbitrary: Arbitrary[LargeObjectToStore] =
     Arbitrary(
       for {
-        dataLength <- Gen.choose(5*1024*1024 + 1, 11 * 1024 * 1024)
+        dataLength <- Gen.choose(5 * 1024 * 1024 + 1, 11 * 1024 * 1024)
         key <- arbitrary[S3Key]
         data <- Gen.listOfN(dataLength, arbitrary[Byte]).map(_.toArray)
       } yield LargeObjectToStore(key, data))

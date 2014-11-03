@@ -1,12 +1,12 @@
 package io.atlassian.aws
 package dynamodb
 
-import scalaz.{Equal, \/, \/-, -\/}
+import scalaz.{ Equal, \/, \/-, -\/ }
 import kadai.Invalid
-import org.specs2.matcher.{Expectable, Matcher}
+import org.specs2.matcher.{ Expectable, Matcher }
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import kadai.log.Logging
-import org.specs2.execute.{Success, Failure}
+import org.specs2.execute.{ Success, Failure }
 import reflect.ClassTag
 
 trait DynamoDBSpecOps extends Logging {
@@ -15,10 +15,10 @@ trait DynamoDBSpecOps extends Logging {
 
   def createTable[A, B](implicit ev: TableDefinition[A, B], client: AmazonDynamoDBClient) = {
     runDynamoDBAction(DynamoDB.createTable[A, B]()) match {
-      case -\/(e)     =>
+      case -\/(e) =>
         error(s"Error creating table: $e")
         Failure(s"Error creating table: $e")
-      case \/-(task)  =>
+      case \/-(task) =>
         debug(s"Creating table ${ev.name}")
         task.run
         debug(s"Created table ${ev.name}")
@@ -46,7 +46,7 @@ trait DynamoDBSpecOps extends Logging {
       case -\/(Invalid.Err(e)) =>
         m.toString match {
           case "Nothing" => checkType(classOf[Throwable], e)
-          case _ => checkType(m.runtimeClass, e)
+          case _         => checkType(m.runtimeClass, e)
         }
       case -\/(e) => (false, s"Unexpected failure $e")
       case \/-(v) => (false, s"Expected failure but got value $v")

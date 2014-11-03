@@ -17,17 +17,18 @@ Currently the library has basic support for S3, DynamoDB, CloudFormation and SQS
 The project is split into separate modules for each type of AWS API so you can import them separately if you wish (e.g. `aws-scala-s3`, `aws-scala-dynamodb`, `aws-scala-sqs`, `aws-scala-cloudformation`).
 Alternatively, you can:
 
-    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "0.1.2"
+    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "0.1.8"
     
 If you want the `test` JAR for some useful helpers, at the moment you will need to import the individual modules and core, e.g.: 
     
     libraryDependencies ++= Seq(
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "0.1.2",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "0.1.2",
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "0.1.2"  % "test" classifier "tests",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "0.1.2"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "0.1.8",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "0.1.8",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "0.1.8"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "0.1.8"  % "test" classifier "tests",
         )
-    
+
+Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x have a Scalaz 7.1 dependency. All are cross-compiled for both Scala 2.10 and 2.11.
    
 ### Step 1 - Creating a client
 
@@ -147,6 +148,11 @@ To run an action, just call `run` with a client, and then `run` on the Attempt t
 ## Developing
 
 This project is a pretty standard Scala/SBT project using `specs2`. Have a look at the existing specs for examples. We are using immutable specs.
+
+### Scalariform
+
+For consistent code formatting, we're using Scalariform. There is a Git pre-commit hook under `project/hooks` that you can/should put into
+your `.git/hooks` directory that will run Scalariform before all commits.
 
 ### local versus integration tests
 

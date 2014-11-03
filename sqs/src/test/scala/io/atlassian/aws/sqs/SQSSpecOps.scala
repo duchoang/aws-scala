@@ -3,20 +3,20 @@ package io.atlassian.aws.sqs
 import com.amazonaws.services.sqs.AmazonSQSClient
 import kadai.Invalid
 import kadai.log.Logging
-import org.specs2.execute.{Success, Failure}
-import org.specs2.matcher.{Matcher, Expectable}
+import org.specs2.execute.{ Success, Failure }
+import org.specs2.matcher.{ Matcher, Expectable }
 
-import scalaz.{\/-, -\/, \/}
+import scalaz.{ \/-, -\/, \/ }
 
 object SQSSpecOps extends Logging {
   import Logging._
 
   def createTestQueue(name: String)(implicit client: AmazonSQSClient) =
     runSQSAction(SQS.createQueue(QueueParameters(name))) match {
-      case -\/(e)     =>
+      case -\/(e) =>
         error(s"Error creating queue: $e")
         Failure(s"Error creating queue: $e")
-      case \/-(task)  =>
+      case \/-(task) =>
         info(s"Creating queue $name with URL $task")
         Success
     }

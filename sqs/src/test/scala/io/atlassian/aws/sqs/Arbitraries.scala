@@ -1,6 +1,6 @@
 package io.atlassian.aws.sqs
 
-import io.atlassian.aws.sqs.Examples.{Person, Replicate}
+import io.atlassian.aws.sqs.Examples.{ Person, Replicate }
 import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary._
 import scalaz.syntax.apply._

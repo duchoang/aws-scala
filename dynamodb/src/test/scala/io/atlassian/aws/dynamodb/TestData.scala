@@ -1,9 +1,9 @@
 package io.atlassian.aws
 package dynamodb
 
-import io.atlassian.aws.spec.{MoreEqualsInstances, Arbitraries}
+import io.atlassian.aws.spec.{ MoreEqualsInstances, Arbitraries }
 import org.joda.time.DateTime
-import org.scalacheck.{Gen, Arbitrary}
+import org.scalacheck.{ Gen, Arbitrary }
 import org.scalacheck.Arbitrary._
 import scalaz.Equal, scalaz.std.AllInstances._
 
@@ -36,15 +36,15 @@ object TestData extends Arbitraries with MoreEqualsInstances {
 
   implicit val ThingHashKeyDynamoMarshaller =
     Marshaller.fromColumn(logicalKey)
-  
+
   implicit val ThingRangeKeyEncoder: Encoder[ThingRangeKey] =
     Encoder[Long].contramap { _.seq }
 
   implicit val ThingRangeKeyDynamoMarshaller =
     Marshaller.fromColumn(sequence)
-  
+
   implicit val ThingKeyDynamoMarshaller =
-    Marshaller.fromColumn2[ThingHashKey, ThingRangeKey, ThingKey](logicalKey, sequence){ key =>
+    Marshaller.fromColumn2[ThingHashKey, ThingRangeKey, ThingKey](logicalKey, sequence) { key =>
       (ThingHashKey(key.tenant, key.app, key.blobId), ThingRangeKey(key.seq))
     }
 
@@ -92,7 +92,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
       }
   }
 
-  def thingDynamoMappingForTableName(tableName: String) = 
+  def thingDynamoMappingForTableName(tableName: String) =
     TableDefinition.from[ThingKey, ThingValue](tableName, "logicalKey", Some(AttributeDefinition.number("seq")), 5, 5)
 
   implicit def ThingKeyArbitrary: Arbitrary[ThingKey] =
@@ -100,7 +100,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
       for {
         tenant <- Gen.uuid.map { _.toString }
         app <- Gen.uuid.map { _.toString }
-        seq <- Gen.chooseNum(Long.MinValue + 1000000, Long.MaxValue - 1000000)  // We do some incrementing so give us some buffer around the wraparounds
+        seq <- Gen.chooseNum(Long.MinValue + 1000000, Long.MaxValue - 1000000) // We do some incrementing so give us some buffer around the wraparounds
       } yield ThingKey(tenant, app, java.util.UUID.randomUUID.toString, seq)
     }
 
@@ -116,7 +116,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
 
   implicit def ThingValueEqual: Equal[ThingValue] = Equal.equal((a, b) =>
     a.blobHash == b.blobHash && a.length == b.length &&
-    implicitly[Equal[Option[DateTime]]].equal(a.deletedTimestamp, b.deletedTimestamp) &&
-    a.metaData == b.metaData
+      implicitly[Equal[Option[DateTime]]].equal(a.deletedTimestamp, b.deletedTimestamp) &&
+      a.metaData == b.metaData
   )
 }

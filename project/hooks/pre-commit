@@ -1,0 +1,8 @@
+#!/bin/sh
+
+echo "Scalariforming..."
+if test $(sbt ";scalariformFormat;test:scalariformFormat" | grep -c -E "Reformatted|Failed") != 0
+then
+    echo "Adding scalariformed files..."
+    git add -u
+fi
