@@ -7,7 +7,13 @@ import scalaz.syntax.std.list._
 trait Types {
   sealed trait BucketMarker
   type Bucket = String @@ BucketMarker
-  object Bucket extends Tagger[String, BucketMarker]
+  object Bucket extends Tagger[String, BucketMarker] {
+    implicit class BucketSyntax(b: Bucket) {
+      lazy val s: String =
+        b
+    }
+    implicit def BucketAsString(b: Bucket): String = Tag.unwrap(b)
+  }
 
   sealed trait S3KeyMarker
   type S3Key = String @@ S3KeyMarker
@@ -38,7 +44,13 @@ trait Types {
 
       lazy val foldersWithLeadingPaths: List[String] =
         folders.initz.tail.map { l => l.mkString("/") }
+
+      lazy val s: String =
+        k
     }
+
+    implicit def S3KeyAsString(k: S3Key): String =
+      Tag.unwrap(k)
   }
 
   sealed trait CopyResult

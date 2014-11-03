@@ -5,8 +5,10 @@ import argonaut._, Argonaut._
 case class ContentLocation(bucket: Bucket, key: S3Key)
 
 object ContentLocation {
+  import Bucket._, S3Key._
+
   implicit val ContentLocationEncodeJson: EncodeJson[ContentLocation] =
-    jencode2L { (c: ContentLocation) => (c.bucket, c.key) }("bucket", "key")
+    jencode2L { (c: ContentLocation) => (c.bucket.s, c.key.s) }("bucket", "key")
 
   implicit val ContentLocationDecodeJson: DecodeJson[ContentLocation] =
     DecodeJson { c =>

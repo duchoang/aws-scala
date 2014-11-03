@@ -1,7 +1,7 @@
 package io.atlassian.aws
 
 import scalaz.{ Monad, \/-, -\/ }
-import scalaz.syntax.id._
+import scalaz.syntax.either._
 import scalaz.syntax.monad._
 import kadai.Invalid
 

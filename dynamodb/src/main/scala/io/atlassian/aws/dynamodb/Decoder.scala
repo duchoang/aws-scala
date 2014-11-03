@@ -6,7 +6,7 @@ import org.joda.time.{ DateTimeZone, DateTime }
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 
 import scalaz.Monad
-import scalaz.syntax.id.ToIdOps
+import scalaz.syntax.id._
 import scalaz.syntax.monad.ToBindOps
 
 /**

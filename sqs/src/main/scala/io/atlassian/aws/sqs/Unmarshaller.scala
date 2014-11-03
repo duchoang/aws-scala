@@ -4,9 +4,7 @@ package sqs
 import com.amazonaws.services.sqs.model.Message
 import org.joda.time.DateTime
 import scalaz.Monad
-import scalaz.syntax.id._
-import scalaz.syntax.monad._
-import scalaz.syntax.monoid._
+import scalaz.syntax.all._
 import scala.collection.JavaConverters._
 import kadai.Invalid
 import argonaut._, Argonaut._

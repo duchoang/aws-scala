@@ -78,6 +78,11 @@ Being a monad, you can sequence them, `run` them with the client, and also `reco
 Each AWS resource has a typedef setting the client to the appropriate AWS SDK client type. i.e. `S3Action`, `DynamoDBAction`, `CFAction`.
 Each resource also has an object that creates these actions e.g. `S3`, `DynamoDB` and `CloudFormation` objects. Where possible, we've created `scalaz` Tagged types to wrap primitive Strings.
 
+#### Using tagged types
+
+We use tagged types in quite a few places to make sure strings like bucket names and key names can't be accidentally mixed up. With changes to Scalaz 7.1 tagged types, we've added some
+auto-converters to unwrap tagged types. To access these, you will need to import the contents of companion objects of types e.g. `import Bucket._, S3Key._`
+
 #### DynamoDB table mapping
 
 To use the DynamoDB actions, you will need to provide a mapping between your data you want to save and something that the AWS SDK understands.
@@ -121,7 +126,7 @@ The `test` JAR includes a few useful helpers:
    * `io.atlassian.aws.DynamoDBSpecOps` and `io.atlassian.aws.LocalDynamoDBSpec` - Has a bunch of useful functions for creating and deleting temporary tables for testing, and also spinning up a local DynamoDB. Check out `DynamoDBSpec` to see how to use it. 
       If you want to use `LocalDynamoDBSpec`, the key things to do are:
           * Extend the trait
-          * Copy the scripts in the `scripts` directory for installing, starting and stopping local Dynamo.
+          * Copy the scripts in the `scripts` directory for installing, starting and stopping local Dynamo. You will need to have `timeout/gtimeout` and `wget` installed.
           * Add a `arguments` constructor argument to your spec class i.e. `(val arguments: org.specs2.main.Arguments)`
           * Add an implicit value pointing to the client factory function i.e. `implicit val DYNAMO_CLIENT = dynamoClient`
           * Override the `scriptDirectory` function to point to where you store your scripts. e.g. `override val scriptDirectory = "../scripts"`. It is a relative path from the root of the module typically.
@@ -165,7 +170,7 @@ To run the local tests, just do the normal `sbt test`.
 To run integration tests, you will need to:
 
   1. Set up AWS access keys as per standard AWS Java SDK settings (e.g. `AWS_SECRET_KEY` and `AWS_ACCESS_KEY_ID` environment variables)
-  2. Ensure that you have `gtimeout` installed e.g. `brew install coreutils` on Mac OS X
+  2. Ensure that you have `gtimeout` and `wget` installed e.g. `brew install coreutils` and `brew install wget` on Mac OS X
   3. Run the integration tests via `sbt 'test-only -- aws-integration'`
   
 
@@ -173,7 +178,7 @@ To run integration tests, you will need to:
 
 To release and publish, use the standard `sbt`-ism:
 
-    sbt publish      # To publish a snapshot to maven private snapshot repo
-    sbt release      # To tag a release and publish to maven private release repo
+    sbt publish             # To publish a snapshot to maven private snapshot repo
+    sbt 'release cross'     # To tag a release and publish to maven private release repo
     
 Obviously be sure the run the integration before releasing.

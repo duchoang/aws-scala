@@ -5,7 +5,7 @@ import io.atlassian.aws.spec.ScalaCheckSpec
 import org.junit.runner.RunWith
 import org.scalacheck.Prop
 
-import scalaz.syntax.id.ToIdOps
+import scalaz.syntax.id._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class ObjectMarshallUnmarshallSpec extends ScalaCheckSpec {

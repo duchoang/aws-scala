@@ -24,7 +24,7 @@ object S3 {
 
   val MultipartChunkSize = 5 * 1024 * 1024
 
-  import S3Key._
+  import Bucket._, S3Key._
 
   def get(location: ContentLocation, range: Range = Range.All): S3Action[S3Object] =
     S3Action.withClient {

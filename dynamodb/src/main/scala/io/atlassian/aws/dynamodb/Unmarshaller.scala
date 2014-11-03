@@ -3,7 +3,7 @@ package dynamodb
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import kadai.Invalid
-import scalaz.Monad, scalaz.syntax.monad._, scalaz.syntax.id._, scalaz.syntax.monoid._
+import scalaz.Monad, scalaz.syntax.all._
 
 /**
  * Type class for unmarshalling objects from a map returned from AWS DynamoDB client

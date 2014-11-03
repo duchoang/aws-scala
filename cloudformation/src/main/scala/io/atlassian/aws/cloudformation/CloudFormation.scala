@@ -8,7 +8,7 @@ import scala.io.Source
 import scalaz.syntax.id._
 
 object CloudFormation {
-
+  import StackName._
   def createOrUpdateStackFrom(file: File)(name: StackName): CFAction[StackOperationId] =
     stackExists(name).flatMap {
       case false =>

@@ -5,7 +5,7 @@ import com.amazonaws.services.sqs.model.MessageAttributeValue
 import org.joda.time.{ DateTime, DateTimeZone }
 
 import scalaz.Monad
-import scalaz.syntax.id.ToIdOps
+import scalaz.syntax.id._
 import scalaz.syntax.bind.ToBindOps
 
 /**

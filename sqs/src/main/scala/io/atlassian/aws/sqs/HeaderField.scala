@@ -34,5 +34,6 @@ object FieldMainType {
 }
 
 object HeaderTypes {
+  import HeaderSubType._
   val MsSinceEpoch: FieldType = FieldType(FieldMainType.Number, Some(HeaderSubType("msSinceEpoch")))
 }

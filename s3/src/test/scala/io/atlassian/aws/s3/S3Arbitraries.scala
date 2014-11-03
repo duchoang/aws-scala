@@ -64,6 +64,9 @@ trait S3Arbitraries {
   object LargeObjectToStore {
     def apply(key: S3Key, data: Array[Byte]): LargeObjectToStore =
       Tag(ObjectToStore(key, data))
+
+    implicit def AsObjectToStore(l: LargeObjectToStore): ObjectToStore =
+      Tag.unwrap(l)
   }
 
   implicit val LargeObjectToStoreArbitrary: Arbitrary[LargeObjectToStore] =

@@ -20,7 +20,6 @@ import scala.collection.JavaConverters._
  */
 object DynamoDB extends QueryOps {
 
-  import io.atlassian.scalaz71.EnhancedScalazConcurrent._
   import scala.concurrent.duration._
   import DynamoDBAction.withClient
 

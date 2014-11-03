@@ -12,6 +12,8 @@ import scalaz.syntax.std.option._
 import scala.collection.JavaConverters._
 
 object SQS {
+  import QueueURL._, ReceiptHandle._
+
   def createQueue(parameters: QueueParameters): SQSAction[QueueURL] =
     SQSAction.withClient {
       _.createQueue {
