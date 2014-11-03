@@ -3,7 +3,7 @@ package sqs
 
 import com.amazonaws.services.sqs.model.MessageAttributeValue
 
-import scalaz.{Tag, @@}
+import scalaz.{ Tag, @@ }
 
 trait Types {
   sealed trait QueueURLMarker

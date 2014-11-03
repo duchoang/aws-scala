@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package cloudformation
 
-import scalaz.{Tag, @@}
+import scalaz.{ Tag, @@ }
 
 trait Types {
   sealed trait StackNameMarker
