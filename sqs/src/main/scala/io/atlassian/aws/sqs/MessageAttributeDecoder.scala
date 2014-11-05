@@ -38,20 +38,20 @@ object MessageAttributeDecoder {
 
   def from[A](a: Attempt[A]): MessageAttributeDecoder[A] = MessageAttributeDecoder { _ => a }
 
-  def mandatoryField[A](f: MessageAttributeValue => A, typeLabel: String): MessageAttributeDecoder[A] =
+  def mandatoryField[A](f: MessageAttributeValue => Attempt[A], typeLabel: String): MessageAttributeDecoder[A] =
     option {
       case None     => Attempt.fail(s"Could not decode $typeLabel value")
-      case Some(av) => Attempt.safe(f(av))
+      case Some(av) => f(av)
     }
 
   implicit val LongMessageAttributeDecode: MessageAttributeDecoder[Long] =
-    mandatoryField(_.getStringValue.toLong, "Long")
+    mandatoryField(v => Attempt.safe(v.getStringValue.toLong), "Long")
 
   implicit val IntMessageAttributeDecode: MessageAttributeDecoder[Int] =
-    mandatoryField(_.getStringValue.toInt, "Int")
+    mandatoryField(v => Attempt.safe(v.getStringValue.toInt), "Int")
 
   implicit val DateTimeMessageAttributeDecode: MessageAttributeDecoder[DateTime] =
-    mandatoryField(_.getStringValue.toLong |> { i => new DateTime(i, DateTimeZone.UTC) }, "DateTime")
+    mandatoryField(v => Attempt.safe(v.getStringValue.toLong |> { i => new DateTime(i, DateTimeZone.UTC) }), "DateTime")
 
   implicit val StringMessageAttributeDecode: MessageAttributeDecoder[String] =
     option {
