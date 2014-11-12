@@ -8,7 +8,6 @@ import scala.io.Source
 import scalaz.syntax.id._
 
 object CloudFormation {
-  import StackName._
   def createOrUpdateStackFrom(file: File)(name: StackName): CFAction[StackOperationId] =
     stackExists(name).flatMap {
       case false =>
@@ -31,7 +30,7 @@ object CloudFormation {
         val fileSource = Source.fromFile(file)
         try {
           client.createStack(
-            new CreateStackRequest().withStackName(name).withTemplateBody(fileSource.mkString)
+            new CreateStackRequest().withStackName(name.unwrap).withTemplateBody(fileSource.mkString)
           ).getStackId |> StackOperationId.apply
         } finally {
           fileSource.close()
@@ -41,7 +40,7 @@ object CloudFormation {
 
   def createStackFrom(url: URL)(name: StackName): CFAction[StackOperationId] =
     CFAction.withClient {
-      _.createStack(new CreateStackRequest().withStackName(name).withTemplateURL(url.toString)).getStackId |> StackOperationId.apply
+      _.createStack(new CreateStackRequest().withStackName(name.unwrap).withTemplateURL(url.toString)).getStackId |> StackOperationId.apply
     }
 
   def updateStackFrom(file: File)(name: StackName): CFAction[StackOperationId] =
@@ -50,7 +49,7 @@ object CloudFormation {
         val fileSource = Source.fromFile(file)
         try {
           client.updateStack(
-            new UpdateStackRequest().withStackName(name).withTemplateBody(fileSource.mkString)
+            new UpdateStackRequest().withStackName(name.unwrap).withTemplateBody(fileSource.mkString)
           ).getStackId |> StackOperationId.apply
         } finally {
           fileSource.close()
@@ -60,18 +59,18 @@ object CloudFormation {
 
   def updateStackFrom(url: URL)(name: StackName): CFAction[StackOperationId] =
     CFAction.withClient {
-      _.updateStack(new UpdateStackRequest().withStackName(name).withTemplateURL(url.toString)).getStackId |> StackOperationId.apply
+      _.updateStack(new UpdateStackRequest().withStackName(name.unwrap).withTemplateURL(url.toString)).getStackId |> StackOperationId.apply
     }
 
   def deleteStack(name: StackName): CFAction[Unit] =
     CFAction.withClient {
-      _.deleteStack(new DeleteStackRequest().withStackName(name))
+      _.deleteStack(new DeleteStackRequest().withStackName(name.unwrap))
     }
 
   def describeStack(name: StackName): CFAction[Option[Stack]] =
     CFAction.withClient {
       import collection.JavaConversions._
-      _.describeStacks(new DescribeStacksRequest().withStackName(name)).getStacks.headOption
+      _.describeStacks(new DescribeStacksRequest().withStackName(name.unwrap)).getStacks.headOption
     }
 
   def stackExists(name: StackName): CFAction[Boolean] =

@@ -21,14 +21,13 @@ import scalaz.syntax.std.boolean._
 import scalaz.syntax.std.option._
 
 object S3 {
+  import S3Key._
 
   val MultipartChunkSize = 5 * 1024 * 1024
 
-  import Bucket._, S3Key._
-
   def get(location: ContentLocation, range: Range = Range.All): S3Action[S3Object] =
     S3Action.withClient {
-      _ getObject new GetObjectRequest(location.bucket, location.key) <| {
+      _ getObject new GetObjectRequest(location.bucket.unwrap, location.key.unwrap) <| {
         req => range.get.foreach { case (from, to) => req.setRange(from, to) }
       }
     }
@@ -42,7 +41,7 @@ object S3 {
     for {
       _ <- createFolders.whenM(S3.createFoldersFor(location))
       _ = length.foreach(metaData.setContentLength)
-      putResult <- S3Action.withClient(_.putObject(location.bucket, location.key, stream, metaData))
+      putResult <- S3Action.withClient(_.putObject(location.bucket.unwrap, location.key.unwrap, stream, metaData))
     } yield putResult
 
   private def putChunks(location: ContentLocation, stream: InputStream, uploadId: String, parts: List[PartETag], length: Long, buffer: Array[Byte]): S3Action[(List[PartETag], Long)] =
@@ -55,13 +54,13 @@ object S3 {
           partResult <- AwsAction.apply[AmazonS3Client, UploadPartResult] { client =>
             try {
               Attempt.ok(client.uploadPart(new UploadPartRequest()
-                .withBucketName(location.bucket).withKey(location.key)
+                .withBucketName(location.bucket.unwrap).withKey(location.key.unwrap)
                 .withUploadId(uploadId).withPartNumber(parts.length + 1)
                 .withInputStream(new ByteArrayInputStream(buffer, 0, rn))
                 .withPartSize(rn.toLong)))
             } catch {
               case t: Throwable =>
-                client.abortMultipartUpload(new AbortMultipartUploadRequest(location.bucket, location.key, uploadId))
+                client.abortMultipartUpload(new AbortMultipartUploadRequest(location.bucket.unwrap, location.key.unwrap, uploadId))
                 Attempt.exception(t)
             }
           }
@@ -83,13 +82,13 @@ object S3 {
       case None => for {
         _ <- createFolders.whenM(S3.createFoldersFor(location))
         initResult <- S3Action.withClient {
-          _.initiateMultipartUpload(new InitiateMultipartUploadRequest(location.bucket, location.key, metaData))
+          _.initiateMultipartUpload(new InitiateMultipartUploadRequest(location.bucket.unwrap, location.key.unwrap, metaData))
         }
         putResult <- putChunks(location, stream, initResult.getUploadId, List(), 0, new Array[Byte](MultipartChunkSize))
         (parts, contentLength) = putResult
         compResult <- S3Action.withClient {
           // We need to convert `parts` to a mutable java.util.List, because the AWS SDK will sort the list internally.
-          _.completeMultipartUpload(new CompleteMultipartUploadRequest(location.bucket, location.key, initResult.getUploadId, new ArrayList(parts.asJava)))
+          _.completeMultipartUpload(new CompleteMultipartUploadRequest(location.bucket.unwrap, location.key.unwrap, initResult.getUploadId, new ArrayList(parts.asJava)))
         }
       } yield contentLength
     }
@@ -144,7 +143,7 @@ object S3 {
     for {
       _ <- createFolders.whenM { S3.createFoldersFor(to) }
       metaData <- newMetaData.fold { metaData(from) } { S3Action.ok }
-      result <- S3Action.withClient { _ copyObject new CopyObjectRequest(from.bucket, from.key, to.bucket, to.key).withNewObjectMetadata(metaData) }
+      result <- S3Action.withClient { _ copyObject new CopyObjectRequest(from.bucket.unwrap, from.key.unwrap, to.bucket.unwrap, to.key.unwrap).withNewObjectMetadata(metaData) }
     } yield result
 
   def safeMetaData(location: ContentLocation): S3Action[Option[ObjectMetadata]] =
@@ -153,19 +152,19 @@ object S3 {
     }
 
   def metaData(location: ContentLocation): S3Action[ObjectMetadata] =
-    S3Action.withClient { _.getObjectMetadata(location.bucket, location.key) }
+    S3Action.withClient { _.getObjectMetadata(location.bucket.unwrap, location.key.unwrap) }
 
   def exists(location: ContentLocation): S3Action[Boolean] =
     safeMetaData(location).map { _.isDefined }
 
   def delete(location: ContentLocation): S3Action[Unit] =
     S3Action.withClient {
-      _.deleteObject(new DeleteObjectRequest(location.bucket, location.key))
+      _.deleteObject(new DeleteObjectRequest(location.bucket.unwrap, location.key.unwrap))
     }
 
   def listKeys(bucket: Bucket, prefix: String): S3Action[ObjectListing] =
     S3Action.withClient {
-      _.listObjects(bucket, prefix)
+      _.listObjects(bucket.unwrap, prefix)
     }
 
   def nextBatchOfKeys(lastListing: ObjectListing): S3Action[ObjectListing] =
@@ -175,11 +174,11 @@ object S3 {
 
   def exists(bucket: Bucket): S3Action[Boolean] =
     S3Action.withClient {
-      _.doesBucketExist(bucket)
+      _.doesBucketExist(bucket.unwrap)
     }
 
   def regionFor(bucket: Bucket): S3Action[Region] =
-    S3Action.withClient { _.getBucketLocation(bucket) }.flatMap { region =>
+    S3Action.withClient { _.getBucketLocation(bucket.unwrap) }.flatMap { region =>
       region match {
         case AmazonRegion(r) => S3Action.ok(r)
         case _               => S3Action.fail(s"Could not parse region $region")

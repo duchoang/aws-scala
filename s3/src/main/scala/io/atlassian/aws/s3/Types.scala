@@ -7,13 +7,7 @@ import scalaz.syntax.std.list._
 trait Types {
   sealed trait BucketMarker
   type Bucket = String @@ BucketMarker
-  object Bucket extends Tagger[String, BucketMarker] {
-    implicit class BucketSyntax(b: Bucket) {
-      lazy val s: String =
-        b
-    }
-    implicit def BucketAsString(b: Bucket): String = Tag.unwrap(b)
-  }
+  object Bucket extends Tagger[String, BucketMarker]
 
   sealed trait S3KeyMarker
   type S3Key = String @@ S3KeyMarker
@@ -22,20 +16,20 @@ trait Types {
       Tag(s"${folders.mkString("/")}/$key")
 
     implicit class S3KeySyntax(k: S3Key) {
-      lazy val isFolder: Boolean = k.endsWith("/")
+      lazy val isFolder: Boolean = k.unwrap.endsWith("/")
       lazy val prefix: String = {
-        if (k.endsWith("/"))
-          k
+        if (k.unwrap.endsWith("/"))
+          k.unwrap
         else {
-          val lastSlash = k.lastIndexOf('/')
+          val lastSlash = k.unwrap.lastIndexOf('/')
           if (lastSlash > 0)
-            k.substring(0, lastSlash + 1)
+            k.unwrap.substring(0, lastSlash + 1)
           else
             ""
         }
       }
       lazy val folders: List[String] = {
-        val pathComponents = k.split("/").toList
+        val pathComponents = k.unwrap.split("/").toList
 
         if (pathComponents.isEmpty) Nil
         else if (isFolder) pathComponents
@@ -44,13 +38,7 @@ trait Types {
 
       lazy val foldersWithLeadingPaths: List[String] =
         folders.initz.tail.map { l => l.mkString("/") }
-
-      lazy val s: String =
-        k
     }
-
-    implicit def S3KeyAsString(k: S3Key): String =
-      Tag.unwrap(k)
   }
 
   sealed trait CopyResult

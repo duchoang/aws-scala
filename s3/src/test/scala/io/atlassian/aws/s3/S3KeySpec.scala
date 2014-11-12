@@ -1,4 +1,5 @@
-package io.atlassian.aws.s3
+package io.atlassian.aws
+package s3
 
 import org.scalacheck.Prop
 import org.specs2.{ ScalaCheck, SpecificationWithJUnit }
@@ -41,7 +42,7 @@ class S3KeySpec extends SpecificationWithJUnit with S3Arbitraries with ScalaChec
 
   def s3KeyPrefixWorksForNoFolders = Prop.forAll {
     key: S3Key =>
-      S3Key(key.split("/").last).prefix === ""
+      S3Key(key.unwrap.split("/").last).prefix === ""
   }
 
   def s3KeyPrefixWorksForFolders = Prop.forAll {

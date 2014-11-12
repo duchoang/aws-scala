@@ -12,8 +12,6 @@ import scalaz.syntax.std.option._
 import scala.collection.JavaConverters._
 
 object SQS {
-  import QueueURL._, ReceiptHandle._
-
   def createQueue(parameters: QueueParameters): SQSAction[QueueURL] =
     SQSAction.withClient {
       _.createQueue {
@@ -32,13 +30,13 @@ object SQS {
     }
 
   def deleteQueue(url: QueueURL): SQSAction[Unit] =
-    SQSAction.withClient { _.deleteQueue(url) }
+    SQSAction.withClient { _.deleteQueue(url.unwrap) }
 
   def send[A: Marshaller](url: QueueURL, message: A, delay: Duration = 0.seconds): SQSAction[SendResult] =
     SQSAction.withClient {
       _.sendMessage(
         new SendMessageRequest()
-          .withQueueUrl(url)
+          .withQueueUrl(url.unwrap)
           .withDelaySeconds(delay.toSeconds.toInt)
           .withMessageAttributes(Marshaller[A].headerFlattened(message).asJava)
           .withMessageBody(Marshaller[A].body(message))
@@ -48,7 +46,7 @@ object SQS {
   def receive[A: Unmarshaller](url: QueueURL, params: ReceiveMessageParameters = ReceiveMessageParameters()): SQSAction[List[ReceivedMessage[A]]] =
     SQSAction.withClient {
       _.receiveMessage {
-        new ReceiveMessageRequest(url)
+        new ReceiveMessageRequest(url.unwrap)
           .withMaxNumberOfMessages(params.numMessages)
           .withAttributeNames("All")
           .withMessageAttributeNames("All") <| { r =>
@@ -62,7 +60,7 @@ object SQS {
 
   def delete(url: QueueURL, handle: ReceiptHandle): SQSAction[Unit] =
     SQSAction.withClient {
-      _.deleteMessage(new DeleteMessageRequest().withQueueUrl(url).withReceiptHandle(handle))
+      _.deleteMessage(new DeleteMessageRequest().withQueueUrl(url.unwrap).withReceiptHandle(handle.unwrap))
     }
 
   def delete(url: QueueURL, handles: List[ReceiptHandle]): SQSAction[DeleteResult] = {
@@ -71,10 +69,10 @@ object SQS {
       SQSAction.withClient { client =>
 
         val batchWithId = batch.zipWithIndex.map { case (h, index) => index.toString -> h }
-        val batchRequestEntries = batchWithId.map { case (index, h) => new DeleteMessageBatchRequestEntry(index, h) }
+        val batchRequestEntries = batchWithId.map { case (index, h) => new DeleteMessageBatchRequestEntry(index, h.unwrap) }
         val idToHandle = batchWithId.toMap
 
-        client.deleteMessageBatch(new DeleteMessageBatchRequest(url)
+        client.deleteMessageBatch(new DeleteMessageBatchRequest(url.unwrap)
           .withEntries(batchRequestEntries.asJava)).getFailed.asScala.map { entry =>
           FailedDelete(idToHandle.get(entry.getId), entry.getSenderFault, entry.getMessage)
         }.toList
@@ -87,8 +85,8 @@ object SQS {
     SQSAction.withClient {
       _.changeMessageVisibility(
         new ChangeMessageVisibilityRequest()
-          .withQueueUrl(url)
-          .withReceiptHandle(handle)
+          .withQueueUrl(url.unwrap)
+          .withReceiptHandle(handle.unwrap)
           .withVisibilityTimeout(newVisibilityFromNow.toSeconds.toInt)
       )
     }

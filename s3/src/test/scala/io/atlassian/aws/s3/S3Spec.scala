@@ -213,12 +213,12 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
         val dataStream = new ByteArrayInputStream(data.data)
         val key = S3Key(s"$TEST_FOLDER/${data.key}")
         val location = ContentLocation(BUCKET, key)
-        val metaData = S3.DefaultObjectMetadata <| { _.addUserMetadata("foo", data.key) }
+        val metaData = S3.DefaultObjectMetadata <| { _.addUserMetadata("foo", data.key.unwrap) }
 
         (for {
           _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong), metaData)
           retrievedMetaData <- S3.metaData(location)
-        } yield retrievedMetaData) must returnResult { r => r.getUserMetadata.get("foo") === data.key }
+        } yield retrievedMetaData) must returnResult { r => r.getUserMetadata.get("foo") === data.key.unwrap }
       }
   }.set(minTestsOk = 5)
 
@@ -257,7 +257,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
 
   def regionForWorks =
     S3.regionFor(BUCKET) must returnResult { (r: Region) =>
-      S3_CLIENT.getBucketLocation(BUCKET) === r.getName
+      S3_CLIENT.getBucketLocation(BUCKET.unwrap) === r.getName
     }
 
   def regionForWorksForNonExistentBucket =
