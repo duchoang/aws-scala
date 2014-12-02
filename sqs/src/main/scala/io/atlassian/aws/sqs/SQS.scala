@@ -28,7 +28,7 @@ object SQS {
 
   def safeQueueURL(name: String): SQSAction[Option[QueueURL]] =
     queueURL(name).map { _.some }.handle {
-      case Invalid.Err(e: QueueDoesNotExistException) => Attempt.ok(None)
+      case Invalid.Err(e: QueueDoesNotExistException) => SQSAction.ok(None)
     }
 
   def deleteQueue(url: QueueURL): SQSAction[Unit] =

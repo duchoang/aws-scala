@@ -35,7 +35,7 @@ object S3 {
 
   def safeGet(location: ContentLocation, range: Range = Range.All): S3Action[Option[S3Object]] =
     get(location, range).map { some }.handle {
-      case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => Attempt.ok(None)
+      case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => S3Action.ok(None)
     }
 
   def putStream(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[PutObjectResult] =
@@ -149,7 +149,7 @@ object S3 {
 
   def safeMetaData(location: ContentLocation): S3Action[Option[ObjectMetadata]] =
     metaData(location).map { some }.handle {
-      case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => Attempt.ok(None)
+      case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => S3Action.ok(None)
     }
 
   def metaData(location: ContentLocation): S3Action[ObjectMetadata] =

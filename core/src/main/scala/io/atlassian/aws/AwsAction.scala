@@ -10,18 +10,11 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
     def apply[R, A](f: R => Attempt[A]): AwsAction[R, A] =
       Kleisli { f }
 
-    def safe[R, A](f: R => Attempt[A]): AwsAction[R, A] =
-      this.apply { r => Attempt.safe(f(r)).join }
-
     def value[R, A](v: => A): AwsAction[R, A] =
       AwsAction { _ => Attempt.ok(v) }
 
     def ask[R]: AwsAction[R, R] =
       AwsAction(Attempt.ok)
-
-    @deprecated("use ask instead", "2.0")
-    def config[R]: AwsAction[R, R] =
-      ask
 
     def ok[R, A](strict: A): AwsAction[R, A] =
       value(strict)
@@ -35,40 +28,28 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
     def fail[R, A](msg: String): AwsAction[R, A] =
       AwsAction { _ => Attempt.fail(msg) }
 
-    implicit def AwsActionMonad[R]: Monad[({ type L[A] = AwsAction[R, A] })#L] =
-      new Monad[({ type L[A] = AwsAction[R, A] })#L] {
-        def point[A](v: => A) = AwsAction.ok(v)
-        def bind[A, B](m: AwsAction[R, A])(f: A => AwsAction[R, B]) = m flatMap f
-        override def map[A, B](m: AwsAction[R, A])(f: A => B) = m map f
-      }
+    def invalid[R, A](i: Invalid): AwsAction[R, A] =
+      AwsAction { _ => Attempt(i.left) }
 
     implicit class AwsActionOps[R, A](action: AwsAction[R, A]) {
-      private[AwsAction] def unsafeRun(r: R): Attempt[A] = ???
+      def recover(f: Invalid => AwsAction[R, A]): AwsAction[R, A] =
+        AwsAction[R, A] { r => action.run(r).run.fold(f, a => ok[R, A](a)).run(r) }
 
-      def run(r: R): Attempt[A] =
-        Attempt.safe(unsafeRun(r)).join.lift { _.leftMap(AmazonExceptions.transformException) }
-
-      def recover(f: Invalid => Attempt[A]): AwsAction[R, A] =
-        AwsAction[R, A] { run(_: R).run.fold(f, Attempt.ok) }
-
-      def handle(f: PartialFunction[Invalid, Attempt[A]]): AwsAction[R, A] =
-        recover { f orElse { case i => Attempt(i.left) } }
+      def handle(f: PartialFunction[Invalid, AwsAction[R, A]]): AwsAction[R, A] =
+        recover { f orElse { case i => invalid(i) } }
     }
 
     trait Functions[C] {
       type Action[A] = AwsAction[C, A]
 
-      def value[A](v: => A): Action[A] =
-        AwsAction.value(v)
+      def apply[A](run: C => Attempt[A]): Action[A] =
+        AwsAction(run)
 
       def safe[A](v: => A): Action[A] =
         AwsAction.attempt { Attempt.safe(v) }
 
-      def config: Action[C] =
-        AwsAction { c => Attempt.ok(c) }
-
-      def ok[A](strict: A): Action[A] =
-        value(strict)
+      def value[A](v: => A): Action[A] =
+        AwsAction.value(v)
 
       def attempt[A](a: Attempt[A]): Action[A] =
         AwsAction.attempt(a)
@@ -76,8 +57,8 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
       def withClient[A](f: C => A): Action[A] =
         AwsAction.withClient(f)
 
-      def apply[A](run: C => Attempt[A]): Action[A] =
-        AwsAction.safe(run)
+      def ok[A](strict: A): Action[A] =
+        value(strict)
 
       def fail[A](msg: String): Action[A] =
         attempt(Attempt.fail(msg))
