@@ -41,8 +41,10 @@ object Settings {
         , Resolver.mavenLocal
         , "atlassian-public"   at "https://maven.atlassian.com/content/groups/atlassian-public/"
         , "atlassian-internal" at "https://maven.atlassian.com/content/groups/internal/"
-        , "Tools Releases"     at "http://oss.sonatype.org/content/repositories/releases"
-        , "Tools Snapshots"    at "http://oss.sonatype.org/content/repositories/snapshots"
+        , Resolver.sonatypeRepo("public")
+        , Resolver.sonatypeRepo("releases")
+        , Resolver.sonatypeRepo("snapshots")
+        , Resolver.bintrayRepo("non", "maven")
         )
       , credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
       , mappings in (Compile, packageBin) ++= Seq(
@@ -54,6 +56,7 @@ object Settings {
       , ScalariformKeys.preferences := ScalariformKeys.preferences.value
           .setPreference(AlignSingleLineCaseStatements, true)
           .setPreference(AlignParameters, true)
+      , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.5.2")
       )
 
   lazy val standardSettingsAndDependencies =

@@ -29,7 +29,7 @@ trait DynamoDBSpecOps extends Logging {
   def deleteTable[A, B](implicit ev: TableDefinition[A, B], client: AmazonDynamoDBClient) =
     runDynamoDBAction(DynamoDB.deleteTable[A, B])
 
-  def runDynamoDBAction[A](action: DynamoDBAction[A])(implicit client: AmazonDynamoDBClient) =
+  def runDynamoDBAction[A](action: DynamoDBAction[A])(implicit client: AmazonDynamoDBClient): Invalid \/ A =
     action.run(client).run
 
   def returnFailure[A](implicit client: AmazonDynamoDBClient) =
