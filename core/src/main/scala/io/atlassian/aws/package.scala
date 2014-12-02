@@ -2,7 +2,7 @@ package io.atlassian
 
 import scalaz.{ ReaderT, Tag, @@ }
 
-package object aws extends Types {
+package object aws extends AwsActionTypes with Types {
   type Attempt[A] = kadai.Attempt[A]
   val Attempt = kadai.Attempt
 
