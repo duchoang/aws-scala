@@ -17,10 +17,10 @@ object DynamoDBAction {
     DynamoDBAction { _ => attempt }
 
   def withClient[O](f: AmazonDynamoDBClient => O): DynamoDBAction[O] =
-    config map f
+    AwsAction.withClient(f)
 
   def apply[A](run: AmazonDynamoDBClient => Attempt[A]): DynamoDBAction[A] =
-    AwsAction.apply[AmazonDynamoDBClient, A](run)
+    AwsAction.safe(run)
 
   def fail[A](msg: String): DynamoDBAction[A] =
     attempt(Attempt.fail(msg))

@@ -22,6 +22,7 @@ import scalaz.syntax.std.option._
 
 object S3 {
   import S3Key._
+  import AwsAction._
 
   val MultipartChunkSize = 5 * 1024 * 1024
 
@@ -124,10 +125,10 @@ object S3 {
    *         NoOverwrite was specified).
    */
   def copy(from: ContentLocation,
-           to: ContentLocation,
-           meta: Option[ObjectMetadata] = None,
-           createFolders: Boolean = true,
-           overwrite: OverwriteMode = OverwriteMode.Overwrite): S3Action[Option[CopyObjectResult]] =
+    to: ContentLocation,
+    meta: Option[ObjectMetadata] = None,
+    createFolders: Boolean = true,
+    overwrite: OverwriteMode = OverwriteMode.Overwrite): S3Action[Option[CopyObjectResult]] =
     for {
       doCopy <- overwrite match {
         case OverwriteMode.Overwrite   => S3Action.ok(true)

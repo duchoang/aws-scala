@@ -1,45 +1,35 @@
 package io.atlassian.aws
 
-import scalaz.{ Monad, \/-, -\/ }
+import scalaz.{ Kleisli, Monad, ReaderT, \/-, -\/ }
 import scalaz.syntax.either._
 import scalaz.syntax.monad._
 import kadai.Invalid
 
-case class AwsAction[R, A](private val unsafeRun: R => Attempt[A]) {
-  def map[B](f: A => B): AwsAction[R, B] =
-    AwsAction[R, B] {
-      run(_).map(f)
-    }
-
-  def flatMap[B](f: A => AwsAction[R, B]): AwsAction[R, B] =
-    AwsAction[R, B] {
-      r => run(r).flatMap { a => f(a).run(r) }
-    }
-
-  def run(r: R): Attempt[A] =
-    Attempt.safe(unsafeRun(r)).join.lift { _.leftMap(AmazonExceptions.transformException) }
-
-  def recover(f: Invalid => Attempt[A]): AwsAction[R, A] =
-    AwsAction[R, A] {
-      run(_).run.fold(f, Attempt.ok)
-    }
-
-  def handle(f: PartialFunction[Invalid, Attempt[A]]): AwsAction[R, A] =
-    recover { f orElse { case i => Attempt(i.left) } }
-}
-
 object AwsAction {
-  def value[R, A](v: => A): AwsAction[R, A] =
-    AwsAction(_ => Attempt.ok(v))
+  def apply[R, A](f: R => Attempt[A]): AwsAction[R, A] =
+    Kleisli { f }
 
-  def config[R]: AwsAction[R, R] =
+  def safe[R, A](f: R => Attempt[A]): AwsAction[R, A] =
+    this.apply { r => Attempt.safe(f(r)).join }
+
+  def value[R, A](v: => A): AwsAction[R, A] =
+    AwsAction { _ => Attempt.ok(v) }
+
+  def ask[R]: AwsAction[R, R] =
     AwsAction(Attempt.ok)
+
+  @deprecated("use ask instead", "3.0")
+  def config[R]: AwsAction[R, R] =
+    ask
 
   def ok[R, A](strict: A): AwsAction[R, A] =
     value(strict)
 
   def withClient[R, A](f: R => A): AwsAction[R, A] =
-    config.map(f)
+    AwsAction { r => Attempt.safe { f(r) } }
+
+  def attempt[R, A](a: Attempt[A]): AwsAction[R, A] =
+    this.apply { _ => a }
 
   def fail[R, A](msg: String): AwsAction[R, A] =
     AwsAction { _ => Attempt.fail(msg) }
@@ -50,4 +40,17 @@ object AwsAction {
       def bind[A, B](m: AwsAction[R, A])(f: A => AwsAction[R, B]) = m flatMap f
       override def map[A, B](m: AwsAction[R, A])(f: A => B) = m map f
     }
+
+  implicit class AwsActionOps[R, A](action: AwsAction[R, A]) {
+    private[AwsAction] def unsafeRun(r: R): Attempt[A] = ???
+
+    def run(r: R): Attempt[A] =
+      Attempt.safe(unsafeRun(r)).join.lift { _.leftMap(AmazonExceptions.transformException) }
+
+    def recover(f: Invalid => Attempt[A]): AwsAction[R, A] =
+      AwsAction[R, A] { run(_: R).run.fold(f, Attempt.ok) }
+
+    def handle(f: PartialFunction[Invalid, Attempt[A]]): AwsAction[R, A] =
+      recover { f orElse { case i => Attempt(i.left) } }
+  }
 }
