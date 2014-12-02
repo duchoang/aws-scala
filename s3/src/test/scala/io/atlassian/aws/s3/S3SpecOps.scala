@@ -1,4 +1,5 @@
-package io.atlassian.aws.s3
+package io.atlassian.aws
+package s3
 
 import io.atlassian.aws.spec.ArraySpecOps
 

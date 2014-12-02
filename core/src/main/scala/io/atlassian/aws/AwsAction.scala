@@ -53,4 +53,35 @@ object AwsAction {
     def handle(f: PartialFunction[Invalid, Attempt[A]]): AwsAction[R, A] =
       recover { f orElse { case i => Attempt(i.left) } }
   }
+
+  trait Functions[C] {
+    type Action[A] = AwsAction[C, A]
+
+    def value[A](v: => A): Action[A] =
+      AwsAction.value(v)
+
+    def safe[A](v: => A): Action[A] =
+      AwsAction.attempt { Attempt.safe(v) }
+
+    def config: Action[C] =
+      AwsAction { c => Attempt.ok(c) }
+
+    def ok[A](strict: A): Action[A] =
+      value(strict)
+
+    def attempt[A](a: Attempt[A]): Action[A] =
+      AwsAction.attempt(a)
+
+    def withClient[A](f: C => A): Action[A] =
+      AwsAction.withClient(f)
+
+    def apply[A](run: C => Attempt[A]): Action[A] =
+      AwsAction.safe(run)
+
+    def fail[A](msg: String): Action[A] =
+      attempt(Attempt.fail(msg))
+
+    def fail[A](t: Throwable): Action[A] =
+      attempt(Attempt.exception(t))
+  }
 }
