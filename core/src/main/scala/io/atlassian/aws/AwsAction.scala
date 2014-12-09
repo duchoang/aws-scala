@@ -20,10 +20,8 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
       value(strict)
 
     def withClient[R, A](f: R => A): AwsAction[R, A] =
-      AwsAction { r =>
-        Attempt.safe { f(r) }.lift {
-          _.leftMap(AmazonExceptions.transformException)
-        }
+      AwsAction { r: R => Attempt.safe { f(r) } }.recover {
+        AmazonExceptions.transformException andThen invalid[R, A]
       }
 
     def attempt[R, A](a: Attempt[A]): AwsAction[R, A] =
