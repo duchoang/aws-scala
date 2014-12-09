@@ -35,7 +35,7 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
 
     implicit class AwsActionOps[R, A](action: AwsAction[R, A]) {
       def recover(f: Invalid => AwsAction[R, A]): AwsAction[R, A] =
-        AwsAction[R, A] { r => action.run(r).run.fold(f, a => ok[R, A](a)).run(r) }
+        AwsAction[R, A] { r => action.run(r).run.fold(f, ok[R, A](_)).run(r) }
 
       def handle(f: PartialFunction[Invalid, AwsAction[R, A]]): AwsAction[R, A] =
         recover { f orElse { case i => invalid(i) } }
