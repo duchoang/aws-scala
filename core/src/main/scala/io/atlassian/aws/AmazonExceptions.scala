@@ -28,14 +28,14 @@ object AmazonExceptions {
   case class ServiceException(exceptionType: ExceptionType, e: AmazonServiceException) extends Exception(e)
 
   object ServiceException {
-    def from(e: AmazonServiceException): Option[ServiceException] =
-      ExceptionType.unapply(e).map { t => ServiceException(t, e) }
+    def from: AmazonServiceException => Option[ServiceException] =
+      e => ExceptionType.unapply(e).map { t => ServiceException(t, e) }
   }
 
-  private[aws] def transformException(i: Invalid): Invalid =
-    i match {
+  private[aws] def transformException: Invalid => Invalid =
+    _ match {
       case Invalid.Err(e: AmazonServiceException) =>
         AmazonExceptions.ServiceException.from(e).getOrElse(e) |> Invalid.Err
-      case _ => i
+      case i => i
     }
 }
