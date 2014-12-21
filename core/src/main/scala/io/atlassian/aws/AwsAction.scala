@@ -67,6 +67,9 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
 
       def fail[A](t: Throwable): Action[A] =
         attempt(Attempt.exception(t))
+
+      def fail[A](i: Invalid): Action[A] =
+        attempt(Attempt.apply(i.left))
     }
   }
 }

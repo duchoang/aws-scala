@@ -5,6 +5,10 @@ import scalaz.{ @@, Tag }
 import scalaz.syntax.std.list._
 
 trait Types {
+  sealed trait ContentLengthMarker
+  type ContentLength = Long @@ ContentLengthMarker
+  object ContentLength extends Tagger[Long, ContentLengthMarker]
+
   sealed trait BucketMarker
   type Bucket = String @@ BucketMarker
   object Bucket extends Tagger[String, BucketMarker]
