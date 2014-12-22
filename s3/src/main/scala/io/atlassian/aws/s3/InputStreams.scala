@@ -25,17 +25,14 @@ object InputStreams {
    * @return state of input stream and the bytes read
    */
   def readFully(is: InputStream, buffer: Array[Byte]): ReadBytes = {
-    import ReadBytes._
     @tailrec
-    def go(start: Int, length: Int, totalLengthRead: Int): ReadBytes = {
-      val read = is.read(buffer, start, length)
-      if (read == -1)
-        End(totalLengthRead)
-      else if (read < length)
-        go(start + read, length - read, totalLengthRead + read)
-      else
-        NotEnd(totalLengthRead + read)
-    }
+    def go(start: Int, length: Int, total: Int): ReadBytes =
+      is.read(buffer, start, length) match {
+        case -1                      => ReadBytes.End(total)
+        case read if (read < length) => go(start + read, length - read, total + read)
+        case read                    => ReadBytes.NotEnd(total + read)
+      }
+
     go(0, buffer.size, 0)
   }
 
