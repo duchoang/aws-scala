@@ -12,6 +12,7 @@ import kadai.Invalid
 import scala.annotation.tailrec
 import scala.collection.immutable.List
 import scala.collection.JavaConverters._
+import scalaz.concurrent.Task
 
 import scalaz.std.list._
 import scalaz.std.option._
@@ -86,20 +87,16 @@ object S3 {
           .withInputStream(new ByteArrayInputStream(buffer, 0, byteCount))
           .withPartSize(byteCount.toLong))
 
-      @tailrec
-      def go(curTags: List[PartETag], curLength: Long): (List[PartETag], Long) =
-        readFully(stream, buffer) match {
-          case ReadBytes.End(0) =>
-            (curTags, curLength)
-          case ReadBytes.End(rn) =>
-            val partResult = upload(rn, curTags.length + 1)
-            (curTags :+ partResult.getPartETag, curLength + rn.toLong)
-          case ReadBytes.NotEnd(rn) =>
+      def go(curTags: List[PartETag], curLength: Long): Task[(List[PartETag], Long)] =
+        readFully(stream, buffer) flatMap {
+          case ReadBytes.End =>
+            Task.now((curTags, curLength))
+          case ReadBytes.Chunk(rn) =>
             val partResult = upload(rn, curTags.length + 1)
             go(curTags :+ partResult.getPartETag, curLength + rn.toLong)
         }
 
-      go(List(), 0)
+      go(List(), 0).run
     }
 
   def createFoldersFor(location: ContentLocation): S3Action[List[PutObjectResult]] =

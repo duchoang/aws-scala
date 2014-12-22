@@ -19,7 +19,7 @@ class InputStreamsSpec extends SpecificationWithJUnit with ScalaCheck with S3Arb
     (data: ObjectToStore) =>
       val dataStream = new ByteArrayInputStream(data.data)
       val array = new Array[Byte](scala.util.Random.nextInt(2 * data.data.length) + 1)
-      readFully(dataStream, array).read === Math.min(array.length, data.data.length)
+      readFully(dataStream, array).run === ReadBytes.Chunk(Math.min(array.length, data.data.length))
   }.set(minTestsOk = 25)
 
 }
