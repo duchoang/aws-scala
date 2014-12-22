@@ -11,8 +11,9 @@ class InputStreamsSpec extends SpecificationWithJUnit with ScalaCheck with S3Arb
 
     This is a specification to test InputStreams.
 
-    InputStreams should
-      have a working readFully                              $readFullyWorks
+    InputStreams.readFully should
+      work                              $readFullyWorks
+      not stack overflow                $readFullyDoesntStackOverflow
   """
 
   def readFullyWorks = Prop.forAll {
@@ -22,4 +23,13 @@ class InputStreamsSpec extends SpecificationWithJUnit with ScalaCheck with S3Arb
       readFully(dataStream, array).run === ReadBytes.Chunk(Math.min(array.length, data.data.length))
   }.set(minTestsOk = 25)
 
+  def readFullyDoesntStackOverflow = Prop.forAll {
+    (data: ObjectToStore) =>
+      val dataStream = new ByteArrayInputStream(data.data) {
+        override def read(buffer: Array[Byte], offset: Int, length: Int): Int =
+          super.read(buffer, offset, Math.min(10, buffer.length - offset))
+      }
+      val array = new Array[Byte](scala.util.Random.nextInt(2 * data.data.length) + 1)
+      readFully(dataStream, array).run === ReadBytes.Chunk(Math.min(array.length, data.data.length))
+  }.set(minTestsOk = 25)
 }
