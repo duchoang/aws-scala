@@ -5,13 +5,13 @@ import java.io.{ ByteArrayInputStream, InputStream }
 import java.util.ArrayList
 
 import com.amazonaws.regions.Region
-import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ UploadPartResult, AbortMultipartUploadRequest, AmazonS3Exception, CopyObjectRequest, CopyObjectResult, DeleteObjectRequest, ObjectListing, PutObjectResult, ObjectMetadata, GetObjectRequest, S3Object, InitiateMultipartUploadRequest, UploadPartRequest, PartETag, CompleteMultipartUploadRequest, CompleteMultipartUploadResult }
+import com.amazonaws.services.s3.model._
 import io.atlassian.aws.AmazonExceptions.ServiceException
 import kadai.Invalid
 
 import scala.collection.immutable.List
 import scala.collection.JavaConverters._
+import scalaz.concurrent.Task
 
 import scalaz.std.list._
 import scalaz.std.option._
@@ -42,56 +42,60 @@ object S3 {
     for {
       _ <- createFolders.whenM(S3.createFoldersFor(location))
       _ = length.foreach(metaData.setContentLength)
-      putResult <- S3Action.withClient(_.putObject(location.bucket.unwrap, location.key.unwrap, stream, metaData))
+      putResult <- S3Action.withClient { _.putObject(location.bucket.unwrap, location.key.unwrap, stream, metaData) }
     } yield putResult
 
-  private def putChunks(location: ContentLocation, stream: InputStream, uploadId: String, parts: List[PartETag], length: Long, buffer: Array[Byte]): S3Action[(List[PartETag], Long)] =
-    for {
-      rn <- S3Action.safe { stream.read(buffer) }
-      result <- rn match {
-        case -1 => S3Action.value((parts, length))
-        case _ => for {
-          // TODO - Dirty hack to get the abort working. Need to add a combinator to AwsAction for this
-          partResult <- AwsAction.apply[AmazonS3Client, UploadPartResult] { client =>
-            try {
-              Attempt.ok(client.uploadPart(new UploadPartRequest()
-                .withBucketName(location.bucket.unwrap).withKey(location.key.unwrap)
-                .withUploadId(uploadId).withPartNumber(parts.length + 1)
-                .withInputStream(new ByteArrayInputStream(buffer, 0, rn))
-                .withPartSize(rn.toLong)))
-            } catch {
-              case t: Throwable =>
-                client.abortMultipartUpload(new AbortMultipartUploadRequest(location.bucket.unwrap, location.key.unwrap, uploadId))
-                Attempt.exception(t)
-            }
-          }
-          putNextChunk <- putChunks(location, stream, uploadId, parts :+ partResult.getPartETag, length + rn.toLong, buffer)
-        } yield putNextChunk
-      }
-    } yield result
-
   /**
-   * EXPERIMENTAL!!!
-   * First cut at uploaded content of unknown length to S3 (thanks @sreis!)
-   * TODO - abort multipart upload upon error
+   * Uploads stream of data to S3 using multi-part uploads if the length is not known.
+   * @return length of content that was uploaded
    */
-  def putStream2(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[Long] =
+  def putStreamWithMultipart(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[ContentLength] =
     length match {
       case Some(contentLength) => for {
         _ <- putStream(location, stream, length, metaData, createFolders)
-      } yield contentLength
+      } yield ContentLength(contentLength)
       case None => for {
         _ <- createFolders.whenM(S3.createFoldersFor(location))
         initResult <- S3Action.withClient {
           _.initiateMultipartUpload(new InitiateMultipartUploadRequest(location.bucket.unwrap, location.key.unwrap, metaData))
         }
-        putResult <- putChunks(location, stream, initResult.getUploadId, List(), 0, new Array[Byte](MultipartChunkSize))
+        putResult <- putChunks(location, stream, initResult.getUploadId, new Array[Byte](MultipartChunkSize)).recover {
+          i =>
+            S3Action.withClient {
+              _.abortMultipartUpload(new AbortMultipartUploadRequest(location.bucket.unwrap, location.key.unwrap, initResult.getUploadId))
+            }.flatMap { _ => S3Action.fail[(List[PartETag], Long)](i) }
+        }
         (parts, contentLength) = putResult
         compResult <- S3Action.withClient {
           // We need to convert `parts` to a mutable java.util.List, because the AWS SDK will sort the list internally.
           _.completeMultipartUpload(new CompleteMultipartUploadRequest(location.bucket.unwrap, location.key.unwrap, initResult.getUploadId, new ArrayList(parts.asJava)))
         }
-      } yield contentLength
+      } yield ContentLength(contentLength)
+    }
+
+  /* Package visible for testing */
+  private[s3] def putChunks(location: ContentLocation, stream: InputStream, uploadId: String, buffer: Array[Byte]): S3Action[(List[PartETag], Long)] =
+    S3Action.withClient { client =>
+
+      import InputStreams._
+
+      def upload(byteCount: Int, partNumber: Int): UploadPartResult =
+        client.uploadPart(new UploadPartRequest()
+          .withBucketName(location.bucket.unwrap).withKey(location.key.unwrap)
+          .withUploadId(uploadId).withPartNumber(partNumber)
+          .withInputStream(new ByteArrayInputStream(buffer, 0, byteCount))
+          .withPartSize(byteCount.toLong))
+
+      def go(curTags: List[PartETag], curLength: Long): Task[(List[PartETag], Long)] =
+        readFully(stream, buffer) flatMap {
+          case ReadBytes.End =>
+            Task.now((curTags, curLength))
+          case ReadBytes.Chunk(rn) =>
+            val partResult = upload(rn, curTags.length + 1)
+            go(curTags :+ partResult.getPartETag, curLength + rn.toLong)
+        }
+
+      go(List(), 0).run
     }
 
   def createFoldersFor(location: ContentLocation): S3Action[List[PutObjectResult]] =
@@ -125,10 +129,10 @@ object S3 {
    *         NoOverwrite was specified).
    */
   def copy(from: ContentLocation,
-    to: ContentLocation,
-    meta: Option[ObjectMetadata] = None,
-    createFolders: Boolean = true,
-    overwrite: OverwriteMode = OverwriteMode.Overwrite): S3Action[Option[CopyObjectResult]] =
+           to: ContentLocation,
+           meta: Option[ObjectMetadata] = None,
+           createFolders: Boolean = true,
+           overwrite: OverwriteMode = OverwriteMode.Overwrite): S3Action[Option[CopyObjectResult]] =
     for {
       doCopy <- overwrite match {
         case OverwriteMode.Overwrite   => S3Action.ok(true)

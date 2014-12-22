@@ -1,7 +1,9 @@
 package io.atlassian.aws
 package s3
 
+import com.amazonaws.AmazonServiceException
 import com.amazonaws.regions.Region
+import com.amazonaws.services.s3.model._
 import io.atlassian.aws.AmazonExceptions.ExceptionType.RangeRequestedNotSatisfiable
 import io.atlassian.aws.AmazonExceptions.ServiceException
 import kadai.Invalid
@@ -9,16 +11,17 @@ import org.junit.runner.RunWith
 import org.specs2.ScalaCheck
 import org.specs2.SpecificationWithJUnit
 import org.specs2.main.Arguments
-import com.amazonaws.services.s3.{ AmazonS3Client => SDKS3Client }
+import com.amazonaws.services.s3.{ AmazonS3Client => SDKS3Client, AmazonS3 }
+import org.specs2.mock.Mockito
 import org.specs2.specification.Step
 import org.scalacheck.Prop
-import java.io.ByteArrayInputStream
+import java.io.{ IOException, InputStream, ByteArrayInputStream }
 import scalaz.syntax.id._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
-class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaCheck with S3Arbitraries with S3SpecOps {
+class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaCheck with S3Arbitraries with S3SpecOps with Mockito {
 
-  import Bucket._, S3Key._, LargeObjectToStore._
+  import S3Key._, LargeObjectToStore._, spec.NumericTypes._
 
   implicit val S3_CLIENT = new SDKS3Client()
 
@@ -43,7 +46,11 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       have a function to get the region for a bucket        $regionForWorks
       have a function to get the region for a non-existent bucket work        $regionForWorksForNonExistentBucket
       have a working multipart upload                       $multipartUploadWorks
+      have a multipart that aborts on failed upload         $multipartUploadAbortsOnUploadFailure
+      have a multipart that aborts on failed read           $multipartUploadAbortsOnInputStreamFailure
+      have a multipart that doesn't stack overflow          $multipartUploadDoesntStackOverflow
       bail if an invalid range is requested                 $invalidRangeRequestGivesCorrectError
+
                                                             ${Step(deleteTestFolder(BUCKET, TEST_FOLDER))}
   """
 
@@ -265,33 +272,60 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
 
   def multipartUploadWorks = Prop.forAll {
     data: LargeObjectToStore =>
-      {
-        val dataStream = new ByteArrayInputStream(data.data)
-        val key = S3Key(s"$TEST_FOLDER/${data.key}")
-        val location = ContentLocation(BUCKET, key)
+      val dataStream = new ByteArrayInputStream(data.data)
+      val key = S3Key(s"$TEST_FOLDER/${data.key}")
+      val location = ContentLocation(BUCKET, key)
 
-        (for {
-          _ <- S3.putStream2(location, dataStream)
-          result <- S3.get(location)
-        } yield result) must returnS3Object(data)
-
-      }
+      (for {
+        _ <- S3.putStreamWithMultipart(location, dataStream)
+        result <- S3.get(location)
+      } yield result) must returnS3Object(data)
   }.set(minTestsOk = 5)
 
   def invalidRangeRequestGivesCorrectError = Prop.forAll {
     (data: ObjectToStore) =>
-      {
-        val dataStream = new ByteArrayInputStream(data.data)
-        val key = S3Key(s"$TEST_FOLDER/${data.key}")
-        val location = ContentLocation(BUCKET, key)
-        val invalidRange = Range.From(data.data.length.toLong + 1)
-        (for {
-          _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
-          result <- S3.safeGet(location, invalidRange)
-        } yield result) must failWithInvalid {
-          case Invalid.Err(ServiceException(RangeRequestedNotSatisfiable, _)) => true
-        }
+      val dataStream = new ByteArrayInputStream(data.data)
+      val key = S3Key(s"$TEST_FOLDER/${data.key}")
+      val location = ContentLocation(BUCKET, key)
+      val invalidRange = Range.From(data.data.length.toLong + 1)
+      (for {
+        _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
+        result <- S3.safeGet(location, invalidRange)
+      } yield result) must failWithInvalid {
+        case Invalid.Err(ServiceException(RangeRequestedNotSatisfiable, _)) => true
       }
-
   }.set(minTestsOk = 5)
+
+  def multipartUploadAbortsOnInputStreamFailure = Prop.forAll {
+    (key: S3Key, len: Pos[Int]) =>
+      val s3client = mock[AmazonS3]
+      val dataStream = mock[InputStream]
+      dataStream.read(any[Array[Byte]], anyInt, anyInt) throws new IOException("FOO")
+      s3client.initiateMultipartUpload(any[InitiateMultipartUploadRequest]) returns (new InitiateMultipartUploadResult() <| { _.setUploadId("1") })
+      s3client.uploadPart(any[UploadPartRequest]) returns new UploadPartResult
+      s3client.abortMultipartUpload(any[AbortMultipartUploadRequest]) answers { _ => () }
+      S3.putStreamWithMultipart(ContentLocation(BUCKET, key), dataStream).run(s3client).run.toEither must beLeft and
+        (there was one(s3client).initiateMultipartUpload(any[InitiateMultipartUploadRequest])) and
+        (there was one(s3client).abortMultipartUpload(any[AbortMultipartUploadRequest]))
+  }
+
+  def multipartUploadAbortsOnUploadFailure = Prop.forAll {
+    (key: S3Key, len: Pos[Int]) =>
+      val s3client = mock[AmazonS3]
+      val dataStream = new ByteArrayInputStream(new Array[Byte](len.i))
+      s3client.initiateMultipartUpload(any[InitiateMultipartUploadRequest]) returns (new InitiateMultipartUploadResult() <| { _.setUploadId("1") })
+      s3client.uploadPart(any[UploadPartRequest]) throws new AmazonServiceException("FOO")
+      s3client.abortMultipartUpload(any[AbortMultipartUploadRequest]) answers { _ => () }
+      S3.putStreamWithMultipart(ContentLocation(BUCKET, key), dataStream).run(s3client).run.toEither must beLeft and
+        (there was one(s3client).initiateMultipartUpload(any[InitiateMultipartUploadRequest])) and
+        (there was one(s3client).abortMultipartUpload(any[AbortMultipartUploadRequest]))
+  }
+
+  def multipartUploadDoesntStackOverflow = Prop.forAll {
+    (key: S3Key, len: Pos[Int]) =>
+      val s3client = mock[AmazonS3]
+      val dataStream = new ByteArrayInputStream(new Array[Byte](len.i))
+      s3client.uploadPart(any[UploadPartRequest]) returns new UploadPartResult
+      S3.putChunks(ContentLocation(BUCKET, key), dataStream, "FOO", new Array[Byte](1000)).run(s3client).run.toEither must beRight
+  }
 }
