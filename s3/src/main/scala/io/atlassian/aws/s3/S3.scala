@@ -9,7 +9,6 @@ import com.amazonaws.services.s3.model._
 import io.atlassian.aws.AmazonExceptions.ServiceException
 import kadai.Invalid
 
-import scala.annotation.tailrec
 import scala.collection.immutable.List
 import scala.collection.JavaConverters._
 import scalaz.concurrent.Task
