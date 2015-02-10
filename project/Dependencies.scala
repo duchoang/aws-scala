@@ -7,7 +7,7 @@ object Dependencies {
 
   lazy val ARGONAUT_VERSION = "6.1-M4"
 
-  lazy val AWS_SDK_VERSION = "1.9.3"
+  lazy val AWS_SDK_VERSION = "1.9.16"
 
   lazy val KADAI_VERSION = "3.0.0"
 

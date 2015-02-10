@@ -3,6 +3,8 @@ package io.atlassian.aws
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.metrics.RequestMetricCollector
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
+import com.amazonaws.services.rds.AmazonRDSClient
+import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient
 import com.amazonaws.services.sqs.AmazonSQSClient
 import com.amazonaws.{ AmazonWebServiceClient, ClientConfiguration }
 import scalaz.syntax.id._
@@ -78,6 +80,16 @@ object AmazonClient extends AmazonClientOps {
   implicit object SQSClient extends AmazonClient[AmazonSQSClient](
     constructor = new AmazonSQSClient(awsCredentialsProvider, _, _),
     serviceName = ServiceAbbreviations.SQS
+  )
+
+  implicit object SWFClient extends AmazonClient[AmazonSimpleWorkflowClient](
+    constructor = new AmazonSimpleWorkflowClient(awsCredentialsProvider, _, _),
+    serviceName = ServiceAbbreviations.SimpleWorkflow
+  )
+
+  implicit object RDSClient extends AmazonClient[AmazonRDSClient](
+    constructor = new AmazonRDSClient(awsCredentialsProvider, _, _),
+    serviceName = ServiceAbbreviations.RDS
   )
 
   private lazy val awsCredentialsProvider = new DefaultAWSCredentialsProviderChain
