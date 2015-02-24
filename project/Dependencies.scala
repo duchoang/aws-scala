@@ -3,7 +3,7 @@ import Keys._
 
 object Dependencies {
 
-  lazy val SCALAZ_VERSION = "7.1.0"
+  lazy val SCALAZ_VERSION = "7.1.1"
 
   lazy val ARGONAUT_VERSION = "6.1-M4"
 
