@@ -7,8 +7,8 @@ object Settings {
 
   val testSettings = testOptions in Test += Tests.Argument("console", "junitxml")
 
-  val scala210 = "2.10.4"
-  val scala211 = "2.11.5"
+  val scala210 = "2.10.5"
+  val scala211 = "2.11.6"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -19,7 +19,7 @@ object Settings {
       Seq[Def.Setting[_]] (
         organization := "io.atlassian.aws-scala"
       , scalaVersion := scala211
-      , crossScalaVersions := Seq(scala210, scala211)
+      , crossScalaVersions := Seq(scala211, scala210)
       , scalacOptions := Seq(
           "-deprecation"
         , "-unchecked"

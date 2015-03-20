@@ -3,7 +3,7 @@ package dynamodb
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import kadai.Invalid
-import scalaz.Monad, scalaz.syntax.all._
+import scalaz.Monad, scalaz.std.option._, scalaz.syntax.all._, scalaz.syntax.std.either._
 
 /**
  * Type class for unmarshalling objects from a map returned from AWS DynamoDB client
@@ -14,15 +14,31 @@ trait Unmarshaller[A] {
     unmarshall(m)
 
   def unmarshall: Unmarshaller.Operation[A]
+
+  /** Unmarshalls a given map of attribute values from AWS SDK into a value object */
+  private[dynamodb] def option(map: java.util.Map[String, AttributeValue]): DynamoDBAction[Option[A]] = {
+    import collection.JavaConverters._
+    if (map == null)
+      DynamoDBAction.ok(none[A])
+    else
+      map.asScala.toMap |> fromMap |> { _.map(some) } |> DynamoDBAction.attempt
+  }
+
+  /** Unmarshalls a given map of attribute values from AWS SDK into a value object */
+  private[dynamodb] def unmarshall(map: java.util.Map[String, AttributeValue]): DynamoDBAction[A] = {
+    import collection.JavaConverters._
+    if (map == null)
+      DynamoDBAction.fail("No values to unmarshall")
+    else
+      map.asScala.toMap |> fromMap |> DynamoDBAction.attempt
+  }
 }
 
 object Unmarshaller {
-  def apply[A: Unmarshaller] =
-    implicitly[Unmarshaller[A]]
-
-  def from[A](f: Operation[A]) = new Unmarshaller[A] {
-    def unmarshall = f
-  }
+  def from[A](f: Operation[A]) =
+    new Unmarshaller[A] {
+      def unmarshall = f
+    }
 
   /**
    * Represents an unmarshalling operation that tries to convert a map of field names to AttributeValues into an object of
@@ -35,12 +51,10 @@ object Unmarshaller {
       run(m)
 
     def map[B](f: A => B): Operation[B] =
-      flatMap(f andThen Operation.ok)
+      Operation { run(_).map(f) }
 
     def flatMap[B](f: A => Operation[B]): Operation[B] =
-      Operation {
-        m => run(m) >>= { f(_)(m) }
-      }
+      Operation { m => run(m) >>= { f(_)(m) } }
   }
 
   object Operation {
@@ -55,9 +69,9 @@ object Unmarshaller {
      * @tparam A The type of the field to unmarshall.
      * @return Unmarshall operation for unmarshalling a field in the object.
      */
-    def get[A](name: String)(implicit converter: Decoder[A]): Operation[A] =
+    def get[A: Decoder](name: String): Operation[A] =
       Operation { m =>
-        (m.get(name) |> converter).lift {
+        (m.get(name) |> Decoder[A].decode).lift {
           _.leftMap { _ |+| Invalid.Message(s"Cannot decode field $name") }
         }
       }

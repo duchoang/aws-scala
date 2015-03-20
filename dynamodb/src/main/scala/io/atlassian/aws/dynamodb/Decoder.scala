@@ -13,15 +13,21 @@ import scalaz.syntax.monad.ToBindOps
  * Represents a function that tries to convert an AttributeValue into a
  * Scala value (typically that represents a field in an object).
  */
-case class Decoder[A] private[Decoder] (run: Value => Attempt[A]) extends (Value => Attempt[A]) {
-  def apply(o: Value): Attempt[A] =
+case class Decoder[A] private[Decoder] (run: Value => Attempt[A]) {
+  def decode(o: Value): Attempt[A] =
     run(o)
 
-  def map[B](f: A => B): Decoder[B] = flatMap(f andThen Decoder.ok)
+  def map[B](f: A => B): Decoder[B] =
+    Decoder { run(_).map(f) }
 
   def flatMap[B](f: A => Decoder[B]): Decoder[B] =
+    Decoder { m => run(m) >>= { f(_).decode(m) } }
+
+  def mapPartial[B](f: PartialFunction[A, B]): Decoder[B] =
     Decoder {
-      m => run(m) >>= { f(_)(m) }
+      run(_).flatMap {
+        a => if (f.isDefinedAt(a)) Attempt.ok(f(a)) else Attempt.fail(s"'$a' is an invalid value")
+      }
     }
 }
 
@@ -32,8 +38,9 @@ object Decoder {
   def apply[A: Decoder] =
     implicitly[Decoder[A]]
 
-  private def option[A](f: PartialFunction[Value, Attempt[A]]) =
-    Decoder[A](f)
+  // TODO what does this do when failing? remove?
+  private[Decoder] def option[A](f: PartialFunction[Value, Attempt[A]]): Decoder[A] =
+    Decoder(f)
 
   def ok[A](strict: A): Decoder[A] = from { Attempt.ok(strict) }
 
@@ -44,6 +51,11 @@ object Decoder {
       case None     => Attempt.fail(s"No $label value present")
       case Some(av) => Attempt.safe(f(av))
     }
+
+  // instances
+
+  implicit def FromCodec[A: Codec]: Decoder[A] =
+    Codec[A].decode
 
   implicit def LongDecode: Decoder[Long] =
     mandatoryField(_.getN.toLong, "Long")
@@ -63,10 +75,10 @@ object Decoder {
         else Attempt.ok(av.getS)
     }
 
-  implicit def OptionDecode[A](implicit decode: Decoder[A]): Decoder[Option[A]] =
+  implicit def OptionDecode[A: Decoder]: Decoder[Option[A]] =
     option {
       case None                => Attempt.ok(None)
-      case someValue @ Some(_) => decode(someValue).toOption |> Attempt.ok
+      case someValue @ Some(_) => Decoder[A].decode(someValue).toOption |> Attempt.ok
     }
 
   implicit def DecodeAttributeValueMonad: Monad[Decoder] =

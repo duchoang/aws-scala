@@ -8,8 +8,9 @@ import scala.collection.JavaConverters._
  * @tparam A The thing that can be stored as 'values' in a DynamoDB table
  */
 trait StoreValue[A] {
-  def asNew(a: A)(implicit ev: Marshaller[A]): UpdateItemRequestEndo
-  def asUpdated(o: A, a: A)(implicit ev: Marshaller[A]): UpdateItemRequestEndo
+  // TODO can StoreValue hold Column??? can Column derive the SV ???
+  def asNew(a: A)(col: Column[A]): UpdateItemRequestEndo
+  def asUpdated(o: A, a: A): UpdateItemRequestEndo
 }
 
 object StoreValue {
@@ -27,20 +28,24 @@ object StoreValue {
    * provides. If marshalling the field generates None then we assume we need to delete the field, otherwise the
    * new value is just put.
    */
-  def newFromValues[A](a: A)(implicit ev: Marshaller[A]): UpdateItemRequestEndo = {
-    val updates = ev.toMap(a).mapValues {
-      case None                 => delete
-      case Some(attributeValue) => put(attributeValue)
+  def newFromValues[A](a: A)(col: Column[A]): UpdateItemRequestEndo =
+    scalaz.Endo[UpdateItemRequest] {
+      _.withAttributeUpdates {
+        col.marshaller.toMap(a).mapValues {
+          case None                 => delete
+          case Some(attributeValue) => put(attributeValue)
+        }.asJava
+      }
     }
-    scalaz.Endo[UpdateItemRequest](_.withAttributeUpdates(updates.asJava))
-  }
 
   /**
    * Create a StoreValue assuming that 'asNew' is just putting all the attribute values into DynamoDB.
    * @param update Function that takes an original value, and an new value and generates an [[UpdateItemRequestEndo]] that represents the update function.
    */
-  def withUpdated[A](update: (A, A) => UpdateItemRequestEndo) = new StoreValue[A] {
-    def asNew(a: A)(implicit ev: Marshaller[A]) = newFromValues(a)
-    def asUpdated(o: A, a: A)(implicit ev: Marshaller[A]) = update(o, a)
-  }
+  // TODO pass Column in here?
+  def withUpdated[A](update: (A, A) => UpdateItemRequestEndo) =
+    new StoreValue[A] {
+      def asNew(a: A)(col: Column[A]) = newFromValues(a)(col)
+      def asUpdated(o: A, a: A) = update(o, a)
+    }
 }

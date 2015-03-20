@@ -5,7 +5,11 @@ import io.atlassian.aws.spec.ScalaCheckSpec
 import org.junit.runner.RunWith
 import org.scalacheck.{ Arbitrary, Prop }
 import Arbitrary._
+import scalaz.Equal
 import scalaz.syntax.id._
+import scalaz.std.option._
+import scalaz.std.string._
+import scalaz.std.anyVal._
 import org.joda.time.DateTime
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
@@ -13,43 +17,23 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
   import Attempt._
 
   def is = s2"""
-    EncodeAttributeValue/DecodeAttributeValue should
-      correctly encode and decode longs         $correctlyEncodeDecodeLongs
-      correctly encode and decode ints          $correctlyEncodeDecodeInts
-      correctly encode and decode strings       $correctlyEncodeDecodeStrings
-      correctly encode and decode date times    $correctlyEncodeDecodeDateTime
-      correctly encode and decode options       $correctlyEncodeDecodeOptions
+  Encode/Decode pairs should correctly:
+    round-trip longs         ${Prop.forAll { roundTrip(_: Long) }}
+    round-trip ints          ${Prop.forAll { roundTrip(_: Int) }}
+    round-trip strings       ${Prop.forAll { roundTrip(_: String) }}
+    round-trip date times    ${Prop.forAll { roundTrip(_: DateTime) }}
+    round-trip options       $correctlyEncodeDecodeOptions
   """
 
-  import Encoder._
-  import Decoder._
-
-  def correctlyEncodeDecodeLongs = Prop.forAll {
-    long: Long =>
-      (LongEncode(long) |> LongDecode) === Attempt.ok(long)
-  }
-
-  def correctlyEncodeDecodeInts = Prop.forAll {
-    int: Int =>
-      (IntEncode(int) |> IntDecode) === Attempt.ok(int)
-  }
-
-  def correctlyEncodeDecodeStrings = Prop.forAll {
-    string: String =>
-      (StringEncode(string) |> StringDecode) === Attempt.ok(string)
-  }
-
-  def correctlyEncodeDecodeDateTime = Prop.forAll {
-    value: DateTime =>
-      (DateTimeEncode(value) |> DateTimeDecode) must equal(Attempt.ok(value))
-  }
+  def roundTrip[A: Encoder: Decoder: Equal](a: A) =
+    (Encoder[A].encode(a) |> Decoder[A].decode) must equal(Attempt.ok(a))
 
   def correctlyEncodeDecodeOptions = Prop.forAll {
     value: Option[String] =>
       value match {
-        case None     => OptionEncode[String].run(value) must beNone
-        case Some("") => OptionEncode[String].run(value) must beNone
-        case Some(v)  => (OptionEncode[String].run(value) |> OptionDecode[String]) === Attempt.ok(value)
+        case None     => Encoder.OptionEncode[String].run(value) must beNone
+        case Some("") => Encoder.OptionEncode[String].run(value) must beNone
+        case Some(v)  => roundTrip(value)
       }
   }
 }

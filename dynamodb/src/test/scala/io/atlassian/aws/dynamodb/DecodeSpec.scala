@@ -4,6 +4,7 @@ package dynamodb
 import spec.ScalaCheckSpec
 import org.junit.runner.RunWith
 import scalaz.syntax.id._
+import org.joda.time.DateTime
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class DecodeSpec extends ScalaCheckSpec {
@@ -21,17 +22,17 @@ class DecodeSpec extends ScalaCheckSpec {
   import Decoder._
 
   def longDecodeHandlesExceptions =
-    (StringEncode("Foo") |> LongDecode).toOr.toEither must beLeft
+    (Encoder[String].encode("Foo") |> Decoder[Long].decode).toOr.toEither must beLeft
 
   def intDecodeHandlesExceptions =
-    (StringEncode("Foo") |> IntDecode).toOr.toEither must beLeft
+    (Encoder[String].encode("Foo") |> Decoder[Int].decode).toOr.toEither must beLeft
 
   def dateTimeDecodeHandlesExceptions =
-    (StringEncode("Foo") |> DateTimeDecode).toOr.toEither must beLeft
+    (Encoder[String].encode("Foo") |> Decoder[DateTime].decode).toOr.toEither must beLeft
 
   def stringDecodeHandlesExceptions =
-    (IntEncode(100) |> StringDecode).toOr.toEither must beLeft
+    (Encoder[Int].encode(100) |> Decoder[String].decode).toOr.toEither must beLeft
 
   def optionDecodeandlesExceptions =
-    (IntEncode(100) |> OptionDecode[String]) === Attempt.ok(None)
+    (Encoder[Int].encode(100) |> Decoder[Option[String]].decode) === Attempt.ok(None)
 }

@@ -2,7 +2,7 @@ package io.atlassian.aws
 package dynamodb
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
-import scalaz.syntax.id._
+import scalaz.Contravariant, scalaz.syntax.id._
 
 /**
  * Type class for marshalling objects into a map suitable for passing to AWS DynamoDB client
@@ -22,9 +22,6 @@ trait Marshaller[A] {
 }
 
 object Marshaller {
-  def apply[A: Marshaller] =
-    implicitly[Marshaller[A]]
-
   /**
    * Convenience method to marshall a specific field in the object.
    * Alternately, use a Column to encapsulate a named Field for reuse.
@@ -34,21 +31,25 @@ object Marshaller {
    * @param encode Encoder for the field value to store.
    * @return A field mapping that can be used for marshalling the object
    */
-  def set[A](name: String, value: A)(implicit encode: Encoder[A]): Field[A] =
-    name -> encode(value)
+  def set[A](name: String, value: A)(implicit ev: Encoder[A]): Field[A] =
+    name -> ev.encode(value)
 
-  def from[A](toKeyValue: ToKeyValue[A]): Marshaller[A] =
+  def from[A](toKeyValue: A => KeyValue): Marshaller[A] =
     new Marshaller[A] {
       def toMap(a: A): KeyValue = toKeyValue(a)
     }
 
-  def fromColumn[A: Encoder](column: Column[A]): Marshaller[A] =
-    new Marshaller[A] {
-      def toMap(a: A): KeyValue = Map(column(a))
-    }
+  implicit object MarshallerContra extends Contravariant[Marshaller] {
+    def contramap[A, B](ma: Marshaller[A])(f: B => A): Marshaller[B] =
+      from { b => ma.toMap(f(b)) }
+  }
+  // TODO remove in 2.1
+  @deprecated("use column.marshaller instead", "2.0")
+  def fromColumn[A](column: Column[A]): Marshaller[A] =
+    column.marshaller
 
-  def fromColumn2[A: Encoder, B: Encoder, C](ca: Column[A], cb: Column[B])(f: C => (A, B)): Marshaller[C] =
-    new Marshaller[C] {
-      def toMap(c: C): KeyValue = f(c) |> { case (a, b) => Map(ca(a), cb(b)) }
-    }
+  // TODO remove in 2.1
+  @deprecated("use Column.compose instead", "2.0")
+  def fromColumn2[A, B, C](ca: Column[A], cb: Column[B])(f: C => (A, B)): Marshaller[C] =
+    Column.compose2[C](ca, cb)(f)((_: A, _: B) => ???).marshaller
 }

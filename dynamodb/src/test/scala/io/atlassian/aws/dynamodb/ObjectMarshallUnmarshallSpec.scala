@@ -22,15 +22,15 @@ class ObjectMarshallUnmarshallSpec extends ScalaCheckSpec {
   import Encoder._
 
   def flattenedMapWorks = Prop.forAll {
-    thing: ThingValue =>
+    thing: Value =>
       val testData = thing.copy(deletedTimestamp = None)
-      val mappedData = Marshaller[ThingValue].toFlattenedMap(testData)
-      (mappedData.get("blobHash") === StringEncode(testData.blobHash)) and
-        (mappedData.get("metaData") === StringEncode(testData.metaData)) and
+      val mappedData = Value.column.marshaller.toFlattenedMap(testData)
+      (mappedData.get("blobHash") === Encoder[String].encode(testData.hash)) and
+        (mappedData.get("metaData") === Encoder[String].encode(testData.metaData)) and
         (mappedData.get("deletedTimestamp") must beNone)
   }
   def workTogether = Prop.forAll {
-    thing: ThingValue =>
-      (Marshaller[ThingValue].toFlattenedMap(thing) |> Unmarshaller[ThingValue].fromMap) must equal(Attempt.ok(thing))
+    thing: Value =>
+      (Value.column.marshaller.toFlattenedMap(thing) |> Value.column.unmarshaller.fromMap) must equal(Attempt.ok(thing))
   }
 }

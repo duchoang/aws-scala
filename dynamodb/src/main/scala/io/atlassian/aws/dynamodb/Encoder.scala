@@ -8,11 +8,11 @@ import scalaz.syntax.id._
 import scalaz.syntax.std.option._
 
 case class Encoder[A](run: A => Option[AttributeValue]) {
-  def apply(a: A): Option[AttributeValue] =
+  def encode(a: A): Option[AttributeValue] =
     run(a)
 
   def unapply(a: A): Option[AttributeValue] =
-    this(a)
+    encode(a)
 
   def contramap[B](f: B => A) =
     Encoder(f andThen run)
@@ -24,6 +24,9 @@ object Encoder {
 
   private def attribute[A](f: A => AttributeValue => AttributeValue): Encoder[A] =
     Encoder { a => (new AttributeValue() <| { f(a) }).some }
+
+  implicit def EncoderFromCodec[A: Codec] =
+    Codec[A].encode
 
   implicit def LongEncode: Encoder[Long] =
     attribute { l => _.withN(l.toString) }
