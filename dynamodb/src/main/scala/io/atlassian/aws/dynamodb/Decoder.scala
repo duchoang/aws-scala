@@ -25,8 +25,11 @@ case class Decoder[A] private[Decoder] (run: Value => Attempt[A]) {
 
   def mapPartial[B](f: PartialFunction[A, B]): Decoder[B] =
     Decoder {
-      run(_).flatMap {
-        a => if (f.isDefinedAt(a)) Attempt.ok(f(a)) else Attempt.fail(s"'$a' is an invalid value")
+      run(_).flatMap { a =>
+        if (f.isDefinedAt(a))
+          Attempt.ok(f(a))
+        else
+          Attempt.fail(s"'$a' is an invalid value")
       }
     }
 }
@@ -38,8 +41,7 @@ object Decoder {
   def apply[A: Decoder] =
     implicitly[Decoder[A]]
 
-  // TODO what does this do when failing? remove?
-  private[Decoder] def option[A](f: PartialFunction[Value, Attempt[A]]): Decoder[A] =
+  private[Decoder] def option[A](f: Value => Attempt[A]): Decoder[A] =
     Decoder(f)
 
   def ok[A](strict: A): Decoder[A] = from { Attempt.ok(strict) }
@@ -53,9 +55,6 @@ object Decoder {
     }
 
   // instances
-
-  implicit def FromCodec[A: Codec]: Decoder[A] =
-    Codec[A].decode
 
   implicit def LongDecode: Decoder[Long] =
     mandatoryField(_.getN.toLong, "Long")

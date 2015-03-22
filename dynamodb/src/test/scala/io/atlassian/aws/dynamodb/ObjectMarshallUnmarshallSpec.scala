@@ -25,7 +25,7 @@ class ObjectMarshallUnmarshallSpec extends ScalaCheckSpec {
     thing: Value =>
       val testData = thing.copy(deletedTimestamp = None)
       val mappedData = Value.column.marshaller.toFlattenedMap(testData)
-      (mappedData.get("blobHash") === Encoder[String].encode(testData.hash)) and
+      (mappedData.get("hash") === Encoder[String].encode(testData.hash)) and
         (mappedData.get("metaData") === Encoder[String].encode(testData.metaData)) and
         (mappedData.get("deletedTimestamp") must beNone)
   }

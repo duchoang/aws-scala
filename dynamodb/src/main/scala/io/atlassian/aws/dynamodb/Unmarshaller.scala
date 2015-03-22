@@ -3,17 +3,20 @@ package dynamodb
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import kadai.Invalid
-import scalaz.Monad, scalaz.std.option._, scalaz.syntax.all._, scalaz.syntax.std.either._
+import scalaz.{ Functor, Monad }, scalaz.std.option._, scalaz.syntax.all._, scalaz.syntax.std.either._
 
 /**
  * Type class for unmarshalling objects from a map returned from AWS DynamoDB client
  * @tparam A The type of the object to unmarshall
  */
 trait Unmarshaller[A] {
+  def unmarshall: Unmarshaller.Operation[A]
+
+  def map[B](f: A => B): Unmarshaller[B] =
+    Unmarshaller.from { unmarshall.map(f) }
+
   final def fromMap(m: Map[String, AttributeValue]): Attempt[A] =
     unmarshall(m)
-
-  def unmarshall: Unmarshaller.Operation[A]
 
   /** Unmarshalls a given map of attribute values from AWS SDK into a value object */
   private[dynamodb] def option(map: java.util.Map[String, AttributeValue]): DynamoDBAction[Option[A]] = {
@@ -82,5 +85,9 @@ object Unmarshaller {
         def bind[A, B](m: Operation[A])(f: A => Operation[B]) = m flatMap f
         override def map[A, B](m: Operation[A])(f: A => B) = m map f
       }
+  }
+
+  implicit object UnmarshallerFunctor extends Functor[Unmarshaller] {
+    def map[A, B](fa: Unmarshaller[A])(f: A => B) = fa map f
   }
 }

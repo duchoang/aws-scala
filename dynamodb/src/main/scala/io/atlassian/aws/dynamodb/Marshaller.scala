@@ -19,6 +19,9 @@ trait Marshaller[A] {
     toMap(a).collect {
       case (key, Some(value)) => key -> value
     }
+
+  def contramap[B](f: B => A): Marshaller[B] =
+    Marshaller.from { b => toMap(f(b)) }
 }
 
 object Marshaller {
@@ -40,8 +43,7 @@ object Marshaller {
     }
 
   implicit object MarshallerContra extends Contravariant[Marshaller] {
-    def contramap[A, B](ma: Marshaller[A])(f: B => A): Marshaller[B] =
-      from { b => ma.toMap(f(b)) }
+    def contramap[A, B](ma: Marshaller[A])(f: B => A): Marshaller[B] = ma contramap f
   }
   // TODO remove in 2.1
   @deprecated("use column.marshaller instead", "2.0")

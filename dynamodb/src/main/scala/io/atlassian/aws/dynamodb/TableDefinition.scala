@@ -33,5 +33,4 @@ object TableDefinition {
         },
       provisionedThroughput = new ProvisionedThroughput().withReadCapacityUnits(provisionedReadCapacity).withWriteCapacityUnits(provisionedWriteCapacity)
     )
-
 }

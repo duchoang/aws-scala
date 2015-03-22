@@ -2,11 +2,21 @@ package io.atlassian.aws.dynamodb
 
 import Marshaller._
 import Unmarshaller.Operation._
+import scalaz.InvariantFunctor
 import scalaz.syntax.id._
 
 sealed trait Column[A] {
+  self =>
+
   def marshaller: Marshaller[A]
   def unmarshaller: Unmarshaller[A]
+
+  // invariant map
+  def xmap[B](f: A => B, g: B => A): Column[B] =
+    new Column[B] {
+      val marshaller = self.marshaller.contramap(g)
+      val unmarshaller = self.unmarshaller.map(f)
+    }
 }
 
 /**
@@ -27,16 +37,25 @@ final class SingleColumn[A](val name: String)(implicit encode: Encoder[A], decod
     new Unmarshaller[A] {
       def unmarshall = Unmarshaller.Operation.get(name)
     }
-
-  // TODO retire
-  def get: Unmarshaller.Operation[A] =
-    unmarshaller.unmarshall
 }
 
 object Column extends ColumnComposites {
   def apply[A: Encoder: Decoder](s: String): Column[A] =
     new SingleColumn[A](s)
 
+  implicit object ColumnInvariantFunctor extends InvariantFunctor[Column] {
+    def xmap[A, B](ca: Column[A], f: A => B, g: B => A): Column[B] =
+      ca.xmap(f, g)
+  }
+
+  /**
+   * models the restrictions on types that can be used for keys
+   */
+  sealed trait Type
+  object Type {
+    case object Key
+    case object Composite
+  }
 }
 
 trait ColumnComposites {

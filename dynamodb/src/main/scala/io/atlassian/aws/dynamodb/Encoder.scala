@@ -25,9 +25,6 @@ object Encoder {
   private def attribute[A](f: A => AttributeValue => AttributeValue): Encoder[A] =
     Encoder { a => (new AttributeValue() <| { f(a) }).some }
 
-  implicit def EncoderFromCodec[A: Codec] =
-    Codec[A].encode
-
   implicit def LongEncode: Encoder[Long] =
     attribute { l => _.withN(l.toString) }
 

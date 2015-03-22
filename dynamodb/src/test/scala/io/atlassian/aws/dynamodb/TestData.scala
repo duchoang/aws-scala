@@ -69,15 +69,16 @@ object TestData extends Arbitraries with MoreEqualsInstances {
   }
 
   def thingDynamoMappingForTableName(tableName: String) =
-    TableDefinition.from[Key, Value](tableName, "logicalKey", Some(AttributeDefinition.number("seq")), 5, 5)
+    TableDefinition.from[Key, Value](tableName, "key", Some(AttributeDefinition.number("seq")), 5, 5)
 
   implicit def KeyArbitrary: Arbitrary[Key] =
     Arbitrary {
       for {
         a <- Gen.uuid.map { _.toString }
         b <- Gen.uuid.map { _.toString }
-        seq <- Gen.chooseNum(Long.MinValue + 1000000, Long.MaxValue - 1000000) // We do some incrementing so give us some buffer around the wraparounds
-      } yield Key(a, b, java.util.UUID.randomUUID.toString, seq)
+        c <- Gen.uuid.map { _.toString }
+        seq <- Gen.chooseNum(0, Long.MaxValue - 1000000) // We do some incrementing so give us some buffer around the wraparounds
+      } yield Key(a, b, c, seq)
     }
 
   implicit def ValueArbitrary: Arbitrary[Value] =
