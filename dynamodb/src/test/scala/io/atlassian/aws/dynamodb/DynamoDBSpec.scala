@@ -30,7 +30,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  implicit val ThingDynamoMapping = thingDynamoMappingForTableName(s"my_things2_${System.currentTimeMillis.toString}")
+  implicit val table = tableNamed(s"my_things2_${System.currentTimeMillis.toString}")
 
   // TODO - These tests are sequential because of flakiness with integration tests.
   def is = stopOnFail ^ sequential ^ s2"""
@@ -69,7 +69,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
       val putRequest =
         new UpdateItemRequest()
-          .withTableName(ThingDynamoMapping.name)
+          .withTableName(table.name)
           .withKey(key.asJava)
           .withAttributeUpdates(value.asJava)
 
@@ -97,7 +97,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
       val putRequest =
         new UpdateItemRequest()
-          .withTableName(ThingDynamoMapping.name)
+          .withTableName(table.name)
           .withKey(key.asJava)
           .withAttributeUpdates(value.asJava)
 
@@ -109,7 +109,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   def newPutWorks = Prop.forAll {
     (thingKey: Key, thingValue: Value) =>
       DynamoDB.put[Key, Value](thingKey, thingValue)(Key.column, Value.column) must returnValue(None) and
-        ((DYNAMO_CLIENT.getItem(ThingDynamoMapping.name, Key.column.marshaller.toFlattenedMap(thingKey).asJava).getItem.asScala.toMap |>
+        ((DYNAMO_CLIENT.getItem(table.name, Key.column.marshaller.toFlattenedMap(thingKey).asJava).getItem.asScala.toMap |>
           Value.column.unmarshaller.fromMap) must equal(Attempt.ok(thingValue)))
   }.set(minTestsOk = NUM_TESTS)
 
@@ -156,7 +156,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   }.set(minTestsOk = NUM_TESTS)
 
   def describeTableWorks =
-    DynamoDB.describeTable(ThingDynamoMapping.name).map(_.getTableName) must returnValue(ThingDynamoMapping.name)
+    DynamoDB.describeTable(table.name).map(_.getTableName) must returnValue(table.name)
 
   def describeTableHandlesUnknownTable =
     DynamoDB.describeTable("some_dodgy_table") must returnFailure
@@ -164,7 +164,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   def queryWorksWhenHashKeyDoesntExist = Prop.forAll {
     (k: Key) =>
       val hashKey = HashKey(k.a, k.b, k.c)
-      DynamoDB.query(Query.forHash[HashKey, Key, Value](hashKey))(Value.column) must returnResult { page =>
+      DynamoDB.query(QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column))(Value.column) must returnResult { page =>
         page.result.isEmpty && page.next.isEmpty
       }
   }.set(minTestsOk = NUM_TESTS)
@@ -183,7 +183,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
 
       val hashKey = HashKey(k.a, k.b, k.c)
-      val query = Query.forHash[HashKey, Key, Value](hashKey)
+      val query = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column)
 
       (for {
         result <- DynamoDB.query(query)(Value.column)
@@ -196,8 +196,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     (k: Key, v1: Value, v2: Value) =>
       val k2 = k.copy(seq = k.seq + 1)
       val hashKey = HashKey(k.a, k.b, k.c)
-      val queryAsc = Query.forHash[HashKey, Key, Value](hashKey)
-      val queryDesc = Query.forHash[HashKey, Key, Value](hashKey = hashKey, scanDirection = ScanDirection.Descending)
+      val queryAsc = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column)
+      val queryDesc = QueryImpl.forHash[HashKey](hashKey = hashKey, scanDirection = ScanDirection.Descending)(table.name, HashKey.column)
       (for {
         _ <- DynamoDB.put(k, v1)(Key.column, Value.column)
         _ <- DynamoDB.put(k2, v2)(Key.column, Value.column)
@@ -217,7 +217,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val k2 = k.copy(seq = k.seq + 1)
       val k3 = k2.copy(seq = k2.seq + 1)
       val hashKey = HashKey(k.a, k.b, k.c)
-      val query = Query.forHashAndRange[HashKey, RangeKey, Key, Value](hashKey, RangeKey(k2.seq), Comparison.Lte)
+      val query = QueryImpl.forHashAndRange[HashKey, RangeKey](hashKey, RangeKey(k2.seq), Comparison.Lte)(table.name, HashKey.column, RangeKey.column)
       (for {
         _ <- DynamoDB.put(k, v1)(Key.column, Value.column)
         _ <- DynamoDB.put(k2, v2)(Key.column, Value.column)

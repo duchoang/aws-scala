@@ -8,9 +8,9 @@ import scalaz.concurrent.Task
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
 
-case class TableEnvironment[K, V](key: Column[K], value: Column[V], storeValue: StoreValue[V], tableDef: TableDefinition[K, V]) {
+case class TableEnvironment[K, V](key: Column[K], value: Column[V], update: ValueUpdate[V], tableDef: TableDefinition[K, V]) {
   private[dynamodb] object asImplicits {
-    implicit val sv = storeValue
+    implicit val sv = update
     implicit val td = tableDef
   }
 }
@@ -22,9 +22,7 @@ case class TableEnvironment[K, V](key: Column[K], value: Column[V], storeValue: 
  *
  * Tables are represented as key-value mappings, so you need classes to represent the key and the value. In addition,
  * you need to create instances of:
- *   * [[TableDefinition]] for the table.
- *   * [[Marshaller]] for the key
- *   * [[Marshaller]], [[Unmarshaller]] and [[StoreValue]] for the value
+ *   * TODO describe new Column based definition
  */
 object DynamoDB extends QueryOps {
 
@@ -38,11 +36,11 @@ object DynamoDB extends QueryOps {
       r => vc.unmarshaller.option(r.getItem)
     }
 
-  def put[K, V](key: K, value: V, overwrite: OverwriteMode = OverwriteMode.Overwrite)(kc: Column[K], vc: Column[V])(implicit evValue: StoreValue[V], evMapping: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
+  def put[K, V](key: K, value: V, overwrite: OverwriteMode = OverwriteMode.Overwrite)(kc: Column[K], vc: Column[V])(implicit evValue: ValueUpdate[V], evMapping: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
     doUpdate(key, evValue.asNew(value)(vc), overwrite)(kc, vc)
 
   def update[K, V](key: K, original: V, newValue: V)(kc: Column[K], vc: Column[V])(
-    implicit evValue: StoreValue[V], evMapping: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
+    implicit evValue: ValueUpdate[V], evMapping: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
     doUpdate(key, evValue.asUpdated(original, newValue), OverwriteMode.Overwrite)(kc, vc)
 
   def delete[K, V](key: K)(col: Column[K])(
@@ -161,7 +159,7 @@ object DynamoDB extends QueryOps {
   }
 
   private def doUpdate[K, V](key: K, updateItemRequestEndo: UpdateItemRequestEndo, overwrite: OverwriteMode)(kc: Column[K], vc: Column[V])(
-    implicit evValue: StoreValue[V], table: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
+    implicit evValue: ValueUpdate[V], table: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
     DynamoDBAction.withClient {
       _.updateItem {
         new UpdateItemRequest()

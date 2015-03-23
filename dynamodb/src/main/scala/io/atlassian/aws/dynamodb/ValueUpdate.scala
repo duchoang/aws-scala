@@ -7,13 +7,13 @@ import scala.collection.JavaConverters._
  * Type class for things that can be stored as 'values' in a DynamoDB table.
  * @tparam A The thing that can be stored as 'values' in a DynamoDB table
  */
-trait StoreValue[A] {
+trait ValueUpdate[A] {
   // TODO can StoreValue hold Column??? can Column derive the SV ???
   def asNew(a: A)(col: Column[A]): UpdateItemRequestEndo
   def asUpdated(o: A, a: A): UpdateItemRequestEndo
 }
 
-object StoreValue {
+object ValueUpdate {
   def delete: AttributeValueUpdate = new AttributeValueUpdate().withAction(AttributeAction.DELETE)
 
   def put(value: AttributeValue): AttributeValueUpdate = new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(value)
@@ -44,7 +44,7 @@ object StoreValue {
    */
   // TODO pass Column in here?
   def withUpdated[A](update: (A, A) => UpdateItemRequestEndo) =
-    new StoreValue[A] {
+    new ValueUpdate[A] {
       def asNew(a: A)(col: Column[A]) = newFromValues(a)(col)
       def asUpdated(o: A, a: A) = update(o, a)
     }

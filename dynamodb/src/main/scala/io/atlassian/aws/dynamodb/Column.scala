@@ -24,7 +24,7 @@ sealed trait Column[A] {
  * prepare the encoded representation to the Dynamo driver, and to return
  * the de-serialized value back from the database, respectively.
  */
-final class SingleColumn[A](val name: String)(implicit encode: Encoder[A], decode: Decoder[A]) extends Column[A] {
+final class NamedColumn[A](val name: String)(implicit encode: Encoder[A], decode: Decoder[A]) extends Column[A] {
   def apply(a: A): Field[A] =
     set(name, a)
 
@@ -40,8 +40,8 @@ final class SingleColumn[A](val name: String)(implicit encode: Encoder[A], decod
 }
 
 object Column extends ColumnComposites {
-  def apply[A: Encoder: Decoder](s: String): Column[A] =
-    new SingleColumn[A](s)
+  def apply[A: Encoder: Decoder](s: String): NamedColumn[A] =
+    new NamedColumn[A](s)
 
   implicit object ColumnInvariantFunctor extends InvariantFunctor[Column] {
     def xmap[A, B](ca: Column[A], f: A => B, g: B => A): Column[B] =

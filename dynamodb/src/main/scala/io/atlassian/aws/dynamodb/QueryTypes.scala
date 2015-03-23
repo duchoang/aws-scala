@@ -21,7 +21,7 @@ trait QueryTypes {
     }
   }
 
-  case class Page[A](result: List[A], next: Option[Query[A]])
+  case class Page[Q, A](result: List[A], next: Option[Q])
 
   sealed trait ScanDirection
   object ScanDirection {

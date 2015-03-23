@@ -55,20 +55,20 @@ object TestData extends Arbitraries with MoreEqualsInstances {
     val column =
       Column.compose4[Value](hash, metaData, length, deletedTimestamp) { case Value(h, md, len, ts) => (h, md, len, ts) } { Value.apply }
 
-    implicit val storeValue: StoreValue[Value] =
-      StoreValue.withUpdated[Value] {
+    implicit val storeValue: ValueUpdate[Value] =
+      ValueUpdate.withUpdated[Value] {
         (o, a) =>
           (o.deletedTimestamp, a.deletedTimestamp) match {
             case (None, Some(DateTimeEncode(deletedTimestamp))) =>
               // If it is a delete just update the deleted timestamp.
               // We probably should create a different value class for deletions (it will be neater)
-              StoreValue.updatedFromMap(Map("deletedTimestamp" -> StoreValue.put(deletedTimestamp)))
-            case _ => StoreValue.newFromValues(a)(column)
+              ValueUpdate.updatedFromMap(Map("deletedTimestamp" -> ValueUpdate.put(deletedTimestamp)))
+            case _ => ValueUpdate.newFromValues(a)(column)
           }
       }
   }
 
-  def thingDynamoMappingForTableName(tableName: String) =
+  def tableNamed(tableName: String) =
     TableDefinition.from[Key, Value](tableName, "key", Some(AttributeDefinition.number("seq")), 5, 5)
 
   implicit def KeyArbitrary: Arbitrary[Key] =

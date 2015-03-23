@@ -6,16 +6,18 @@ import scalaz.std.list._
 trait QueryOps {
   import collection.JavaConverters._
 
-  def query[A](query: Query[A])(col: Column[A]): DynamoDBAction[Page[A]] =
-    DynamoDBAction.withClient { client =>
-      client.query(query.asQueryRequest)
-    } flatMap { result =>
-      result.getItems.asScala.toList.traverse[DynamoDBAction, A] { m => col.unmarshaller.unmarshall(m) } map { values =>
-        val lastKey = Option(result.getLastEvaluatedKey)
-        val next = lastKey.map { lk =>
-          Query.nextFromQuery(query, lk.asScala.toMap)
-        }
-        Page(values, next)
+  def query[A](q: QueryImpl)(col: Column[A]): DynamoDBAction[Page[QueryImpl, A]] =
+    DynamoDBAction.withClient {
+      _.query(q.asQueryRequest)
+    } flatMap { res =>
+      res.getItems.asScala.toList.traverse[DynamoDBAction, A] {
+        col.unmarshaller.unmarshall
+      }.map {
+        Page(_,
+          Option(res.getLastEvaluatedKey).map { lastKey =>
+            QueryImpl.nextFromQuery(q, lastKey.asScala.toMap)
+          }
+        )
       }
     }
 }

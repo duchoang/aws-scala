@@ -1,65 +1,29 @@
-package io.atlassian.aws
-package dynamodb
+package io.atlassian.aws.dynamodb
 
-import com.amazonaws.services.dynamodbv2.model.{ QueryRequest, Condition, AttributeValue }
-import DynamoDB.ReadConsistency
-import collection.JavaConverters._
-import scalaz.syntax.id._
+import scalaz.Order
 
-object Query {
-  def forHash[HK, K, V](
-    hashKey: HK,
-    exclusiveStartKey: Option[Map[String, AttributeValue]] = None,
-    scanDirection: ScanDirection = ScanDirection.Ascending,
-    consistency: ReadConsistency = ReadConsistency.Eventual,
-    limit: Option[Int] = None)(implicit table: TableDefinition[K, V]): Query[V] = ??? /*{
+trait KeyValueQuery {
+  /** key type */
+  type K
 
-    val keyConditions = Map(
-      columnName -> condition(hashKey, Comparison.Eq)
-    )
-    Query(table.name, keyConditions, exclusiveStartKey, scanDirection, consistency, limit)
-  }*/
+  /** ordering, or sequence type, may not be avaiable in which case use Nothing */
+  type O
 
-  def forHashAndRange[HK, RK, K, V](
-    hashKey: HK,
-    rangeKey: RK,
-    rangeComparison: Comparison,
-    exclusiveStartKey: Option[Map[String, AttributeValue]] = None,
-    scanDirection: ScanDirection = ScanDirection.Ascending,
-    consistency: ReadConsistency = ReadConsistency.Eventual,
-    limit: Option[Int] = None)(implicit table: TableDefinition[K, V]): Query[V] = ??? /*{
+  /** value type*/
+  type V
 
-    val keyConditions = Map(
-      evHashKeyColumn.name -> condition(hashKey, Comparison.Eq),
-      evRangeKeyColumn.name -> condition(rangeKey, rangeComparison)
-    )
+  sealed trait Query
 
-    Query(table.name, keyConditions, exclusiveStartKey, scanDirection, consistency, limit)
-  }*/
+  object Query {
+    def key(k: K, config: Config = Config())(implicit order: Order[O]): Query =
+      Hashed(k, config)
 
-  def nextFromQuery[A](query: Query[A], exclusiveStartKey: Map[String, AttributeValue]): Query[A] =
-    Query(query.table, query.keyConditions, Some(exclusiveStartKey), query.scanDirection, query.consistency, query.limit)
+    def range(k: K, ord: O, cmp: Comparison, config: Config = Config())(implicit order: Order[O]): Query =
+      Ranged(k, ord, cmp, config)
 
-  private def condition[K](key: K, comparator: Comparison)(implicit kc: Column[K]) =
-    new Condition().withComparisonOperator(Comparison.asAWS(comparator)).withAttributeValueList(
-      kc.marshaller.toFlattenedMap(key).values.asJavaCollection)
-}
+    case class Hashed(key: K, config: Config) extends Query
+    case class Ranged(key: K, ord: O, cmp: Comparison, config: Config) extends Query
 
-case class Query[A](table: String,
-  keyConditions: Map[String, Condition],
-  exclusiveStartKey: Option[Map[String, AttributeValue]],
-  scanDirection: ScanDirection,
-  consistency: ReadConsistency,
-  limit: Option[Int]) {
-  def asQueryRequest: QueryRequest = {
-    new QueryRequest()
-      .withTableName(table)
-      .withKeyConditions(keyConditions.asJava)
-      .withScanIndexForward(ScanDirection.asBool(scanDirection))
-      .withConsistentRead(ReadConsistency.asBool(consistency)) <|
-      { req =>
-        limit.foreach { req.setLimit(_) }
-        exclusiveStartKey.foreach { esk => req.setExclusiveStartKey(esk.asJava) }
-      }
+    case class Config(limit: Option[Int] = None)
   }
 }
