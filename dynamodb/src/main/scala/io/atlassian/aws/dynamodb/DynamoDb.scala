@@ -2,16 +2,18 @@ package io.atlassian.aws
 package dynamodb
 
 import scalaz.~>
-import scalaz.syntax.id._
-import scalaz.std.option._
 import scalaz.concurrent.Task
+import scalaz.std.option._
+import scalaz.std.list._
+import scalaz.syntax.id._
+import scalaz.syntax.traverse._
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
 
-case class TableEnvironment[K, V](key: Column[K], value: Column[V], update: ValueUpdate[V], tableDef: TableDefinition[K, V]) {
+case class TableEnvironment[K, H, R, V](key: Column[K], hash: NamedColumn[H], range: NamedColumn[R], value: Column[V], update: ValueUpdate[V], table: TableDefinition[K, V]) {
   private[dynamodb] object asImplicits {
     implicit val sv = update
-    implicit val td = tableDef
+    //implicit val td = table
   }
 }
 
@@ -20,33 +22,49 @@ case class TableEnvironment[K, V](key: Column[K], value: Column[V], update: Valu
  * providing an instance of an AmazonDynamoDBClient (see AmazonClient for
  * convenient constructor functions).
  *
+ * This class is generally not intended to be used directly, but used through the Table algebra and
+ *
  * Tables are represented as key-value mappings, so you need classes to represent the key and the value. In addition,
  * you need to create instances of:
  *   * TODO describe new Column based definition
  */
-object DynamoDB extends QueryOps {
+object DynamoDB {
 
   import scala.concurrent.duration._
   import DynamoDBAction.withClient
 
-  def get[K, V](key: K, consistency: ReadConsistency = ReadConsistency.Eventual)(kc: Column[K], vc: Column[V])(implicit evMapping: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
+  def get[K, V](key: K, consistency: ReadConsistency = ReadConsistency.Eventual)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Option[V]] =
     withClient {
-      _.getItem(evMapping.name, kc.marshaller.toFlattenedMap(key).asJava, ReadConsistency.asBool(consistency))
+      _.getItem(table, kc.marshaller.toFlattenedMap(key).asJava, ReadConsistency.asBool(consistency))
     }.flatMap {
       r => vc.unmarshaller.option(r.getItem)
     }
 
-  def put[K, V](key: K, value: V, overwrite: OverwriteMode = OverwriteMode.Overwrite)(kc: Column[K], vc: Column[V])(implicit evValue: ValueUpdate[V], evMapping: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
-    doUpdate(key, evValue.asNew(value)(vc), overwrite)(kc, vc)
+  def put[K, V](key: K, value: V, overwrite: OverwriteMode = OverwriteMode.Overwrite)(table: String, kc: Column[K], vc: Column[V])(implicit evValue: ValueUpdate[V]): DynamoDBAction[Option[V]] =
+    doUpdate(key, evValue.asNew(value)(vc), overwrite)(table, kc, vc)
 
-  def update[K, V](key: K, original: V, newValue: V)(kc: Column[K], vc: Column[V])(
-    implicit evValue: ValueUpdate[V], evMapping: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
-    doUpdate(key, evValue.asUpdated(original, newValue), OverwriteMode.Overwrite)(kc, vc)
+  def update[K, V](key: K, original: V, newValue: V)(table: String, kc: Column[K], vc: Column[V])(implicit evValue: ValueUpdate[V]): DynamoDBAction[Option[V]] =
+    doUpdate(key, evValue.asUpdated(original, newValue), OverwriteMode.Overwrite)(table, kc, vc)
 
-  def delete[K, V](key: K)(col: Column[K])(
-    implicit evMapping: TableDefinition[K, V]): DynamoDBAction[DeleteItemResult] =
+  def delete[K, V](key: K)(table: String, col: Column[K]): DynamoDBAction[DeleteItemResult] =
     withClient {
-      _.deleteItem(evMapping.name, col.marshaller.toFlattenedMap(key).asJava)
+      _.deleteItem(table, col.marshaller.toFlattenedMap(key).asJava)
+    }
+
+  def query[V](q: QueryImpl)(col: Column[V]): DynamoDBAction[Page[V]] =
+    DynamoDBAction.withClient {
+      _.query(q.asQueryRequest)
+    } flatMap { res =>
+      res.getItems.asScala.toList.traverse[DynamoDBAction, V] {
+        col.unmarshaller.unmarshall
+      }.map {
+        vs =>
+          Page(vs,
+            Option(res.getLastEvaluatedKey).map { lastKey =>
+              QueryImpl.nextFromQuery(q, lastKey.asScala.toMap)
+            }
+          )
+      }
     }
 
   def tableExists(tableName: String): DynamoDBAction[Boolean] =
@@ -71,31 +89,30 @@ object DynamoDB extends QueryOps {
    * @tparam V The value type
    * @return Map of key -> values that failed to be saved.
    */
-  def batchPut[K, V](keyValues: Map[K, V])(kc: Column[K], vc: Column[V])(
-    implicit table: TableDefinition[K, V]): DynamoDBAction[Map[K, V]] =
+  def batchPut[K, V](keyValues: Map[K, V])(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Map[K, V]] =
     withClient {
-      client =>
-        val writeRequests =
-          keyValues.map {
-            case (k, v) =>
-              new WriteRequest().withPutRequest(
-                new PutRequest().withItem(
+      _.batchWriteItem {
+        new BatchWriteItemRequest().withRequestItems {
+          Map(
+            table -> keyValues.map {
+              case (k, v) => new WriteRequest().withPutRequest {
+                new PutRequest().withItem {
                   (kc.marshaller.toFlattenedMap(k) ++ vc.marshaller.toFlattenedMap(v)).asJava
-                )
-              )
-          }.toList.asJava
-        val requestItems = Map(table.name -> writeRequests).asJava
-        client.batchWriteItem(new BatchWriteItemRequest().withRequestItems(requestItems))
-          .getUnprocessedItems.asScala.get(table.name) match {
-            case None => Map()
-            case Some(reqs) => reqs.asScala.map { req =>
-              val item = req.getPutRequest.getItem.asScala.toMap
-              (for {
-                failedKey <- kc.unmarshaller.fromMap(item)
-                failedValue <- vc.unmarshaller.fromMap(item)
-              } yield failedKey -> failedValue).toOption
-            }.flatten.toMap
-          }
+                }
+              }
+            }.toList.asJava
+          ).asJava
+        }
+      }.getUnprocessedItems.asScala.get(table) match {
+        case None => Map()
+        case Some(reqs) => reqs.asScala.map { req =>
+          val item = req.getPutRequest.getItem.asScala.toMap
+          (for {
+            failedKey <- kc.unmarshaller.fromMap(item)
+            failedValue <- vc.unmarshaller.fromMap(item)
+          } yield failedKey -> failedValue).toOption
+        }.flatten.toMap
+      }
     }
 
   /**
@@ -158,12 +175,12 @@ object DynamoDB extends QueryOps {
     }
   }
 
-  private def doUpdate[K, V](key: K, updateItemRequestEndo: UpdateItemRequestEndo, overwrite: OverwriteMode)(kc: Column[K], vc: Column[V])(
-    implicit evValue: ValueUpdate[V], table: TableDefinition[K, V]): DynamoDBAction[Option[V]] =
+  private def doUpdate[K, V](key: K, updateItemRequestEndo: UpdateItemRequestEndo, overwrite: OverwriteMode)(tableName: String, kc: Column[K], vc: Column[V])(
+    implicit evValue: ValueUpdate[V]): DynamoDBAction[Option[V]] =
     DynamoDBAction.withClient {
       _.updateItem {
         new UpdateItemRequest()
-          .withTableName(table.name)
+          .withTableName(tableName)
           .withReturnValues(ReturnValue.ALL_OLD)
           .withKey(kc.marshaller.toFlattenedMap(key).asJava) |> updateItemRequestEndo.run |> {
             req =>
@@ -182,17 +199,26 @@ object DynamoDB extends QueryOps {
       }
     }.flatMap { result => vc.unmarshaller.option(result.getAttributes) }
 
-  def interpreter(kv: KeyValueDB)(env: TableEnvironment[kv.K, kv.V]): kv.DBOp ~> DynamoDBAction =
+  def interpreter(kv: KeyValueDB)(env: TableEnvironment[kv.K, kv.H, kv.R, kv.V]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
       import env.asImplicits._
+      import kv.DBOp._
+      import kv.Query._
       def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
         fa match {
-          case kv.Get(k)                         => get(k)(env.key, env.value)
-          case kv.Put(k, v)                      => put(k, v)(env.key, env.value)
-          case kv.Update(v, original, newVal)    => update(v, original, newVal)(env.key, env.value)
-          case kv.Delete(k)                      => delete(k)(env.key).map { _ => () }
-          case kv.TableExists(name)              => tableExists(name)
-          case kv.BatchPut(kvs /*: Map[K, V]*/ ) => batchPut(kvs)(env.key, env.value)
+          case Get(k)                      => get(k)(env.table.name, env.key, env.value)
+          case Put(k, v)                   => put(k, v)(env.table.name, env.key, env.value)
+          case Update(v, original, newVal) => update(v, original, newVal)(env.table.name, env.key, env.value)
+          case Delete(k)                   => delete(k)(env.table.name, env.key).map { _ => () }
+          case QueryOp(q)                  => queryImpl(q)
+          case TableExists(name)           => tableExists(name)
+          case BatchPut(kvs)               => batchPut(kvs)(env.table.name, env.key, env.value)
+        }
+
+      def queryImpl[A]: kv.Query => DynamoDBAction[Page[kv.V]] =
+        _ match {
+          case Hashed(h, cfg)         => query(QueryImpl.forHash(h)(env.table.name, env.hash))(env.value)
+          case Ranged(h, r, cmp, cfg) => query(QueryImpl.forHashAndRange(h, r, cmp)(env.table.name, env.hash, env.range))(env.value)
         }
     }
 }

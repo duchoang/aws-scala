@@ -2,27 +2,29 @@ package io.atlassian.aws.dynamodb
 
 import scalaz.Order
 
-trait KeyValueQuery {
-  /** key type */
-  type K
+/**
+ * Queries is defined in terms of Hash and Range types.
+ *
+ * The Hash type identifies records
+ */
+trait Queries {
+  /** the Hash type */
+  type H
 
-  /** ordering, or sequence type, may not be avaiable in which case use Nothing */
-  type O
-
-  /** value type*/
-  type V
+  /** the Range type */
+  type R
 
   sealed trait Query
 
   object Query {
-    def key(k: K, config: Config = Config())(implicit order: Order[O]): Query =
-      Hashed(k, config)
+    def hash(hash: H, config: Config = Config()): Query =
+      Hashed(hash, config)
 
-    def range(k: K, ord: O, cmp: Comparison, config: Config = Config())(implicit order: Order[O]): Query =
-      Ranged(k, ord, cmp, config)
+    def range(hash: H, range: R, cmp: Comparison, config: Config = Config())(implicit order: Order[R]): Query =
+      Ranged(hash, range, cmp, config)
 
-    case class Hashed(key: K, config: Config) extends Query
-    case class Ranged(key: K, ord: O, cmp: Comparison, config: Config) extends Query
+    case class Hashed(hash: H, config: Config) extends Query
+    case class Ranged(hash: H, range: R, cmp: Comparison, config: Config) extends Query
 
     case class Config(limit: Option[Int] = None)
   }

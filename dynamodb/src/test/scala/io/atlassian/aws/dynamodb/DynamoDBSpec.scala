@@ -75,11 +75,11 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
       DYNAMO_CLIENT.updateItem(putRequest)
 
-      DynamoDB.get[Key, Value](thingKey)(Key.column, Value.column) must returnValue(Some(thingValue))
+      DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column) must returnValue(Some(thingValue))
   }.set(minTestsOk = NUM_TESTS)
 
   def getWorksIfNoValue =
-    DynamoDB.get[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(Key.column, Value.column) must returnValue(None)
+    DynamoDB.get[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.name, Key.column, Value.column) must returnValue(None)
 
   def getWorksIfCantDeserialize = Prop.forAll {
     (thingKey: Key, thingValue: Value) =>
@@ -103,12 +103,12 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
       DYNAMO_CLIENT.updateItem(putRequest)
 
-      DynamoDB.get[Key, Value](thingKey)(Key.column, Value.column) must returnFailure
+      DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column) must returnFailure
   }.set(minTestsOk = NUM_TESTS)
 
   def newPutWorks = Prop.forAll {
     (thingKey: Key, thingValue: Value) =>
-      DynamoDB.put[Key, Value](thingKey, thingValue)(Key.column, Value.column) must returnValue(None) and
+      DynamoDB.put[Key, Value](thingKey, thingValue)(table.name, Key.column, Value.column) must returnValue(None) and
         ((DYNAMO_CLIENT.getItem(table.name, Key.column.marshaller.toFlattenedMap(thingKey).asJava).getItem.asScala.toMap |>
           Value.column.unmarshaller.fromMap) must equal(Attempt.ok(thingValue)))
   }.set(minTestsOk = NUM_TESTS)
@@ -116,10 +116,10 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   def putReplaceWorks = Prop.forAll {
     (thingKey: Key, thingValue: Value, thingValue2: Value) =>
       (for {
-        firstPut <- DynamoDB.put[Key, Value](thingKey, thingValue)(Key.column, Value.column)
-        firstGet <- DynamoDB.get[Key, Value](thingKey)(Key.column, Value.column)
-        secondPut <- DynamoDB.put[Key, Value](thingKey, thingValue2)(Key.column, Value.column)
-        secondGet <- DynamoDB.get[Key, Value](thingKey)(Key.column, Value.column)
+        firstPut <- DynamoDB.put[Key, Value](thingKey, thingValue)(table.name, Key.column, Value.column)
+        firstGet <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
+        secondPut <- DynamoDB.put[Key, Value](thingKey, thingValue2)(table.name, Key.column, Value.column)
+        secondGet <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
       } yield (firstPut, firstGet, secondPut, secondGet)) must returnValue((None, Some(thingValue), Some(thingValue), Some(thingValue2)))
   }.set(minTestsOk = NUM_TESTS)
 
@@ -128,30 +128,30 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val thingValue1 = thingValue.copy(deletedTimestamp = Some(date))
       val thingValue2 = thingValue.copy(deletedTimestamp = None)
       (for {
-        firstPut <- DynamoDB.put[Key, Value](thingKey, thingValue1)(Key.column, Value.column)
-        update <- DynamoDB.update[Key, Value](thingKey, thingValue1, thingValue2)(Key.column, Value.column)
-        secondGet <- DynamoDB.get[Key, Value](thingKey)(Key.column, Value.column)
+        firstPut <- DynamoDB.put[Key, Value](thingKey, thingValue1)(table.name, Key.column, Value.column)
+        update <- DynamoDB.update[Key, Value](thingKey, thingValue1, thingValue2)(table.name, Key.column, Value.column)
+        secondGet <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
       } yield (firstPut, update, secondGet)) must returnValue((None, Some(thingValue1), Some(thingValue2)))
   }.set(minTestsOk = NUM_TESTS)
 
   def deleteWorks = Prop.forAll {
     (thingKey: Key, thingValue: Value) =>
       (for {
-        _ <- DynamoDB.put[Key, Value](thingKey, thingValue)(Key.column, Value.column)
-        _ <- DynamoDB.delete[Key, Value](thingKey)(Key.column)
-        result <- DynamoDB.get[Key, Value](thingKey)(Key.column, Value.column)
+        _ <- DynamoDB.put[Key, Value](thingKey, thingValue)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.delete[Key, Value](thingKey)(table.name, Key.column)
+        result <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
       } yield result) must returnValue(None)
   }.set(minTestsOk = NUM_TESTS)
 
   def deleteWorksForNonExistentKey =
-    DynamoDB.delete[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(Key.column) must returnSuccess
+    DynamoDB.delete[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.name, Key.column) must returnSuccess
 
   def noOverwriteWorks = Prop.forAll {
     (thingKey: Key, thingValue: Value, thingValue2: Value) =>
       (for {
-        firstPut <- DynamoDB.put[Key, Value](thingKey, thingValue)(Key.column, Value.column)
-        firstGet <- DynamoDB.get[Key, Value](thingKey)(Key.column, Value.column)
-        secondPut <- DynamoDB.put[Key, Value](thingKey, thingValue2, OverwriteMode.NoOverwrite)(Key.column, Value.column)
+        firstPut <- DynamoDB.put[Key, Value](thingKey, thingValue)(table.name, Key.column, Value.column)
+        firstGet <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
+        secondPut <- DynamoDB.put[Key, Value](thingKey, thingValue2, OverwriteMode.NoOverwrite)(table.name, Key.column, Value.column)
       } yield firstPut) must returnException[Option[Value], ConditionalCheckFailedException]
   }.set(minTestsOk = NUM_TESTS)
 
@@ -179,7 +179,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         val valuesToSave = window.map { i =>
           k.copy(seq = i.toLong) -> valueToSave.copy(length = i.toLong)
         }.toMap
-        DynamoDB.batchPut(valuesToSave)(Key.column, Value.column).run(DYNAMO_CLIENT).run
+        DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column).run(DYNAMO_CLIENT).run
       }
 
       val hashKey = HashKey(k.a, k.b, k.c)
@@ -199,8 +199,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val queryAsc = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column)
       val queryDesc = QueryImpl.forHash[HashKey](hashKey = hashKey, scanDirection = ScanDirection.Descending)(table.name, HashKey.column)
       (for {
-        _ <- DynamoDB.put(k, v1)(Key.column, Value.column)
-        _ <- DynamoDB.put(k2, v2)(Key.column, Value.column)
+        _ <- DynamoDB.put(k, v1)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.put(k2, v2)(table.name, Key.column, Value.column)
         ascResult <- DynamoDB.query(queryAsc)(Value.column)
         descResult <- DynamoDB.query(queryDesc)(Value.column)
       } yield (ascResult, descResult)) must returnResult {
@@ -219,9 +219,9 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val hashKey = HashKey(k.a, k.b, k.c)
       val query = QueryImpl.forHashAndRange[HashKey, RangeKey](hashKey, RangeKey(k2.seq), Comparison.Lte)(table.name, HashKey.column, RangeKey.column)
       (for {
-        _ <- DynamoDB.put(k, v1)(Key.column, Value.column)
-        _ <- DynamoDB.put(k2, v2)(Key.column, Value.column)
-        _ <- DynamoDB.put(k3, v3)(Key.column, Value.column)
+        _ <- DynamoDB.put(k, v1)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.put(k2, v2)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.put(k3, v3)(table.name, Key.column, Value.column)
         result <- DynamoDB.query(query)(Value.column)
       } yield result) must returnResult { page =>
         page.result must equal(List(v1, v2)) and

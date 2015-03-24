@@ -15,13 +15,13 @@ object TableDefinition {
 
   def rangeSchemaElement(name: String) = new KeySchemaElement(name, KeyType.RANGE)
 
-  def from[A, B](
+  def from[K, V](
     tableName: String,
     hashKey: String,
     rangeKey: Option[AttributeDefinition] = None,
     provisionedReadCapacity: Long = 5,
     provisionedWriteCapacity: Long = 5) =
-    TableDefinition[A, B](
+    TableDefinition[K, V](
       name = tableName,
       attributeDefinitions =
         rangeKey.foldLeft(List(AttributeDefinition.string(hashKey))) {
