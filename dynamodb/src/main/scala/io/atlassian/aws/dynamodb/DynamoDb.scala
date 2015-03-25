@@ -199,7 +199,7 @@ object DynamoDB {
       }
     }.flatMap { result => vc.unmarshaller.option(result.getAttributes) }
 
-  def interpreter(kv: KeyValueDB)(env: TableEnvironment[kv.K, kv.H, kv.R, kv.V]): kv.DBOp ~> DynamoDBAction =
+  def interpreter(kv: Table)(env: TableEnvironment[kv.K, kv.H, kv.R, kv.V]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
       import env.asImplicits._
       import kv.DBOp._
@@ -211,7 +211,7 @@ object DynamoDB {
           case Update(v, original, newVal) => update(v, original, newVal)(env.table.name, env.key, env.value)
           case Delete(k)                   => delete(k)(env.table.name, env.key).map { _ => () }
           case QueryOp(q)                  => queryImpl(q)
-          case TableExists(name)           => tableExists(name)
+          case TableExists                 => tableExists(env.table.name)
           case BatchPut(kvs)               => batchPut(kvs)(env.table.name, env.key, env.value)
         }
 

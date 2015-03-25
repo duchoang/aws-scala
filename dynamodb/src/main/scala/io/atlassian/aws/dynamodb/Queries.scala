@@ -5,7 +5,7 @@ import scalaz.Order
 /**
  * Queries is defined in terms of Hash and Range types.
  *
- * The Hash type identifies records
+ * The Hash type identifies records and the Range allows us to do ordering.
  */
 trait Queries {
   /** the Hash type */

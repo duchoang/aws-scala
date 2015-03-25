@@ -3,32 +3,33 @@ package io.atlassian.aws.dynamodb
 import scalaz.{ Coyoneda, Free, Monad }
 
 /**
- * A single KV table. Implementations have concrete key and value types.
+ * A key-value table. Implementations have concrete key and value types.
  */
-trait KeyValueDB extends Queries {
+trait Table extends Queries {
   type K
   type V
 
   type DBAction[A] = Free.FreeC[DBOp, A]
 
+  import DBOp._
+
   def get(k: K): DBAction[Option[V]] =
-    DBOp.Get(k).action
+    Get(k).action
 
   def put(k: K, v: V): DBAction[Option[V]] =
-    DBOp.Put(k, v).action
+    Put(k, v).action
 
   def update(k: K, old: V, v: V): DBAction[Option[V]] =
-    DBOp.Update(k, old, v).action
+    Update(k, old, v).action
 
   def delete(k: K): DBAction[Unit] =
-    DBOp.Delete(k).action
+    Delete(k).action
 
   def query(q: Query): DBAction[Page[V]] =
-    DBOp.QueryOp(q).action
+    QueryOp(q).action
 
-  // TODO this doesn't belong here really
-  def tableExists(name: String): DBAction[Boolean] =
-    DBOp.TableExists(name).action
+  def tableExists: DBAction[Boolean] =
+    TableExists.action
 
   /**
    * Perform a batch put operation using the given key -> value pairs. DynamoDB has the following restrictions:
@@ -54,8 +55,8 @@ trait KeyValueDB extends Queries {
     case class Update(key: K, original: V, newValue: V) extends DBOp[Option[V]]
     case class Delete(key: K) extends DBOp[Unit]
     case class QueryOp(query: Query) extends DBOp[Page[V]]
-    case class TableExists(tableName: String) extends DBOp[Boolean]
     case class BatchPut(keyValues: Map[K, V]) extends DBOp[Map[K, V]]
+    case object TableExists extends DBOp[Boolean]
   }
 
   implicit val MonadDBAction: Monad[DBAction] =
@@ -66,7 +67,7 @@ trait KeyValueDB extends Queries {
   }
 }
 
-object StringTable extends KeyValueDB {
+object StringTable extends Table {
   type K = String
   type V = String
 
