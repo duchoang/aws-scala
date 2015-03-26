@@ -66,16 +66,14 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
       Process.repeatEval {
         for {
           unitOrActivity <-
-            Task.fork {
-              Task.delay {
-                pollActivity.fold(
-                { i => warn(i); ().left },
-                {
-                  case None => ().left
-                  case Some(ai) =>
-                    activityMap.get(ai.activity).map { ad => (ai, ad).right[Unit] } | ().left
-                })
-              }
+            Task {
+              pollActivity.fold(
+              { i => warn(i); ().left },
+              {
+                case None => ().left
+                case Some(ai) =>
+                  activityMap.get(ai.activity).map { ad => (ai, ad).right[Unit] } | ().left
+              })
             }
           unitOrResult <-
             unitOrActivity.fold(
