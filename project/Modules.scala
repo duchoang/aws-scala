@@ -21,6 +21,9 @@ trait Modules {
   lazy val dynamodb =
     Project(id = "dynamodb", base = file("dynamodb"), settings = standardSettingsAndDependencies) dependsOn (core % depTest)
 
+  lazy val rds =
+    Project(id = "rds", base = file("rds"), settings = standardSettingsAndDependencies) dependsOn (core % depTest)
+
   lazy val s3 =
     Project(id = "s3", base = file("s3"), settings = standardSettingsAndDependencies) dependsOn (core % depTest)
 
@@ -29,8 +32,8 @@ trait Modules {
 
   lazy val all =
     Project(id = "all", base = file("."), settings = standardSettings) dependsOn ( // needs both dependsOn and aggregate to produce dependencies in the pom
-      core, cloudformation, dynamodb, s3, sqs
+      core, cloudformation, dynamodb, rds, s3, sqs
     ) aggregate (
-      core, cloudformation, dynamodb, s3, sqs
+      core, cloudformation, dynamodb, rds, s3, sqs
     )
 }
