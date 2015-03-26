@@ -5,23 +5,19 @@ import org.joda.time.{ DateTimeZone, DateTime }
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 
-import scalaz.Monad
+import scalaz.Functor
 import scalaz.syntax.id._
-import scalaz.syntax.monad.ToBindOps
 
 /**
  * Represents a function that tries to convert an AttributeValue into a
  * Scala value (typically that represents a field in an object).
  */
-case class Decoder[A] private[Decoder] (run: Value => Attempt[A]) {
+case class Decoder[A] private[Decoder] (run: Value => Attempt[A])(val keyType: Key.Type) {
   def decode(o: Value): Attempt[A] =
     run(o)
 
   def map[B](f: A => B): Decoder[B] =
-    Decoder { run(_).map(f) }
-
-  def flatMap[B](f: A => Decoder[B]): Decoder[B] =
-    Decoder { m => run(m) >>= { f(_).decode(m) } }
+    Decoder { run(_).map(f) } (keyType)
 
   def mapPartial[B](f: PartialFunction[A, B]): Decoder[B] =
     Decoder {
@@ -31,7 +27,7 @@ case class Decoder[A] private[Decoder] (run: Value => Attempt[A]) {
         else
           Attempt.fail(s"'$a' is an invalid value")
       }
-    }
+    }(keyType)
 }
 
 /**
@@ -41,49 +37,45 @@ object Decoder {
   def apply[A: Decoder] =
     implicitly[Decoder[A]]
 
-  private[Decoder] def option[A](f: Value => Attempt[A]): Decoder[A] =
-    Decoder(f)
+  private[Decoder] def option[A](f: Value => Attempt[A])(keyType: Key.Type): Decoder[A] =
+    Decoder(f)(keyType)
 
-  def ok[A](strict: A): Decoder[A] = from { Attempt.ok(strict) }
+  //def from[A](a: Attempt[A]): Decoder[A] = Decoder { _ => a }
 
-  def from[A](a: Attempt[A]): Decoder[A] = Decoder { _ => a }
-
-  def mandatoryField[A](f: AttributeValue => A, label: String): Decoder[A] =
+  def mandatoryField[A](f: AttributeValue => A, label: String)(keyType: Key.Type): Decoder[A] =
     option {
       case None     => Attempt.fail(s"No $label value present")
       case Some(av) => Attempt.safe(f(av))
-    }
+    }(keyType)
 
   // instances
 
-  implicit def LongDecode: Decoder[Long] =
-    mandatoryField(_.getN.toLong, "Long")
+  implicit val LongDecode: Decoder[Long] =
+    mandatoryField(_.getN.toLong, "Long")(Key.NumberType)
 
-  implicit def IntDecode: Decoder[Int] =
-    mandatoryField(_.getN.toInt, "Int")
+  implicit val IntDecode: Decoder[Int] =
+    mandatoryField(_.getN.toInt, "Int")(Key.NumberType)
 
-  implicit def DateTimeDecode: Decoder[DateTime] =
-    mandatoryField(_.getN.toLong |> { i => new DateTime(i, DateTimeZone.UTC) }, "DateTime")
+  implicit val DateTimeDecode: Decoder[DateTime] =
+    mandatoryField(_.getN.toLong |> { i => new DateTime(i, DateTimeZone.UTC) }, "DateTime")(Key.NumberType)
 
-  implicit def StringDecode: Decoder[String] =
+  implicit val StringDecode: Decoder[String] =
     option {
       // No attribute value means an empty string (because DynamoDB doesn't support empty strings as attribute values)
       case None => Attempt.ok("")
       case Some(av) =>
         if (av.getS == null) Attempt.fail("No string value present")
         else Attempt.ok(av.getS)
-    }
+    }(Key.StringType)
 
-  implicit def OptionDecode[A: Decoder]: Decoder[Option[A]] =
+  implicit def OptionDecode[A](implicit decoder: Decoder[A]): Decoder[Option[A]] =
     option {
       case None                => Attempt.ok(None)
-      case someValue @ Some(_) => Decoder[A].decode(someValue).toOption |> Attempt.ok
-    }
+      case someValue @ Some(_) => decoder.decode(someValue).toOption |> Attempt.ok
+    }(decoder.keyType)
 
-  implicit def DecodeAttributeValueMonad: Monad[Decoder] =
-    new Monad[Decoder] {
-      def point[A](v: => A) = Decoder.ok(v)
-      def bind[A, B](m: Decoder[A])(f: A => Decoder[B]) = m flatMap f
-      override def map[A, B](m: Decoder[A])(f: A => B) = m map f
+  implicit def DecodeAttributeValueMonad: Functor[Decoder] =
+    new Functor[Decoder] {
+      def map[A, B](m: Decoder[A])(f: A => B) = m map f
     }
 }

@@ -10,12 +10,6 @@ import scalaz.syntax.traverse._
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
 
-case class TableEnvironment[K, H, R, V](key: Column[K], hash: NamedColumn[H], range: NamedColumn[R], value: Column[V], update: ValueUpdate[V], table: TableDefinition[K, V]) {
-  private[dynamodb] object asImplicits {
-    implicit val sv = update
-    //implicit val td = table
-  }
-}
 
 /**
  * Contains functions that perform operations on a DynamoDB table. Functions return a DynamoDBAction that can be run by
@@ -40,11 +34,11 @@ object DynamoDB {
       r => vc.unmarshaller.option(r.getItem)
     }
 
-  def put[K, V](key: K, value: V, overwrite: OverwriteMode = OverwriteMode.Overwrite)(table: String, kc: Column[K], vc: Column[V])(implicit evValue: ValueUpdate[V]): DynamoDBAction[Option[V]] =
-    doUpdate(key, evValue.asNew(value)(vc), overwrite)(table, kc, vc)
+  def put[K, V](key: K, value: V, overwrite: OverwriteMode = OverwriteMode.Overwrite)(table: String, kc: Column[K], vc: Column[V], update: ValueUpdate[V]): DynamoDBAction[Option[V]] =
+    doUpdate(key, update.asNew(value)(vc), overwrite)(table, kc, vc, update)
 
-  def update[K, V](key: K, original: V, newValue: V)(table: String, kc: Column[K], vc: Column[V])(implicit evValue: ValueUpdate[V]): DynamoDBAction[Option[V]] =
-    doUpdate(key, evValue.asUpdated(original, newValue), OverwriteMode.Overwrite)(table, kc, vc)
+  def update[K, V](key: K, original: V, newValue: V)(table: String, kc: Column[K], vc: Column[V], update: ValueUpdate[V]): DynamoDBAction[Option[V]] =
+    doUpdate(key, update.asUpdated(original, newValue), OverwriteMode.Overwrite)(table, kc, vc, update)
 
   def delete[K, V](key: K)(table: String, col: Column[K]): DynamoDBAction[DeleteItemResult] =
     withClient {
@@ -78,16 +72,6 @@ object DynamoDB {
    * Perform a batch put operation using the given key -> value pairs. DynamoDB has the following restrictions:
    *   - item size must be < 64kb
    *   - we can only batch put 25 items at a time
-   *
-   * @param keyValues The key -> value pairs to save
-   * @param evKeyMarshaller marshaller for the key
-   * @param evKeyUnmarshaller unmarshaller for the key
-   * @param evValueMarshaller marshaller for the value
-   * @param evValueUnmarshaller unmarshaller for the value
-   * @param tableDef Table definition for the key -> value store
-   * @tparam K The key type
-   * @tparam V The value type
-   * @return Map of key -> values that failed to be saved.
    */
   def batchPut[K, V](keyValues: Map[K, V])(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Map[K, V]] =
     withClient {
@@ -118,21 +102,14 @@ object DynamoDB {
   /**
    * Creates a table for the given entity. The table name comes from the entity and is transformed by the
    * tableNameTransformer (e.g. to create tables for different environments)
-   * @tparam A The key of the table
-   * @tparam B The value of the table
-   * @param checkTableActiveIntervals Tables take a while to become active. This is a sequence of interval between testing
-   *                                  tests for whether the table is active.
-   * @param evMapping Enforces a mapping between A and B that represents the table.
-   * @return DynamoDBAction that when run provides a Task for creating the table. The task will return when the table
-   *         is active.
    */
-  private[dynamodb] def createTable[K, V](checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli))(implicit evMapping: TableDefinition[K, V]): DynamoDBAction[Task[TableDescription]] =
+  private[dynamodb] def createTable[K, V, H, R](table: TableDefinition[K, V, H, R], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
     withClient {
       _.createTable {
-        new CreateTableRequest().withTableName(evMapping.name)
-          .withAttributeDefinitions(evMapping.attributeDefinitions.asJavaCollection)
-          .withKeySchema(evMapping.schemaElements.asJavaCollection)
-          .withProvisionedThroughput(evMapping.provisionedThroughput)
+        new CreateTableRequest().withTableName(table.name)
+          .withAttributeDefinitions(table.attributeDefinitions.asJavaCollection)
+          .withKeySchema(table.schemaElements.asJavaCollection)
+          .withProvisionedThroughput(table.provisionedThroughput)
       }
     }.flatMap { createTableResult =>
       withClient { client =>
@@ -159,7 +136,7 @@ object DynamoDB {
    * Deletes the table for the given entity. The table name comes from the entity and is transformed by the
    * tableNameTransformer (e.g. to create tables for different environments)
    */
-  private[dynamodb] def deleteTable[K, V](implicit Table: TableDefinition[K, V]): DynamoDBAction[DeleteTableResult] =
+  private[dynamodb] def deleteTable[K, V, H, R](Table: TableDefinition[K, V, H, R]): DynamoDBAction[DeleteTableResult] =
     withClient {
       _.deleteTable(Table.name)
     }
@@ -175,8 +152,7 @@ object DynamoDB {
     }
   }
 
-  private def doUpdate[K, V](key: K, updateItemRequestEndo: UpdateItemRequestEndo, overwrite: OverwriteMode)(tableName: String, kc: Column[K], vc: Column[V])(
-    implicit evValue: ValueUpdate[V]): DynamoDBAction[Option[V]] =
+  private def doUpdate[K, V](key: K, updateItemRequestEndo: UpdateItemRequestEndo, overwrite: OverwriteMode)(tableName: String, kc: Column[K], vc: Column[V], update: ValueUpdate[V]): DynamoDBAction[Option[V]] =
     DynamoDBAction.withClient {
       _.updateItem {
         new UpdateItemRequest()
@@ -199,26 +175,24 @@ object DynamoDB {
       }
     }.flatMap { result => vc.unmarshaller.option(result.getAttributes) }
 
-  def interpreter(kv: Table)(env: TableEnvironment[kv.K, kv.H, kv.R, kv.V]): kv.DBOp ~> DynamoDBAction =
+  def interpreter(kv: Table)(t: TableDefinition[kv.K, kv.V, kv.H, kv.R]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
-      import env.asImplicits._
       import kv.DBOp._
       import kv.Query._
       def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
         fa match {
-          case Get(k)                      => get(k)(env.table.name, env.key, env.value)
-          case Put(k, v)                   => put(k, v)(env.table.name, env.key, env.value)
-          case Update(v, original, newVal) => update(v, original, newVal)(env.table.name, env.key, env.value)
-          case Delete(k)                   => delete(k)(env.table.name, env.key).map { _ => () }
+          case Get(k)                      => get(k)(t.name, t.key, t.value)
+          case Put(k, v)                   => put(k, v)(t.name, t.key, t.value, t.update)
+          case Update(v, original, newVal) => update(v, original, newVal)(t.name, t.key, t.value, t.update)
+          case Delete(k)                   => delete(k)(t.name, t.key).map { _ => () }
           case QueryOp(q)                  => queryImpl(q)
-          case TableExists                 => tableExists(env.table.name)
-          case BatchPut(kvs)               => batchPut(kvs)(env.table.name, env.key, env.value)
+          case TableExists                 => tableExists(t.name)
+          case BatchPut(kvs)               => batchPut(kvs)(t.name, t.key, t.value)
         }
 
-      def queryImpl[A]: kv.Query => DynamoDBAction[Page[kv.V]] =
-        _ match {
-          case Hashed(h, cfg)         => query(QueryImpl.forHash(h)(env.table.name, env.hash))(env.value)
-          case Ranged(h, r, cmp, cfg) => query(QueryImpl.forHashAndRange(h, r, cmp)(env.table.name, env.hash, env.range))(env.value)
-        }
+      def queryImpl[A]: kv.Query => DynamoDBAction[Page[kv.V]] = {
+        case Hashed(h, cfg)         => query(QueryImpl.forHash(h)(t.name, t.hash))(t.value)
+        case Ranged(h, r, cmp, cfg) => query(QueryImpl.forHashAndRange(h, r, cmp)(t.name, t.hash, t.range))(t.value)
+      }
     }
 }

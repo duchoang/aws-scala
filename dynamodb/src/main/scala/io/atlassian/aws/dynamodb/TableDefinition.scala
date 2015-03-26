@@ -3,8 +3,13 @@ package dynamodb
 
 import com.amazonaws.services.dynamodbv2.model._
 
-case class TableDefinition[A, B](
+case class TableDefinition[K, V, H, R] private[TableDefinition] (
   name: String,
+  key: Column[K],
+  hash: NamedColumn[H],
+  range: NamedColumn[R],
+  value: Column[V],
+  update: ValueUpdate[V],
   attributeDefinitions: List[AttributeDefinition],
   // Schema definition representing this key
   schemaElements: List[KeySchemaElement],
@@ -15,22 +20,24 @@ object TableDefinition {
 
   def rangeSchemaElement(name: String) = new KeySchemaElement(name, KeyType.RANGE)
 
-  def from[K, V](
+  def from[K, V, H: Decoder, R: Decoder](
     tableName: String,
-    hashKey: String,
-    rangeKey: Option[AttributeDefinition] = None,
+    key: Column[K],
+    value: Column[V],
+    hash: NamedColumn[H],
+    range: NamedColumn[R],
+    update: ValueUpdate[V],
     provisionedReadCapacity: Long = 5,
     provisionedWriteCapacity: Long = 5) =
-    TableDefinition[K, V](
-      name = tableName,
-      attributeDefinitions =
-        rangeKey.foldLeft(List(AttributeDefinition.string(hashKey))) {
-          (list, keyDef) => list :+ keyDef
-        },
-      schemaElements =
-        rangeKey.foldLeft(List(hashSchemaElement(hashKey))) {
-          (list, keyDef) => list :+ rangeSchemaElement(keyDef.getAttributeName)
-        },
-      provisionedThroughput = new ProvisionedThroughput().withReadCapacityUnits(provisionedReadCapacity).withWriteCapacityUnits(provisionedWriteCapacity)
+    TableDefinition[K, V, H, R](
+      tableName,
+      key,
+      hash,
+      range,
+      value,
+      update,
+      List(Decoder[H].keyType(hash.name), Decoder[R].keyType(range.name)),
+      List(hashSchemaElement(hash.name), rangeSchemaElement(range.name)),
+      new ProvisionedThroughput().withReadCapacityUnits(provisionedReadCapacity).withWriteCapacityUnits(provisionedWriteCapacity)
     )
 }

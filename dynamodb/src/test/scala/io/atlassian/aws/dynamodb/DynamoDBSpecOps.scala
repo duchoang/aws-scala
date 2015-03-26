@@ -13,21 +13,21 @@ trait DynamoDBSpecOps extends Logging {
 
   import Logging._
 
-  def createTable[A, B](implicit ev: TableDefinition[A, B], client: AmazonDynamoDBClient) = {
-    runDynamoDBAction(DynamoDB.createTable[A, B]()) match {
+  def createTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDBClient) = {
+    runDynamoDBAction(DynamoDB.createTable[K, V, H, R](table)) match {
       case -\/(e) =>
         error(s"Error creating table: $e")
         Failure(s"Error creating table: $e")
       case \/-(task) =>
-        debug(s"Creating table ${ev.name}")
+        debug(s"Creating table ${table.name}")
         task.run
-        debug(s"Created table ${ev.name}")
+        debug(s"Created table ${table.name}")
         Success
     }
   }
 
-  def deleteTable[A, B](implicit ev: TableDefinition[A, B], client: AmazonDynamoDBClient) =
-    runDynamoDBAction(DynamoDB.deleteTable[A, B])
+  def deleteTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDBClient) =
+    runDynamoDBAction(DynamoDB.deleteTable[K, V, H, R](table))
 
   def runDynamoDBAction[A](action: DynamoDBAction[A])(implicit client: AmazonDynamoDBClient): Invalid \/ A =
     action.run(client).run
@@ -74,5 +74,4 @@ trait DynamoDBSpecOps extends Logging {
       result(comparisonResult, message, message, s)
     }
   }
-
 }

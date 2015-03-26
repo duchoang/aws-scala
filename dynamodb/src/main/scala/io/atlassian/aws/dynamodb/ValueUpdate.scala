@@ -39,7 +39,7 @@ object ValueUpdate {
     }
 
   /**
-   * Create a StoreValue assuming that 'asNew' is just putting all the attribute values into DynamoDB.
+   * Create a ValueUpdate assuming that 'asNew' is just putting all the attribute values into DynamoDB.
    * @param update Function that takes an original value, and an new value and generates an [[UpdateItemRequestEndo]] that represents the update function.
    */
   // TODO pass Column in here?

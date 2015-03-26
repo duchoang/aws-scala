@@ -55,7 +55,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
     val column =
       Column.compose4[Value](hash, metaData, length, deletedTimestamp) { case Value(h, md, len, ts) => (h, md, len, ts) } { Value.apply }
 
-    implicit val storeValue: ValueUpdate[Value] =
+    val update: ValueUpdate[Value] =
       ValueUpdate.withUpdated[Value] {
         (o, a) =>
           (o.deletedTimestamp, a.deletedTimestamp) match {
@@ -69,7 +69,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
   }
 
   def tableNamed(tableName: String) =
-    TableDefinition.from[Key, Value](tableName, "key", Some(AttributeDefinition.number("seq")), 5, 5)
+    TableDefinition.from[Key, Value, HashKey, RangeKey](tableName, Key.column, Value.column, HashKey.column, RangeKey.column, Value.update)
 
   implicit def KeyArbitrary: Arbitrary[Key] =
     Arbitrary {
