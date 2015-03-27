@@ -42,7 +42,7 @@ object Decoder {
 
   //def from[A](a: Attempt[A]): Decoder[A] = Decoder { _ => a }
 
-  def mandatoryField[A](f: AttributeValue => A, label: String)(keyType: Key.Type): Decoder[A] =
+  def mandatoryField[A](f: AttributeValue => A)(label: String)(keyType: Key.Type): Decoder[A] =
     option {
       case None     => Attempt.fail(s"No $label value present")
       case Some(av) => Attempt.safe(f(av))
@@ -51,21 +51,22 @@ object Decoder {
   // instances
 
   implicit val LongDecode: Decoder[Long] =
-    mandatoryField(_.getN.toLong, "Long")(Key.NumberType)
+    mandatoryField { _.getN.toLong }("Long")(Key.NumberType)
 
   implicit val IntDecode: Decoder[Int] =
-    mandatoryField(_.getN.toInt, "Int")(Key.NumberType)
+    mandatoryField { _.getN.toInt}("Int")(Key.NumberType)
 
   implicit val DateTimeDecode: Decoder[DateTime] =
-    mandatoryField(_.getN.toLong |> { i => new DateTime(i, DateTimeZone.UTC) }, "DateTime")(Key.NumberType)
+    mandatoryField { _.getN.toLong |> { i => new DateTime(i, DateTimeZone.UTC) } }("DateTime")(Key.NumberType)
 
   implicit val StringDecode: Decoder[String] =
     option {
-      // No attribute value means an empty string (because DynamoDB doesn't support empty strings as attribute values)
-      case None => Attempt.ok("")
-      case Some(av) =>
-        if (av.getS == null) Attempt.fail("No string value present")
-        else Attempt.ok(av.getS)
+      case None => Attempt.fail("No string value present")
+      case Some(a) => a.getS |> { s =>
+        if (s == null) Attempt.fail("No string value present")
+        else if (s == EMPTY_STRING_PLACEHOLDER) Attempt.ok("") // TODO, nasty, nasty, nasty 
+        else Attempt.ok(s)
+      }
     }(Key.StringType)
 
   implicit def OptionDecode[A](implicit decoder: Decoder[A]): Decoder[Option[A]] =

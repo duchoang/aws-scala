@@ -17,6 +17,19 @@ sealed trait Column[A] {
       val marshaller = self.marshaller.contramap(g)
       val unmarshaller = self.unmarshaller.map(f)
     }
+
+  def liftOption =
+    new Column[Option[A]] {
+      // TODO, this should be done much more nicely
+      val marshaller =
+        new Marshaller[Option[A]] {
+          def toMap(a: Option[A]): KeyValue = a.fold(Map.empty[String, Value]) { self.marshaller.toMap }
+        }
+      val unmarshaller =
+        new Unmarshaller[Option[A]] {
+          def unmarshall = self.unmarshaller.unmarshall.liftOption
+        }
+    }
 }
 
 /**

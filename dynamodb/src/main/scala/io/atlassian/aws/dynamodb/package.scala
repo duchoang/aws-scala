@@ -18,4 +18,6 @@ package object dynamodb extends QueryTypes {
   type Field[A] = (String, Value)
 
   type KeyValue = Map[String, Value]
+
+  private[dynamodb] val EMPTY_STRING_PLACEHOLDER = 128169.toChar.toString
 }

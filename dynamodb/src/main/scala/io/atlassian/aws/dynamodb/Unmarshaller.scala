@@ -58,6 +58,9 @@ private[dynamodb] object Unmarshaller {
 
     def flatMap[B](f: A => Operation[B]): Operation[B] =
       Operation { m => run(m) >>= { f(_)(m) } }
+
+    def liftOption: Operation[Option[A]] =
+      Operation { run(_).toOption.point[Attempt] }
   }
 
   object Operation {
@@ -67,8 +70,6 @@ private[dynamodb] object Unmarshaller {
     /**
      * Main convenience method for creating an [[Operation]].
      * @param name The name of the field to extract.
-     * @param converter Implicit unmarshaller for a specific AttributeValue to the field.
-     *                  See [[Decoder]] for currently supported field types.
      * @tparam A The type of the field to unmarshall.
      * @return Unmarshall operation for unmarshalling a field in the object.
      */
