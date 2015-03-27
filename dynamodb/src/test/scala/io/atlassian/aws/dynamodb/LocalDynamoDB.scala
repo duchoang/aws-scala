@@ -22,7 +22,7 @@ import scalaz.syntax.id._
  *
  * You can also optionally override various command line argument names to configure the spec.
  */
-trait LocalDynamoDBSpec extends DynamoDBSpecOps with MoreEqualsInstances {
+trait LocalDynamoDB {
   /**
    * Override this to provide a custom command line argument name that represents 'use AWS resources' mode
    */
@@ -102,5 +102,4 @@ trait LocalDynamoDBSpec extends DynamoDBSpecOps with MoreEqualsInstances {
     } else {
       AmazonClient.default[AmazonDynamoDBClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
     }
-
 }

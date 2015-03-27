@@ -14,18 +14,24 @@ trait Queries {
   /** the Range type */
   type R
 
-  sealed trait Query
+  sealed trait Query {
+    def config(c: Query.Config): Query
+  }
 
   object Query {
     def hash(hash: H, config: Config = Config()): Query =
       Hashed(hash, config)
 
-    def range(hash: H, range: R, cmp: Comparison, config: Config = Config())(implicit order: Order[R]): Query =
+    def range(hash: H, range: R, cmp: Comparison, config: Config = Config()): Query =
       Ranged(hash, range, cmp, config)
 
-    case class Hashed(hash: H, config: Config) extends Query
-    case class Ranged(hash: H, range: R, cmp: Comparison, config: Config) extends Query
+    case class Hashed(hash: H, config: Config) extends Query {
+      def config(c: Query.Config) = copy(config = c)
+    }
+    case class Ranged(hash: H, range: R, cmp: Comparison, config: Config) extends Query {
+      def config(c: Query.Config) = copy(config = c)
+    }
 
-    case class Config(limit: Option[Int] = None)
+    case class Config(direction: ScanDirection = ScanDirection.Ascending, limit: Option[Int] = None)
   }
 }

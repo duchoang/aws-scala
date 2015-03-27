@@ -51,8 +51,8 @@ object DynamoDB {
     } flatMap { res =>
       res.getItems.asScala.toList.traverse[DynamoDBAction, V] {
         cv.unmarshaller.unmarshall
-      }.map {
-        Page(_,
+      }.map { vs =>
+        Page(vs,
           Option(res.getLastEvaluatedKey).flatMap {
             lastKey => ck.unmarshaller.unmarshall(lastKey.asScala.toMap).toOption
           }
@@ -190,8 +190,8 @@ object DynamoDB {
         }
 
       def queryImpl: kv.Query => DynamoDBAction[Page[kv.R, kv.V]] = {
-        case Hashed(h, cfg)         => query(QueryImpl.forHash(h)(t.name, t.hash))(t.range, t.value)
-        case Ranged(h, r, cmp, cfg) => query(QueryImpl.forHashAndRange(h, r, cmp)(t.name, t.hash, t.range))(t.range, t.value)
+        case Hashed(h, Config(dir, _))         => query(QueryImpl.forHash(h, scanDirection = dir)(t.name, t.hash))(t.range, t.value)
+        case Ranged(h, r, cmp, Config(dir, _)) => query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir)(t.name, t.hash, t.range))(t.range, t.value)
       } //.map { _ => ??? }
     }
 }

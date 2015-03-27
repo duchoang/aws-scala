@@ -17,7 +17,7 @@ import java.util.UUID.randomUUID
 import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
-class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDynamoDBSpec {
+class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDynamoDB with DynamoDBActionMatchers {
   import TestData._, Attempt._
 
   val NUM_TESTS =
@@ -229,9 +229,17 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
   }.set(minTestsOk = NUM_TESTS)
 
+  object TestTable extends Table {
+    type K = Key
+    type V = Value
+    type H = HashKey
+    type R = RangeKey
+
+  }
+
   def createTestTable() =
-    createTable[Key, Value, HashKey, RangeKey](table)
+    DynamoDBOps.createTable[Key, Value, HashKey, RangeKey](table)
 
   def deleteTestTable =
-    deleteTable[Key, Value, HashKey, RangeKey](table)
+    DynamoDBOps.deleteTable[Key, Value, HashKey, RangeKey](table)
 }

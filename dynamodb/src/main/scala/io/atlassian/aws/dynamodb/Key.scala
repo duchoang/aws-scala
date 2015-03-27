@@ -13,4 +13,7 @@ object Key {
   case object NumberType extends Type {
     def apply(name: String) = AttributeDefinition.number(name)
   }
+  case object BinaryType extends Type {
+    def apply(name: String) = AttributeDefinition.binary(name)
+  }
 }
