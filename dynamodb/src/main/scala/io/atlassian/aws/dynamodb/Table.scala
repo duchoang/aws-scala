@@ -25,7 +25,7 @@ trait Table extends Queries {
   def delete(k: K): DBAction[Unit] =
     Delete(k).action
 
-  def query(q: Query): DBAction[Page[V]] =
+  def query(q: Query): DBAction[Page[R, V]] =
     QueryOp(q).action
 
   def tableExists: DBAction[Boolean] =
@@ -54,7 +54,7 @@ trait Table extends Queries {
     case class Put(key: K, value: V) extends DBOp[Option[V]]
     case class Update(key: K, original: V, newValue: V) extends DBOp[Option[V]]
     case class Delete(key: K) extends DBOp[Unit]
-    case class QueryOp(query: Query) extends DBOp[Page[V]]
+    case class QueryOp(query: Query) extends DBOp[Page[R, V]]
     case class BatchPut(keyValues: Map[K, V]) extends DBOp[Map[K, V]]
     case object TableExists extends DBOp[Boolean]
   }

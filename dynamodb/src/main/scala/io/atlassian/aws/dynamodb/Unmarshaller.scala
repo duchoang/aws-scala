@@ -9,7 +9,7 @@ import scalaz.{ Functor, Monad }, scalaz.std.option._, scalaz.syntax.all._, scal
  * Type class for unmarshalling objects from a map returned from AWS DynamoDB client
  * @tparam A The type of the object to unmarshall
  */
-trait Unmarshaller[A] {
+private[dynamodb] trait Unmarshaller[A] {
   def unmarshall: Unmarshaller.Operation[A]
 
   def map[B](f: A => B): Unmarshaller[B] =
@@ -37,7 +37,7 @@ trait Unmarshaller[A] {
   }
 }
 
-object Unmarshaller {
+private[dynamodb] object Unmarshaller {
   def from[A](f: Operation[A]) =
     new Unmarshaller[A] {
       def unmarshall = f

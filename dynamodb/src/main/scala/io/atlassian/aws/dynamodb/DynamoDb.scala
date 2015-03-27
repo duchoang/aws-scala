@@ -10,7 +10,6 @@ import scalaz.syntax.traverse._
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
 
-
 /**
  * Contains functions that perform operations on a DynamoDB table. Functions return a DynamoDBAction that can be run by
  * providing an instance of an AmazonDynamoDBClient (see AmazonClient for
@@ -45,19 +44,19 @@ object DynamoDB {
       _.deleteItem(table, col.marshaller.toFlattenedMap(key).asJava)
     }
 
-  def query[V](q: QueryImpl)(col: Column[V]): DynamoDBAction[Page[V]] =
+  /** takes a Range Key */
+  def query[KR, V](q: QueryImpl)(ck: Column[KR], cv: Column[V]): DynamoDBAction[Page[KR, V]] =
     DynamoDBAction.withClient {
       _.query(q.asQueryRequest)
     } flatMap { res =>
       res.getItems.asScala.toList.traverse[DynamoDBAction, V] {
-        col.unmarshaller.unmarshall
+        cv.unmarshaller.unmarshall
       }.map {
-        vs =>
-          Page(vs,
-            Option(res.getLastEvaluatedKey).map { lastKey =>
-              QueryImpl.nextFromQuery(q, lastKey.asScala.toMap)
-            }
-          )
+        Page(_,
+          Option(res.getLastEvaluatedKey).flatMap {
+            lastKey => ck.unmarshaller.unmarshall(lastKey.asScala.toMap).toOption
+          }
+        )
       }
     }
 
@@ -190,9 +189,9 @@ object DynamoDB {
           case BatchPut(kvs)               => batchPut(kvs)(t.name, t.key, t.value)
         }
 
-      def queryImpl[A]: kv.Query => DynamoDBAction[Page[kv.V]] = {
-        case Hashed(h, cfg)         => query(QueryImpl.forHash(h)(t.name, t.hash))(t.value)
-        case Ranged(h, r, cmp, cfg) => query(QueryImpl.forHashAndRange(h, r, cmp)(t.name, t.hash, t.range))(t.value)
-      }
+      def queryImpl: kv.Query => DynamoDBAction[Page[kv.R, kv.V]] = {
+        case Hashed(h, cfg)         => query(QueryImpl.forHash(h)(t.name, t.hash))(t.range, t.value)
+        case Ranged(h, r, cmp, cfg) => query(QueryImpl.forHashAndRange(h, r, cmp)(t.name, t.hash, t.range))(t.range, t.value)
+      } //.map { _ => ??? }
     }
 }

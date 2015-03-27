@@ -164,7 +164,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   def queryWorksWhenHashKeyDoesntExist = Prop.forAll {
     (k: Key) =>
       val hashKey = HashKey(k.a, k.b, k.c)
-      DynamoDB.query(QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column))(Value.column) must returnResult { page =>
+      DynamoDB.query(QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column))(RangeKey.column, Value.column) must returnResult { page =>
         page.result.isEmpty && page.next.isEmpty
       }
   }.set(minTestsOk = NUM_TESTS)
@@ -186,7 +186,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val query = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column)
 
       (for {
-        result <- DynamoDB.query(query)(Value.column)
+        result <- DynamoDB.query(query)(RangeKey.column, Value.column)
       } yield result) must returnResult { page =>
         page.next must not beNone
       }
@@ -201,8 +201,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       (for {
         _ <- DynamoDB.put(k, v1)(table.name, Key.column, Value.column, table.update)
         _ <- DynamoDB.put(k2, v2)(table.name, Key.column, Value.column, table.update)
-        ascResult <- DynamoDB.query(queryAsc)(Value.column)
-        descResult <- DynamoDB.query(queryDesc)(Value.column)
+        ascResult <- DynamoDB.query(queryAsc)(RangeKey.column, Value.column)
+        descResult <- DynamoDB.query(queryDesc)(RangeKey.column, Value.column)
       } yield (ascResult, descResult)) must returnResult {
         case (page1, page2) =>
           page1.result must equal(List(v1, v2)) and
@@ -222,7 +222,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         _ <- DynamoDB.put(k, v1)(table.name, Key.column, Value.column, table.update)
         _ <- DynamoDB.put(k2, v2)(table.name, Key.column, Value.column, table.update)
         _ <- DynamoDB.put(k3, v3)(table.name, Key.column, Value.column, table.update)
-        result <- DynamoDB.query(query)(Value.column)
+        result <- DynamoDB.query(query)(RangeKey.column, Value.column)
       } yield result) must returnResult { page =>
         page.result must equal(List(v1, v2)) and
           (page.next must beNone)

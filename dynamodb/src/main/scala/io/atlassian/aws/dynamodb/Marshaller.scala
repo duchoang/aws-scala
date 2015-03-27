@@ -8,7 +8,7 @@ import scalaz.Contravariant, scalaz.syntax.id._
  * Type class for marshalling objects into a map suitable for passing to AWS DynamoDB client
  * @tparam A The type of the object to marshall.
  */
-trait Marshaller[A] {
+private[dynamodb] trait Marshaller[A] {
   /**
    * Generates a map of field (i.e. column) names to a possible AttributeValue.
    * If the value is None, we assume that the value is deleted.
@@ -24,7 +24,7 @@ trait Marshaller[A] {
     Marshaller.from { b => toMap(f(b)) }
 }
 
-object Marshaller {
+private[dynamodb] object Marshaller {
   /**
    * Convenience method to marshall a specific field in the object.
    * Alternately, use a Column to encapsulate a named Field for reuse.

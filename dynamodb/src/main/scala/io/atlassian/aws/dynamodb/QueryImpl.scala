@@ -6,7 +6,7 @@ import DynamoDB.ReadConsistency
 import collection.JavaConverters._
 import scalaz.syntax.id._
 
-object QueryImpl {
+private[dynamodb] object QueryImpl {
   def forHash[K](
     hashKey: K,
     exclusiveStartKey: Option[Map[String, AttributeValue]] = None,
@@ -50,7 +50,7 @@ object QueryImpl {
       kc.marshaller.toFlattenedMap(key).values.asJavaCollection)
 }
 
-case class QueryImpl(table: String,
+private[dynamodb] case class QueryImpl(table: String,
   keyConditions: Map[String, Condition],
   exclusiveStartKey: Option[Map[String, AttributeValue]],
   scanDirection: ScanDirection,

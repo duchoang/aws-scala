@@ -5,7 +5,7 @@ import com.amazonaws.services.dynamodbv2.model.{ ScalarAttributeType, AttributeD
 /**
  * Convenience functions to construct an AttributeDefinition
  */
-object AttributeDefinition {
+private[dynamodb] object AttributeDefinition {
   def apply(name: String, attributeType: ScalarAttributeType): AttDef =
     new AttDef(name, attributeType)
 
@@ -14,4 +14,7 @@ object AttributeDefinition {
 
   def number(name: String): AttDef =
     apply(name, ScalarAttributeType.N)
+
+  def binary(name: String): AttDef =
+    apply(name, ScalarAttributeType.B)
 }
