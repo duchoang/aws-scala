@@ -1,6 +1,8 @@
 package io.atlassian.aws.dynamodb
 
-import scalaz.{ Coyoneda, Free, Monad }
+import kadai.Invalid
+
+import scalaz._
 
 /**
  * A key-value table. Implementations have concrete key and value types.
@@ -36,8 +38,6 @@ trait Table extends Queries {
    *   - item size must be < 64kb
    *   - we can only batch put 25 items at a time
    *
-   * @tparam K The key type
-   * @tparam V The value type
    * @param vals the vals to put in the batch
    * @return Map of key -> values that failed to be saved
    */
@@ -65,14 +65,10 @@ trait Table extends Queries {
   private implicit class FreeOps[A](op: DBOp[A]) {
     def action: DBAction[A] = Free.liftFC(op)
   }
-}
 
-object StringTable extends Table {
-  type K = String
-  type V = String
-
-  //  val table =
-  //    TableEnvironment(
-  //      Marshaller.fromColumn(Column[String]("name"))
-  //    )
+  /** Turn a natural transform from DBOp to C into a DBAction to C */
+  def runFree[C[_]: Monad](op2c: DBOp ~> C): DBAction ~> C =
+    new (DBAction ~> C) {
+      def apply[A](a: DBAction[A]): C[A] = Free.runFC[DBOp, C, A](a)(op2c)
+    }
 }

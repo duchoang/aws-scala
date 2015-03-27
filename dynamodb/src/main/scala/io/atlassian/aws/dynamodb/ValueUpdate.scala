@@ -24,7 +24,7 @@ object ValueUpdate {
     }
 
   /**
-   * Create an [[UpdateItemRequestEndo]] from an object's field values using what the object's [[Marshaller]]
+   * Create an [[UpdateItemRequestEndo]] from an object's field values using what the object's Marshaller
    * provides. If marshalling the field generates None then we assume we need to delete the field, otherwise the
    * new value is just put.
    */

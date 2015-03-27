@@ -13,15 +13,12 @@ trait DBActionMatchers extends Logging {
 
   import Logging._
 
+  type InvalidOr[A] = Invalid \/ A
   val table: Table
 
-  def run: table.DBOp ~> (Invalid \/ ?)
-
-  def runFree: table.DBAction ~> (Invalid \/ ?) =
-    new (table.DBAction ~> (Invalid \/ ?)) {
-      def apply[A](a: table.DBAction[A]) =
-        Free.runFC[table.DBOp, Invalid \/ ?, A](a)(run)
-    }
+  def run: table.DBOp ~> InvalidOr
+  def runFree: table.DBAction ~> InvalidOr =
+    table.runFree[InvalidOr](run)
 
   def returnFailure[A] =
     new ServiceMatcher[A]({
@@ -58,11 +55,9 @@ trait DBActionMatchers extends Logging {
       case \/-(v) => (check(v), s"Expected value, but match failed with value $v")
     })
 
-  class ServiceMatcher[A](check: \/[Invalid, A] => (Boolean, String)) extends Matcher[table.DBAction[A]] {
+  class ServiceMatcher[A](check: Invalid \/ A => (Boolean, String)) extends Matcher[table.DBAction[A]] {
     def apply[S <: table.DBAction[A]](s: Expectable[S]) = {
-      val execResult = runFree(s.value)
-
-      val (comparisonResult, message) = check(execResult)
+      val (comparisonResult, message) = check(runFree(s.value))
       result(comparisonResult, message, message, s)
     }
   }
