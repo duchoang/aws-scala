@@ -96,8 +96,8 @@ object DynamoDB {
         case Some(reqs) => reqs.asScala.map { req =>
           val item = req.getPutRequest.getItem.asScala.toMap
           (for {
-            failedKey <- kc.unmarshaller.fromMap(item)
-            failedValue <- vc.unmarshaller.fromMap(item)
+            failedKey <- kc.unmarshaller.run(item)
+            failedValue <- vc.unmarshaller.run(item)
           } yield failedKey -> failedValue).toOption
         }.flatten.toMap
       }

@@ -107,9 +107,10 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
   def newPutWorks = Prop.forAll {
     (key: Key, value: Value) =>
-      DynamoDB.put[Key, Value](key, value)(table.name, Key.column, Value.column, table.update) must returnValue(None) and
-        ((DYNAMO_CLIENT.getItem(table.name, Key.column.marshaller.toFlattenedMap(key).asJava).getItem.asScala.toMap |>
-          Value.column.unmarshaller.fromMap) must equal(Attempt.ok(value)))
+      DynamoDB.put[Key, Value](key, value)(table.name, Key.column, Value.column, table.update) must returnValue(None) and (
+        (DYNAMO_CLIENT.getItem(table.name, Key.column.marshaller.toFlattenedMap(key).asJava).getItem.asScala.toMap |> Value.column.unmarshaller.run)
+        must equal(Attempt.ok(value))
+      )
   }.set(minTestsOk = NUM_TESTS)
 
   def putReplaceWorks = Prop.forAll {

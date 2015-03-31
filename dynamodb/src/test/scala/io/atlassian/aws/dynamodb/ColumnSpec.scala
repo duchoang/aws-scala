@@ -25,7 +25,7 @@ class ColumnSpec extends ScalaCheckSpec {
   def round[A: Arbitrary: Encoder: Decoder: Equal] = Prop.forAll {
     (name: String, a: A) =>
       def check[X: Equal](c: Column[X])(x: X) =
-        c.unmarshaller.fromMap(c.marshaller.toFlattenedMap(x)).toOption.exists(Equal[X].equal(_, x))
+        c.unmarshaller.run(c.marshaller.toFlattenedMap(x)).toOption.exists(Equal[X].equal(_, x))
 
       check(Column[A](name))(a)
       check(Column[A](name).liftOption)(Some(a))

@@ -32,6 +32,6 @@ class ObjectMarshallUnmarshallSpec extends ScalaCheckSpec {
   }
   def workTogether = Prop.forAll {
     thing: Value =>
-      (Value.column.marshaller.toFlattenedMap(thing) |> Value.column.unmarshaller.fromMap) must equal(Attempt.ok(thing))
+      (Value.column.marshaller.toFlattenedMap(thing) |> Value.column.unmarshaller.run) must equal(Attempt.ok(thing))
   }
 }
