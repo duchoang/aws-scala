@@ -19,7 +19,6 @@ sealed trait Column[A] {
 
   def liftOption =
     new Column[Option[A]] {
-      // TODO, this should be done much more nicely
       val marshaller = self.marshaller.liftOption
       val unmarshaller = self.unmarshaller.liftOption
     }
@@ -31,14 +30,7 @@ sealed trait Column[A] {
  * the de-serialized value back from the database, respectively.
  */
 final class NamedColumn[A](val name: String)(implicit encoder: Encoder[A], decoder: Decoder[A]) extends Column[A] {
-  private def apply(a: A): Field[A] =
-    name -> encoder.encode(a)
-
-  val marshaller =
-    new Marshaller[A] {
-      def toMap(a: A): KeyValue = Map(apply(a))
-    }
-
+  val marshaller = Marshaller[A] { a => Map(name -> encoder.encode(a)) }
   val unmarshaller = Unmarshaller.get(name)
 }
 
@@ -72,7 +64,7 @@ trait ColumnComposites {
     def apply[B, C](cb: Column[B], cc: Column[C])(from: A => (B, C))(to: (B, C) => A): Column[A] =
       new Column[A] {
         val marshaller =
-          Marshaller.from[A] {
+          Marshaller[A] {
             from(_) |> { case (b, c) => append(toMap(b, cb), toMap(c, cc)) }
           }
 
@@ -88,7 +80,7 @@ trait ColumnComposites {
     def apply[B, C, D](cb: Column[B], cc: Column[C], cd: Column[D])(from: A => (B, C, D))(to: (B, C, D) => A): Column[A] =
       new Column[A] {
         val marshaller =
-          Marshaller.from[A] {
+          Marshaller[A] {
             from(_) |> { case (b, c, d) => append(toMap(b, cb), toMap(c, cc), toMap(d, cd)) }
           }
 
@@ -105,7 +97,7 @@ trait ColumnComposites {
     def apply[B, C, D, E](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E])(from: A => (B, C, D, E))(to: (B, C, D, E) => A): Column[A] =
       new Column[A] {
         val marshaller =
-          Marshaller.from[A] {
+          Marshaller[A] {
             from(_) |> { case (b, c, d, e) => append(toMap(b, cb), toMap(c, cc), toMap(d, cd), toMap(e, ce)) }
           }
 
@@ -123,7 +115,7 @@ trait ColumnComposites {
     def apply[B, C, D, E, F](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F])(from: A => (B, C, D, E, F))(to: (B, C, D, E, F) => A): Column[A] =
       new Column[A] {
         val marshaller =
-          Marshaller.from[A] {
+          Marshaller[A] {
             from(_) |> { case (b, c, d, e, f) => append(toMap(b, cb), toMap(c, cc), toMap(d, cd), toMap(e, ce), toMap(f, cf)) }
           }
 
@@ -142,7 +134,7 @@ trait ColumnComposites {
     def apply[B, C, D, E, F, G](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F], cg: Column[G])(from: A => (B, C, D, E, F, G))(to: (B, C, D, E, F, G) => A): Column[A] =
       new Column[A] {
         val marshaller =
-          Marshaller.from[A] {
+          Marshaller[A] {
             from(_) |> {
               case (b, c, d, e, f, g) =>
                 append(toMap(b, cb), toMap(c, cc), toMap(d, cd), toMap(e, ce), toMap(f, cf), toMap(g, cg))
