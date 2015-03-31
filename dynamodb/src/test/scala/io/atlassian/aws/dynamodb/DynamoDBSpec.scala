@@ -1,7 +1,8 @@
 package io.atlassian.aws
 package dynamodb
 
-import io.atlassian.aws.spec.ScalaCheckSpec
+import Unmarshaller._
+import spec.ScalaCheckSpec
 
 import scala.collection.JavaConverters.{ mapAsJavaMapConverter, mapAsScalaMapConverter }
 

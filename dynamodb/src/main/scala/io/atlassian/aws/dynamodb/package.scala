@@ -2,6 +2,7 @@ package io.atlassian.aws
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, UpdateItemRequest }
+import scalaz.ReaderT
 import scalaz.std.option.{ some, none }
 
 package object dynamodb extends QueryTypes {
@@ -20,4 +21,6 @@ package object dynamodb extends QueryTypes {
   type KeyValue = Map[String, Value]
 
   private[dynamodb] val EMPTY_STRING_PLACEHOLDER = 0.toChar.toString // "\"" + 128169.toChar + "\""
+
+  type Unmarshaller[A] = ReaderT[Attempt, Map[String, AttributeValue], A]
 }

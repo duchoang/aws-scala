@@ -1,6 +1,7 @@
 package io.atlassian.aws.dynamodb
 
 import Marshaller._
+import Unmarshaller._
 import scalaz.InvariantFunctor
 import scalaz.syntax.id._
 

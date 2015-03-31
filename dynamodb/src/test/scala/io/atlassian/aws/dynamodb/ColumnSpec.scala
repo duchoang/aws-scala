@@ -3,7 +3,8 @@ package io.atlassian.aws.dynamodb
 import io.atlassian.aws.spec.ScalaCheckSpec
 import org.joda.time.DateTime
 import org.junit.runner.RunWith
-import org.scalacheck.{Arbitrary, Prop}
+import org.scalacheck.{ Arbitrary, Prop }
+import Unmarshaller._
 
 import scalaz.Equal
 import scalaz.std.anyVal._
@@ -20,7 +21,6 @@ class ColumnSpec extends ScalaCheckSpec {
       round trip String    ${round[String]}
       round trip DateTime    ${round[DateTime]}
     """
-
 
   def round[A: Arbitrary: Encoder: Decoder: Equal] = Prop.forAll {
     (name: String, a: A) =>

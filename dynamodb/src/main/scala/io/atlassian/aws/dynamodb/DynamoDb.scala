@@ -9,6 +9,7 @@ import scalaz.syntax.id._
 import scalaz.syntax.traverse._
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
+import Unmarshaller._
 
 /**
  * Contains functions that perform operations on a DynamoDB table. Functions return a DynamoDBAction that can be run by
