@@ -31,7 +31,7 @@ object ValueUpdate {
   def newFromValues[A](a: A)(col: Column[A]): UpdateItemRequestEndo =
     scalaz.Endo[UpdateItemRequest] {
       _.withAttributeUpdates {
-        col.marshaller.toMap(a).mapValues {
+        col.marshall(a).mapValues {
           case None                 => delete
           case Some(attributeValue) => put(attributeValue)
         }.asJava

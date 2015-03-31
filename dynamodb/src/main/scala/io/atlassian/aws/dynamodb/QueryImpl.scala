@@ -47,7 +47,7 @@ private[dynamodb] object QueryImpl {
 
   private def condition[K](key: K, comparator: Comparison)(kc: Column[K]) =
     new Condition().withComparisonOperator(Comparison.asAWS(comparator)).withAttributeValueList(
-      kc.marshaller.toFlattenedMap(key).values.asJavaCollection)
+      kc.marshall.toFlattenedMap(key).values.asJavaCollection)
 }
 
 private[dynamodb] case class QueryImpl(table: String,

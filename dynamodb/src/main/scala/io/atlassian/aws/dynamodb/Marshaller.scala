@@ -13,16 +13,16 @@ private[dynamodb] case class Marshaller[A](run: A => KeyValue) {
    * Generates a map of field (i.e. column) names to a possible AttributeValue.
    * If the value is None, we assume that the value is deleted.
    */
-  def toMap(a: A): KeyValue =
+  def apply(a: A): KeyValue =
     run(a)
 
   def toFlattenedMap(a: A): Map[String, AttributeValue] =
-    toMap(a).collect {
+    this(a).collect {
       case (key, Some(value)) => key -> value
     }
 
   def contramap[B](f: B => A): Marshaller[B] =
-    Marshaller { b => toMap(f(b)) }
+    Marshaller { f andThen this.apply }
 
   def liftOption: Marshaller[Option[A]] =
     Marshaller { _.fold(Map.empty[String, Value]) { run } }

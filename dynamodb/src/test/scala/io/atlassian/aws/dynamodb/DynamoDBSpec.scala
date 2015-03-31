@@ -64,8 +64,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
   def getWorks = Prop.forAll {
     (key: Key, value: Value) =>
-      val keyAttr = Key.column.marshaller.toFlattenedMap(key)
-      val valueAttr = Value.column.marshaller.toFlattenedMap(value).mapValues {
+      val keyAttr = Key.column.marshall.toFlattenedMap(key)
+      val valueAttr = Value.column.marshall.toFlattenedMap(value).mapValues {
         av => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(av)
       }
       val putRequest =
@@ -90,8 +90,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val column = Column[Value2]("foo")
 
       val value2 = new Value2(str)
-      val keyAttr = Key.column.marshaller.toFlattenedMap(key)
-      val valueAttr = column.marshaller.toFlattenedMap(value2).mapValues {
+      val keyAttr = Key.column.marshall.toFlattenedMap(key)
+      val valueAttr = column.marshall.toFlattenedMap(value2).mapValues {
         av => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(av)
       }
       val putRequest =
@@ -108,7 +108,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   def newPutWorks = Prop.forAll {
     (key: Key, value: Value) =>
       DynamoDB.put[Key, Value](key, value)(table.name, Key.column, Value.column, table.update) must returnValue(None) and (
-        (DYNAMO_CLIENT.getItem(table.name, Key.column.marshaller.toFlattenedMap(key).asJava).getItem.asScala.toMap |> Value.column.unmarshaller.run)
+        (DYNAMO_CLIENT.getItem(table.name, Key.column.marshall.toFlattenedMap(key).asJava).getItem.asScala.toMap |> Value.column.unmarshall)
         must equal(Attempt.ok(value))
       )
   }.set(minTestsOk = NUM_TESTS)

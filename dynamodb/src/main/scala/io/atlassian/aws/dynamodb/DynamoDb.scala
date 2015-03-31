@@ -29,10 +29,10 @@ object DynamoDB {
 
   def get[K, V](key: K, consistency: ReadConsistency = ReadConsistency.Eventual)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Option[V]] =
     withClient {
-      _.getItem(table, kc.marshaller.toFlattenedMap(key).asJava, ReadConsistency.asBool(consistency))
+      _.getItem(table, kc.marshall.toFlattenedMap(key).asJava, ReadConsistency.asBool(consistency))
     }.flatMap { r =>
       DynamoDBAction.attempt {
-        vc.unmarshaller.option(r.getItem)
+        vc.unmarshall.option(r.getItem)
       }
     }
 
@@ -44,7 +44,7 @@ object DynamoDB {
 
   def delete[K, V](key: K)(table: String, col: Column[K]): DynamoDBAction[DeleteItemResult] =
     withClient {
-      _.deleteItem(table, col.marshaller.toFlattenedMap(key).asJava)
+      _.deleteItem(table, col.marshall.toFlattenedMap(key).asJava)
     }
 
   /** takes a Range Key */
@@ -54,11 +54,11 @@ object DynamoDB {
     } flatMap { res =>
       DynamoDBAction.attempt {
         res.getItems.asScala.toList.traverse[Attempt, V] {
-          cv.unmarshaller.unmarshall
+          cv.unmarshall.unmarshall
         }.map { vs =>
           Page(vs,
             Option(res.getLastEvaluatedKey).flatMap {
-              lastKey => ck.unmarshaller.run(lastKey.asScala.toMap).toOption
+              lastKey => ck.unmarshall(lastKey.asScala.toMap).toOption
             }
           )
         }
@@ -85,7 +85,7 @@ object DynamoDB {
             table -> keyValues.map {
               case (k, v) => new WriteRequest().withPutRequest {
                 new PutRequest().withItem {
-                  (kc.marshaller.toFlattenedMap(k) ++ vc.marshaller.toFlattenedMap(v)).asJava
+                  (kc.marshall.toFlattenedMap(k) ++ vc.marshall.toFlattenedMap(v)).asJava
                 }
               }
             }.toList.asJava
@@ -96,9 +96,9 @@ object DynamoDB {
         case Some(reqs) => reqs.asScala.map { req =>
           val item = req.getPutRequest.getItem.asScala.toMap
           (for {
-            failedKey <- kc.unmarshaller.run(item)
-            failedValue <- vc.unmarshaller.run(item)
-          } yield failedKey -> failedValue).toOption
+            k <- kc.unmarshall(item)
+            v <- vc.unmarshall(item)
+          } yield k -> v).toOption
         }.flatten.toMap
       }
     }
@@ -162,12 +162,12 @@ object DynamoDB {
         new UpdateItemRequest()
           .withTableName(tableName)
           .withReturnValues(ReturnValue.ALL_OLD)
-          .withKey(kc.marshaller.toFlattenedMap(key).asJava) |> updateItemRequestEndo.run |> {
+          .withKey(kc.marshall.toFlattenedMap(key).asJava) |> updateItemRequestEndo.run |> {
             req =>
               overwrite match {
                 case OverwriteMode.NoOverwrite =>
                   req.withExpected {
-                    kc.marshaller.toFlattenedMap(key).map {
+                    kc.marshall.toFlattenedMap(key).map {
                       case (col, _) =>
                         col -> new ExpectedAttributeValue().withExists(false)
                     }.asJava
@@ -179,7 +179,7 @@ object DynamoDB {
       }
     }.flatMap { result =>
       DynamoDBAction.attempt {
-        vc.unmarshaller.option(result.getAttributes)
+        vc.unmarshall.option(result.getAttributes)
       }
     }
 

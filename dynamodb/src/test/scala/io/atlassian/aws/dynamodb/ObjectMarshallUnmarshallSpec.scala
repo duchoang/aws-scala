@@ -25,13 +25,13 @@ class ObjectMarshallUnmarshallSpec extends ScalaCheckSpec {
   def flattenedMapWorks = Prop.forAll {
     thing: Value =>
       val testData = thing.copy(deletedTimestamp = None)
-      val mappedData = Value.column.marshaller.toFlattenedMap(testData)
+      val mappedData = Value.column.marshall.toFlattenedMap(testData)
       (mappedData.get("hash") === Encoder[String].encode(testData.hash)) and
         (mappedData.get("metaData") === Encoder[String].encode(testData.metaData)) and
         (mappedData.get("deletedTimestamp") must beNone)
   }
   def workTogether = Prop.forAll {
     thing: Value =>
-      (Value.column.marshaller.toFlattenedMap(thing) |> Value.column.unmarshaller.run) must equal(Attempt.ok(thing))
+      (Value.column.marshall.toFlattenedMap(thing) |> Value.column.unmarshall) must equal(Attempt.ok(thing))
   }
 }

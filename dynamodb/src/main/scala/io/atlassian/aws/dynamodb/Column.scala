@@ -8,20 +8,20 @@ import scalaz.syntax.id._
 sealed trait Column[A] {
   self =>
 
-  def marshaller: Marshaller[A]
-  def unmarshaller: Unmarshaller[A]
+  def marshall: Marshaller[A]
+  def unmarshall: Unmarshaller[A]
 
   // invariant map
   def xmap[B](f: A => B, g: B => A): Column[B] =
     new Column[B] {
-      val marshaller = self.marshaller.contramap(g)
-      val unmarshaller = self.unmarshaller.map(f)
+      override val marshall = self.marshall.contramap(g)
+      override val unmarshall = self.unmarshall.map(f)
     }
 
   def liftOption =
     new Column[Option[A]] {
-      val marshaller = self.marshaller.liftOption
-      val unmarshaller = self.unmarshaller.liftOption
+      override val marshall = self.marshall.liftOption
+      override val unmarshall = self.unmarshall.liftOption
     }
 }
 
@@ -31,8 +31,8 @@ sealed trait Column[A] {
  * the de-serialized value back from the database, respectively.
  */
 final class NamedColumn[A](val name: String)(implicit encoder: Encoder[A], decoder: Decoder[A]) extends Column[A] {
-  val marshaller = Marshaller[A] { a => Map(name -> encoder.encode(a)) }
-  val unmarshaller = Unmarshaller.get(name)
+  override val marshall = Marshaller[A] { a => Map(name -> encoder.encode(a)) }
+  override val unmarshall = Unmarshaller.get(name)
 }
 
 object Column extends ColumnComposites {
@@ -64,15 +64,15 @@ trait ColumnComposites {
   def compose2[A] = new Compose[A] {
     def apply[B, C](cb: Column[B], cc: Column[C])(from: A => (B, C))(to: (B, C) => A): Column[A] =
       new Column[A] {
-        val marshaller =
+        val marshall =
           Marshaller[A] {
-            from(_) |> { case (b, c) => append(toMap(b, cb), toMap(c, cc)) }
+            from(_) |> { case (b, c) => append(cb.marshall(b), cc.marshall(c)) }
           }
 
-        val unmarshaller =
+        val unmarshall =
           for {
-            b <- cb.unmarshaller
-            c <- cc.unmarshaller
+            b <- cb.unmarshall
+            c <- cc.unmarshall
           } yield to(b, c)
       }
   }
@@ -80,16 +80,16 @@ trait ColumnComposites {
   def compose3[A] = new Compose[A] {
     def apply[B, C, D](cb: Column[B], cc: Column[C], cd: Column[D])(from: A => (B, C, D))(to: (B, C, D) => A): Column[A] =
       new Column[A] {
-        val marshaller =
+        val marshall =
           Marshaller[A] {
-            from(_) |> { case (b, c, d) => append(toMap(b, cb), toMap(c, cc), toMap(d, cd)) }
+            from(_) |> { case (b, c, d) => append(cb.marshall(b), cc.marshall(c), cd.marshall(d)) }
           }
 
-        val unmarshaller =
+        val unmarshall =
           for {
-            b <- cb.unmarshaller
-            c <- cc.unmarshaller
-            d <- cd.unmarshaller
+            b <- cb.unmarshall
+            c <- cc.unmarshall
+            d <- cd.unmarshall
           } yield to(b, c, d)
       }
   }
@@ -97,17 +97,17 @@ trait ColumnComposites {
   def compose4[A] = new Compose[A] {
     def apply[B, C, D, E](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E])(from: A => (B, C, D, E))(to: (B, C, D, E) => A): Column[A] =
       new Column[A] {
-        val marshaller =
+        val marshall =
           Marshaller[A] {
-            from(_) |> { case (b, c, d, e) => append(toMap(b, cb), toMap(c, cc), toMap(d, cd), toMap(e, ce)) }
+            from(_) |> { case (b, c, d, e) => append(cb.marshall(b), cc.marshall(c), cd.marshall(d), ce.marshall(e)) }
           }
 
-        val unmarshaller =
+        val unmarshall =
           for {
-            b <- cb.unmarshaller
-            c <- cc.unmarshaller
-            d <- cd.unmarshaller
-            e <- ce.unmarshaller
+            b <- cb.unmarshall
+            c <- cc.unmarshall
+            d <- cd.unmarshall
+            e <- ce.unmarshall
           } yield to(b, c, d, e)
       }
   }
@@ -115,18 +115,18 @@ trait ColumnComposites {
   def compose5[A] = new Compose[A] {
     def apply[B, C, D, E, F](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F])(from: A => (B, C, D, E, F))(to: (B, C, D, E, F) => A): Column[A] =
       new Column[A] {
-        val marshaller =
+        val marshall =
           Marshaller[A] {
-            from(_) |> { case (b, c, d, e, f) => append(toMap(b, cb), toMap(c, cc), toMap(d, cd), toMap(e, ce), toMap(f, cf)) }
+            from(_) |> { case (b, c, d, e, f) => append(cb.marshall(b), cc.marshall(c), cd.marshall(d), ce.marshall(e), cf.marshall(f)) }
           }
 
-        val unmarshaller =
+        val unmarshall =
           for {
-            b <- cb.unmarshaller
-            c <- cc.unmarshaller
-            d <- cd.unmarshaller
-            e <- ce.unmarshaller
-            f <- cf.unmarshaller
+            b <- cb.unmarshall
+            c <- cc.unmarshall
+            d <- cd.unmarshall
+            e <- ce.unmarshall
+            f <- cf.unmarshall
           } yield to(b, c, d, e, f)
       }
   }
@@ -134,28 +134,28 @@ trait ColumnComposites {
   def compose6[A] = new Compose[A] {
     def apply[B, C, D, E, F, G](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F], cg: Column[G])(from: A => (B, C, D, E, F, G))(to: (B, C, D, E, F, G) => A): Column[A] =
       new Column[A] {
-        val marshaller =
+        val marshall =
           Marshaller[A] {
             from(_) |> {
               case (b, c, d, e, f, g) =>
-                append(toMap(b, cb), toMap(c, cc), toMap(d, cd), toMap(e, ce), toMap(f, cf), toMap(g, cg))
+                append(cb.marshall(b), cc.marshall(c), cd.marshall(d), ce.marshall(e), cf.marshall(f), cg.marshall(g))
             }
           }
 
-        val unmarshaller =
+        val unmarshall =
           for {
-            b <- cb.unmarshaller
-            c <- cc.unmarshaller
-            d <- cd.unmarshaller
-            e <- ce.unmarshaller
-            f <- cf.unmarshaller
-            g <- cg.unmarshaller
+            b <- cb.unmarshall
+            c <- cc.unmarshall
+            d <- cd.unmarshall
+            e <- ce.unmarshall
+            f <- cf.unmarshall
+            g <- cg.unmarshall
           } yield to(b, c, d, e, f, g)
       }
   }
 
-  private def toMap[A](a: A, col: Column[A]): KeyValue =
-    col.marshaller.toMap(a)
+  //  private def toMap[A](a: A, col: Column[A]): KeyValue =
+  //    col.marshall(a)
 
   private def append(maps: KeyValue*): KeyValue = {
     val builder = Map.newBuilder[String, Value]

@@ -33,6 +33,9 @@ private[dynamodb] object Unmarshaller {
     }
 
   implicit class UnmarshallerOps[A](val unmarshaller: Unmarshaller[A]) extends AnyVal {
+    def apply(m: Map[String, AttributeValue]) =
+      unmarshaller.run(m)
+
     import collection.JavaConverters._
 
     /** Unmarshalls a given map of attribute values from AWS SDK into a value object */
@@ -40,15 +43,15 @@ private[dynamodb] object Unmarshaller {
       if (attrs == null)
         Attempt.ok(none[A])
       else
-        unmarshaller.run(attrs.asScala.toMap).map(some)
+        this(attrs.asScala.toMap).map(some)
 
     def liftOption: Unmarshaller[Option[A]] =
       Kleisli { unmarshaller.run(_).toOption.point[Attempt] }
 
-    def unmarshall(map: java.util.Map[String, AttributeValue]): Attempt[A] =
-      if (map == null)
+    def unmarshall(attrs: java.util.Map[String, AttributeValue]): Attempt[A] =
+      if (attrs == null)
         Attempt.fail("No values to unmarshall")
       else
-        unmarshaller.run(map.asScala.toMap)
+        this(attrs.asScala.toMap)
   }
 }
