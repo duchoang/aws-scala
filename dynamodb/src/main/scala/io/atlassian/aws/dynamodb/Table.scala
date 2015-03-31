@@ -2,10 +2,20 @@ package io.atlassian.aws.dynamodb
 
 import kadai.Invalid
 
-import scalaz._
+import scalaz.{ Coyoneda, Free, Monad, ~> }
 
 /**
- * A key-value table. Implementations have concrete key and value types.
+ * A key-value table.
+ *
+ * Implementations have concrete key and value types,
+ * as well as queryable hash and range types.
+ *
+ * Table returns DBActions that are pure values (DBOps
+ * that line inside Free) and can be chained together with
+ * map/flatMap (ie. there is a monad for DBAction.
+ *
+ * You can get an interpreter for DBActions (to any arbitrary
+ * C[_]) by supplying a DBOp ~> C natural transformation.
  */
 trait Table extends Queries {
   type K
@@ -67,8 +77,9 @@ trait Table extends Queries {
   }
 
   /** Turn a natural transform from DBOp to C into a DBAction to C */
-  def runFree[C[_]: Monad](op2c: DBOp ~> C): DBAction ~> C =
+  def transform[C[_]: Monad](op2c: DBOp ~> C): DBAction ~> C =
     new (DBAction ~> C) {
-      def apply[A](a: DBAction[A]): C[A] = Free.runFC[DBOp, C, A](a)(op2c)
+      def apply[A](a: DBAction[A]): C[A] =
+        Free.runFC[DBOp, C, A](a)(op2c)
     }
 }
