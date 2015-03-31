@@ -62,84 +62,82 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   """
 
   def getWorks = Prop.forAll {
-    (thingKey: Key, thingValue: Value) =>
-      val key = Key.column.marshaller.toFlattenedMap(thingKey)
-      val value = Value.column.marshaller.toFlattenedMap(thingValue).mapValues {
+    (key: Key, value: Value) =>
+      val keyAttr = Key.column.marshaller.toFlattenedMap(key)
+      val valueAttr = Value.column.marshaller.toFlattenedMap(value).mapValues {
         av => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(av)
       }
       val putRequest =
         new UpdateItemRequest()
           .withTableName(table.name)
-          .withKey(key.asJava)
-          .withAttributeUpdates(value.asJava)
+          .withKey(keyAttr.asJava)
+          .withAttributeUpdates(valueAttr.asJava)
 
       DYNAMO_CLIENT.updateItem(putRequest)
 
-      DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column) must returnValue(Some(thingValue))
+      DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column) must returnValue(Some(value))
   }.set(minTestsOk = NUM_TESTS)
 
   def getWorksIfNoValue =
     DynamoDB.get[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.name, Key.column, Value.column) must returnValue(None)
 
   def getWorksIfCantDeserialize = Prop.forAll {
-    (thingKey: Key, thingValue: Value) =>
+    (key: Key, value: Value, str: String) =>
       case class Value2(foo: String)
-      val Value2Marshaller =
-        Marshaller.from[Value2](
-          a => Map(Marshaller.set("foo", a.foo))
-        )
+      implicit val Value2Encoder = Encoder[String].contramap[Value2] { _.foo }
+      implicit val Value2Dcoder = Decoder[String].map[Value2] { Value2.apply }
+      val column = Column[Value2]("foo")
 
-      val thingKey = Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L)
-      val thingValue2 = Value2(randomUUID.toString)
-      val key = Key.column.marshaller.toFlattenedMap(thingKey)
-      val value = Value2Marshaller.toFlattenedMap(thingValue2).mapValues {
+      val value2 = new Value2(str)
+      val keyAttr = Key.column.marshaller.toFlattenedMap(key)
+      val valueAttr = column.marshaller.toFlattenedMap(value2).mapValues {
         av => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(av)
       }
       val putRequest =
         new UpdateItemRequest()
           .withTableName(table.name)
-          .withKey(key.asJava)
-          .withAttributeUpdates(value.asJava)
+          .withKey(keyAttr.asJava)
+          .withAttributeUpdates(valueAttr.asJava)
 
       DYNAMO_CLIENT.updateItem(putRequest)
 
-      DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column) must returnFailure
+      DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column) must returnFailure
   }.set(minTestsOk = NUM_TESTS)
 
   def newPutWorks = Prop.forAll {
-    (thingKey: Key, thingValue: Value) =>
-      DynamoDB.put[Key, Value](thingKey, thingValue)(table.name, Key.column, Value.column, table.update) must returnValue(None) and
-        ((DYNAMO_CLIENT.getItem(table.name, Key.column.marshaller.toFlattenedMap(thingKey).asJava).getItem.asScala.toMap |>
-          Value.column.unmarshaller.fromMap) must equal(Attempt.ok(thingValue)))
+    (key: Key, value: Value) =>
+      DynamoDB.put[Key, Value](key, value)(table.name, Key.column, Value.column, table.update) must returnValue(None) and
+        ((DYNAMO_CLIENT.getItem(table.name, Key.column.marshaller.toFlattenedMap(key).asJava).getItem.asScala.toMap |>
+          Value.column.unmarshaller.fromMap) must equal(Attempt.ok(value)))
   }.set(minTestsOk = NUM_TESTS)
 
   def putReplaceWorks = Prop.forAll {
-    (thingKey: Key, thingValue: Value, thingValue2: Value) =>
+    (key: Key, value: Value, value2: Value) =>
       (for {
-        firstPut <- DynamoDB.put[Key, Value](thingKey, thingValue)(table.name, Key.column, Value.column, table.update)
-        firstGet <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
-        secondPut <- DynamoDB.put[Key, Value](thingKey, thingValue2)(table.name, Key.column, Value.column, table.update)
-        secondGet <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
-      } yield (firstPut, firstGet, secondPut, secondGet)) must returnValue((None, Some(thingValue), Some(thingValue), Some(thingValue2)))
+        firstPut <- DynamoDB.put[Key, Value](key, value)(table.name, Key.column, Value.column, table.update)
+        firstGet <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
+        secondPut <- DynamoDB.put[Key, Value](key, value2)(table.name, Key.column, Value.column, table.update)
+        secondGet <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
+      } yield (firstPut, firstGet, secondPut, secondGet)) must returnValue((None, Some(value), Some(value), Some(value2)))
   }.set(minTestsOk = NUM_TESTS)
 
   def updateWithDeletedFieldWorks = Prop.forAll {
-    (thingKey: Key, thingValue: Value, date: DateTime) =>
-      val thingValue1 = thingValue.copy(deletedTimestamp = Some(date))
-      val thingValue2 = thingValue.copy(deletedTimestamp = None)
+    (key: Key, value: Value, date: DateTime) =>
+      val value1 = value.copy(deletedTimestamp = Some(date))
+      val value2 = value.copy(deletedTimestamp = None)
       (for {
-        firstPut <- DynamoDB.put[Key, Value](thingKey, thingValue1)(table.name, Key.column, Value.column, table.update)
-        update <- DynamoDB.update[Key, Value](thingKey, thingValue1, thingValue2)(table.name, Key.column, Value.column, table.update)
-        secondGet <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
-      } yield (firstPut, update, secondGet)) must returnValue((None, Some(thingValue1), Some(thingValue2)))
+        firstPut <- DynamoDB.put[Key, Value](key, value1)(table.name, Key.column, Value.column, table.update)
+        update <- DynamoDB.update[Key, Value](key, value1, value2)(table.name, Key.column, Value.column, table.update)
+        secondGet <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
+      } yield (firstPut, update, secondGet)) must returnValue((None, Some(value1), Some(value2)))
   }.set(minTestsOk = NUM_TESTS)
 
   def deleteWorks = Prop.forAll {
-    (thingKey: Key, thingValue: Value) =>
+    (key: Key, value: Value) =>
       (for {
-        _ <- DynamoDB.put[Key, Value](thingKey, thingValue)(table.name, Key.column, Value.column, table.update)
-        _ <- DynamoDB.delete[Key, Value](thingKey)(table.name, Key.column)
-        result <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.put[Key, Value](key, value)(table.name, Key.column, Value.column, table.update)
+        _ <- DynamoDB.delete[Key, Value](key)(table.name, Key.column)
+        result <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
       } yield result) must returnValue(None)
   }.set(minTestsOk = NUM_TESTS)
 
@@ -147,11 +145,11 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     DynamoDB.delete[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.name, Key.column) must returnSuccess
 
   def noOverwriteWorks = Prop.forAll {
-    (thingKey: Key, thingValue: Value, thingValue2: Value) =>
+    (key: Key, value: Value, value2: Value) =>
       (for {
-        firstPut <- DynamoDB.put[Key, Value](thingKey, thingValue)(table.name, Key.column, Value.column, table.update)
-        firstGet <- DynamoDB.get[Key, Value](thingKey)(table.name, Key.column, Value.column)
-        secondPut <- DynamoDB.put[Key, Value](thingKey, thingValue2, OverwriteMode.NoOverwrite)(table.name, Key.column, Value.column, table.update)
+        firstPut <- DynamoDB.put[Key, Value](key, value)(table.name, Key.column, Value.column, table.update)
+        firstGet <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
+        secondPut <- DynamoDB.put[Key, Value](key, value2, OverwriteMode.NoOverwrite)(table.name, Key.column, Value.column, table.update)
       } yield firstPut) must returnException[Option[Value], ConditionalCheckFailedException]
   }.set(minTestsOk = NUM_TESTS)
 

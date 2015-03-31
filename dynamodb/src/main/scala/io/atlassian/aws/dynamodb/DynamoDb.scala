@@ -29,8 +29,10 @@ object DynamoDB {
   def get[K, V](key: K, consistency: ReadConsistency = ReadConsistency.Eventual)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Option[V]] =
     withClient {
       _.getItem(table, kc.marshaller.toFlattenedMap(key).asJava, ReadConsistency.asBool(consistency))
-    }.flatMap {
-      r => vc.unmarshaller.option(r.getItem)
+    }.flatMap { r =>
+      DynamoDBAction.attempt {
+        vc.unmarshaller.option(r.getItem)
+      }
     }
 
   def put[K, V](key: K, value: V, overwrite: OverwriteMode = OverwriteMode.Overwrite)(table: String, kc: Column[K], vc: Column[V], update: ValueUpdate[V]): DynamoDBAction[Option[V]] =
@@ -49,14 +51,16 @@ object DynamoDB {
     DynamoDBAction.withClient {
       _.query(q.asQueryRequest)
     } flatMap { res =>
-      res.getItems.asScala.toList.traverse[DynamoDBAction, V] {
-        cv.unmarshaller.unmarshall
-      }.map { vs =>
-        Page(vs,
-          Option(res.getLastEvaluatedKey).flatMap {
-            lastKey => ck.unmarshaller.unmarshall(lastKey.asScala.toMap).toOption
-          }
-        )
+      DynamoDBAction.attempt {
+        res.getItems.asScala.toList.traverse[Attempt, V] {
+          cv.unmarshaller.unmarshall
+        }.map { vs =>
+          Page(vs,
+            Option(res.getLastEvaluatedKey).flatMap {
+              lastKey => ck.unmarshaller.run(lastKey.asScala.toMap).toOption
+            }
+          )
+        }
       }
     }
 
@@ -172,7 +176,11 @@ object DynamoDB {
               }
           }
       }
-    }.flatMap { result => vc.unmarshaller.option(result.getAttributes) }
+    }.flatMap { result =>
+      DynamoDBAction.attempt {
+        vc.unmarshaller.option(result.getAttributes)
+      }
+    }
 
   def interpreter(kv: Table)(t: TableDefinition[kv.K, kv.V, kv.H, kv.R]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {

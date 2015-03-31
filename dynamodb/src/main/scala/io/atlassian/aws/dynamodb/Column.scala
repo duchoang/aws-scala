@@ -1,7 +1,6 @@
 package io.atlassian.aws.dynamodb
 
 import Marshaller._
-import Unmarshaller.Operation._
 import scalaz.InvariantFunctor
 import scalaz.syntax.id._
 
@@ -21,14 +20,8 @@ sealed trait Column[A] {
   def liftOption =
     new Column[Option[A]] {
       // TODO, this should be done much more nicely
-      val marshaller =
-        new Marshaller[Option[A]] {
-          def toMap(a: Option[A]): KeyValue = a.fold(Map.empty[String, Value]) { self.marshaller.toMap }
-        }
-      val unmarshaller =
-        new Unmarshaller[Option[A]] {
-          def unmarshall = self.unmarshaller.unmarshall.liftOption
-        }
+      val marshaller = self.marshaller.liftOption
+      val unmarshaller = self.unmarshaller.liftOption
     }
 }
 
@@ -37,19 +30,16 @@ sealed trait Column[A] {
  * prepare the encoded representation to the Dynamo driver, and to return
  * the de-serialized value back from the database, respectively.
  */
-final class NamedColumn[A](val name: String)(implicit encode: Encoder[A], decode: Decoder[A]) extends Column[A] {
-  def apply(a: A): Field[A] =
-    set(name, a)
+final class NamedColumn[A](val name: String)(implicit encoder: Encoder[A], decoder: Decoder[A]) extends Column[A] {
+  private def apply(a: A): Field[A] =
+    name -> encoder.encode(a)
 
   val marshaller =
     new Marshaller[A] {
       def toMap(a: A): KeyValue = Map(apply(a))
     }
 
-  val unmarshaller =
-    new Unmarshaller[A] {
-      def unmarshall = Unmarshaller.Operation.get(name)
-    }
+  val unmarshaller = Unmarshaller.get(name)
 }
 
 object Column extends ColumnComposites {
@@ -73,8 +63,8 @@ object Column extends ColumnComposites {
 
 trait ColumnComposites {
   /**
-   *  implementations define specific apply methods of the right type
-   *  this lets us specify the composed type and infer the rest from the passed Column types
+   * implementations define specific apply methods of the right type
+   * this lets us specify the composed type and infer the rest from the passed Column types
    */
   trait Compose[To]
 
@@ -87,12 +77,10 @@ trait ColumnComposites {
           }
 
         val unmarshaller =
-          Unmarshaller.from[A] {
-            for {
-              b <- cb.unmarshaller.unmarshall
-              c <- cc.unmarshaller.unmarshall
-            } yield to(b, c)
-          }
+          for {
+            b <- cb.unmarshaller
+            c <- cc.unmarshaller
+          } yield to(b, c)
       }
   }
 
@@ -105,13 +93,11 @@ trait ColumnComposites {
           }
 
         val unmarshaller =
-          Unmarshaller.from[A] {
-            for {
-              b <- cb.unmarshaller.unmarshall
-              c <- cc.unmarshaller.unmarshall
-              d <- cd.unmarshaller.unmarshall
-            } yield to(b, c, d)
-          }
+          for {
+            b <- cb.unmarshaller
+            c <- cc.unmarshaller
+            d <- cd.unmarshaller
+          } yield to(b, c, d)
       }
   }
 
@@ -124,14 +110,12 @@ trait ColumnComposites {
           }
 
         val unmarshaller =
-          Unmarshaller.from[A] {
-            for {
-              b <- cb.unmarshaller.unmarshall
-              c <- cc.unmarshaller.unmarshall
-              d <- cd.unmarshaller.unmarshall
-              e <- ce.unmarshaller.unmarshall
-            } yield to(b, c, d, e)
-          }
+          for {
+            b <- cb.unmarshaller
+            c <- cc.unmarshaller
+            d <- cd.unmarshaller
+            e <- ce.unmarshaller
+          } yield to(b, c, d, e)
       }
   }
 
@@ -144,15 +128,13 @@ trait ColumnComposites {
           }
 
         val unmarshaller =
-          Unmarshaller.from[A] {
-            for {
-              b <- cb.unmarshaller.unmarshall
-              c <- cc.unmarshaller.unmarshall
-              d <- cd.unmarshaller.unmarshall
-              e <- ce.unmarshaller.unmarshall
-              f <- cf.unmarshaller.unmarshall
-            } yield to(b, c, d, e, f)
-          }
+          for {
+            b <- cb.unmarshaller
+            c <- cc.unmarshaller
+            d <- cd.unmarshaller
+            e <- ce.unmarshaller
+            f <- cf.unmarshaller
+          } yield to(b, c, d, e, f)
       }
   }
 
@@ -168,16 +150,14 @@ trait ColumnComposites {
           }
 
         val unmarshaller =
-          Unmarshaller.from[A] {
-            for {
-              b <- cb.unmarshaller.unmarshall
-              c <- cc.unmarshaller.unmarshall
-              d <- cd.unmarshaller.unmarshall
-              e <- ce.unmarshaller.unmarshall
-              f <- cf.unmarshaller.unmarshall
-              g <- cg.unmarshaller.unmarshall
-            } yield to(b, c, d, e, f, g)
-          }
+          for {
+            b <- cb.unmarshaller
+            c <- cc.unmarshaller
+            d <- cd.unmarshaller
+            e <- ce.unmarshaller
+            f <- cf.unmarshaller
+            g <- cg.unmarshaller
+          } yield to(b, c, d, e, f, g)
       }
   }
 

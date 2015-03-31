@@ -18,7 +18,7 @@ trait DBActionMatchers extends Logging {
 
   def run: table.DBOp ~> InvalidOr
   def runFree: table.DBAction ~> InvalidOr =
-    table.runFree[InvalidOr](run)
+    table.transform[InvalidOr](run)
 
   def returnFailure[A] =
     new ServiceMatcher[A]({

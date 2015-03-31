@@ -22,18 +22,9 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     round-trip ints          ${Prop.forAll { roundTrip(_: Int) }}
     round-trip strings       ${Prop.forAll { roundTrip(_: String) }}
     round-trip date times    ${Prop.forAll { roundTrip(_: DateTime) }}
-    round-trip options       $correctlyEncodeDecodeOptions
+    round-trip options       ${Prop.forAll { roundTrip(_: Option[String]) }}
   """
 
   def roundTrip[A: Encoder: Decoder: Equal](a: A) =
     (Encoder[A].encode(a) |> Decoder[A].decode) must equal(Attempt.ok(a))
-
-  def correctlyEncodeDecodeOptions = Prop.forAll {
-    value: Option[String] =>
-      value match {
-        case None     => Encoder.OptionEncode[String].run(value) must beNone
-        case Some("") => Encoder.OptionEncode[String].run(value) must beNone
-        case Some(v)  => roundTrip(value)
-      }
-  }
 }

@@ -19,5 +19,5 @@ package object dynamodb extends QueryTypes {
 
   type KeyValue = Map[String, Value]
 
-  private[dynamodb] val EMPTY_STRING_PLACEHOLDER = 128169.toChar.toString
+  private[dynamodb] val EMPTY_STRING_PLACEHOLDER = 0.toChar.toString // "\"" + 128169.toChar + "\""
 }

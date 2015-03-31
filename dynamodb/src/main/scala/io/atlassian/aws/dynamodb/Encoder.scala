@@ -34,10 +34,7 @@ object Encoder {
   implicit def StringEncode: Encoder[String] =
     Encoder { s =>
       // Encode an empty string as no attribute value (DynamoDB doesn't support empty string for attribute value)
-      new AttributeValue().withS{
-        if (s.isEmpty) EMPTY_STRING_PLACEHOLDER
-        else s
-      }.some
+      new AttributeValue().withS { if (s.isEmpty) EMPTY_STRING_PLACEHOLDER else s }.some
     }
 
   implicit val DateTimeEncode: Encoder[DateTime] =
