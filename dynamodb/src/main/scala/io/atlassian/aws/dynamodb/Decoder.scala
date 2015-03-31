@@ -17,7 +17,7 @@ case class Decoder[A] private[Decoder] (run: Value => Attempt[A])(val keyType: K
     run(o)
 
   def map[B](f: A => B): Decoder[B] =
-    Decoder { run(_).map(f) } (keyType)
+    Decoder { run(_).map(f) }(keyType)
 
   def mapPartial[B](f: PartialFunction[A, B]): Decoder[B] =
     Decoder {
@@ -54,7 +54,7 @@ object Decoder {
     mandatoryField { _.getN.toLong }("Long")(Key.NumberType)
 
   implicit val IntDecode: Decoder[Int] =
-    mandatoryField { _.getN.toInt}("Int")(Key.NumberType)
+    mandatoryField { _.getN.toInt }("Int")(Key.NumberType)
 
   implicit val DateTimeDecode: Decoder[DateTime] =
     mandatoryField { _.getN.toLong |> { i => new DateTime(i, DateTimeZone.UTC) } }("DateTime")(Key.NumberType)

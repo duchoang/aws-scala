@@ -1,7 +1,5 @@
 package io.atlassian.aws.dynamodb
 
-import scalaz.Order
-
 /**
  * Queries is defined in terms of Hash and Range types.
  *

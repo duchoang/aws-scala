@@ -1,6 +1,6 @@
 package io.atlassian.aws.swf.akka
 
-import akka.actor.{Actor, PoisonPill, Props}
+import akka.actor.{ Actor, PoisonPill, Props }
 import akka.util.Timeout
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import io.atlassian.akka.Log
@@ -27,7 +27,7 @@ object ActivityPoller {
 class ActivityPoller(swf: AmazonSimpleWorkflow,
                      config: ActivityPollerConfig,
                      taskList: TaskList,
-                     activities: List[ActivityDefinition[Task]] ) extends Actor with JsonLogging {
+                     activities: List[ActivityDefinition[Task]]) extends Actor with JsonLogging {
 
   import context.dispatcher
   import io.atlassian.aws.swf.akka.ActivityPoller.Protocol._

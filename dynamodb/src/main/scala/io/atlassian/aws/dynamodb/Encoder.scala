@@ -3,7 +3,7 @@ package dynamodb
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import org.joda.time.{ DateTimeZone, DateTime }
-import scalaz.{ Contravariant, Functor }
+import scalaz.Contravariant
 import scalaz.syntax.id._
 import scalaz.syntax.std.option._
 

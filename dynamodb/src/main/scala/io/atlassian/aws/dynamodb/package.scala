@@ -3,7 +3,6 @@ package io.atlassian.aws
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, UpdateItemRequest }
 import scalaz.ReaderT
-import scalaz.std.option.{ some, none }
 
 package object dynamodb extends QueryTypes {
   type UpdateItemRequestEndo = scalaz.Endo[UpdateItemRequest]

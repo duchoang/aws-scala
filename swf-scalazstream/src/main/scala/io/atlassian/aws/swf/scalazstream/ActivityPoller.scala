@@ -9,7 +9,7 @@ import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import kadai.log.json.JsonLogging
 
 import scala.concurrent.duration._
-import scalaz.{Monad, \/-, -\/}
+import scalaz.{ Monad, \/-, -\/ }
 import scalaz.syntax.either._
 import scalaz.syntax.monad._
 import scalaz.syntax.std.option._
@@ -63,39 +63,38 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
     }
 
   def poller[F[_]: Monad]: F[() => Unit] =
-      Process.repeatEval {
-        for {
-          unitOrActivity <-
-            Task {
-              pollActivity.fold(
-              { i => warn(i); ().left },
-              {
-                case None => ().left
-                case Some(ai) =>
-                  activityMap.get(ai.activity).map { ad => (ai, ad).right[Unit] } | ().left
-              })
-            }
-          unitOrResult <-
-            unitOrActivity.fold(
-              _.left.point[Task],
+    Process.repeatEval {
+      for {
+        unitOrActivity <- Task {
+          pollActivity.fold(
+            { i => warn(i); ().left },
             {
-              case (ai, ad) =>
-                val cancel = new AtomicBoolean(false)
-                heartbeat(heartbeatDuration(ad.definition), ai.taskToken).runAsyncInterruptibly({
-                  case -\/(t) => error(t)
-                  case \/-(_) => ()
-                }, cancel)
+              case None => ().left
+              case Some(ai) =>
+                activityMap.get(ai.activity).map { ad => (ai, ad).right[Unit] } | ().left
+            })
+        }
+        unitOrResult <- unitOrActivity.fold(
+          _.left.point[Task],
+          {
+            case (ai, ad) =>
+              val cancel = new AtomicBoolean(false)
+              heartbeat(heartbeatDuration(ad.definition), ai.taskToken).runAsyncInterruptibly({
+                case -\/(t) => error(t)
+                case \/-(_) => ()
+              }, cancel)
 
-                ad.function(ai).timed(10000).onFinish { _ => Task.delay { cancel.set(true) } }
-                  .handle { case t =>
+              ad.function(ai).timed(10000).onFinish { _ => Task.delay { cancel.set(true) } }
+                .handle {
+                  case t =>
                     error(t)
                     Result.failed(t.getMessage, t.getMessage)
                 }.map { r => (ai, r).right }
-            })
-          _ <- Task.delay { unitOrResult.map { case (ai, r) => r.fold(fail(ai), complete(ai)) } }
-        } yield ()
-      }.run.runAsyncInterruptibly {
-        case -\/(t) => error(t)
-        case \/-(_) => ()
-      }.point[F]
+          })
+        _ <- Task.delay { unitOrResult.map { case (ai, r) => r.fold(fail(ai), complete(ai)) } }
+      } yield ()
+    }.run.runAsyncInterruptibly {
+      case -\/(t) => error(t)
+      case \/-(_) => ()
+    }.point[F]
 }

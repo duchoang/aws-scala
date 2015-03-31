@@ -20,6 +20,6 @@ object DecisionQuery {
 }
 
 case class ActivityQuery(domain: Domain, taskList: TaskList, identity: SWFIdentity) {
-  private [swf] val aws: PollForActivityTaskRequest =
+  private[swf] val aws: PollForActivityTaskRequest =
     new PollForActivityTaskRequest().withDomain(domain.unwrap).withTaskList(taskList.aws).withIdentity(identity.unwrap)
 }

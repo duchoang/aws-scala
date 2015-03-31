@@ -8,7 +8,7 @@ trait ActivityTypes {
     import Result._
     def fold[X](f: (String, String) => X, s: String => X): X =
       this match {
-        case FailedActivity(r, d) => f(r, d)
+        case FailedActivity(r, d)  => f(r, d)
         case SuccessfulActivity(o) => s(o)
       }
   }
@@ -23,7 +23,6 @@ trait ActivityTypes {
     def success(output: String): Result =
       SuccessfulActivity(output)
   }
-
 
   type ActivityResult[F[_]] = F[Result]
   type ActivityFunction[F[_]] = ActivityInstance => ActivityResult[F]

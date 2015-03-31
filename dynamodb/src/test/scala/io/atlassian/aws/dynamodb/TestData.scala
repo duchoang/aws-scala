@@ -8,7 +8,7 @@ import org.scalacheck.Arbitrary._
 import scalaz.Equal, scalaz.std.AllInstances._
 
 object TestData extends Arbitraries with MoreEqualsInstances {
-  import Marshaller._, Encoder._
+  import Encoder._
 
   object Mapping {
     val key: Column[HashKey] = HashKey.column

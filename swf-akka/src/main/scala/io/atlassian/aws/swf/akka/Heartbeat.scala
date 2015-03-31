@@ -1,6 +1,6 @@
 package io.atlassian.aws.swf.akka
 
-import akka.actor.{Actor, Props, ActorRef}
+import akka.actor.{ Actor, Props, ActorRef }
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import io.atlassian.akka.Log
 import io.atlassian.aws.swf._

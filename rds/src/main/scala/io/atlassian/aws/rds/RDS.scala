@@ -15,8 +15,10 @@ object RDS {
     withClient { _.createDBInstanceReadReplica(req.aws).getDBInstanceIdentifier |> DbId.apply }
 
   def instanceStatus(id: DbId): RDSAction[DbInstanceStatus] =
-    withClient { _.describeDBInstances(
-      new DescribeDBInstancesRequest().withDBInstanceIdentifier(id.unwrap)
-    ).getDBInstances.get(0).getDBInstanceStatus |> DbInstanceStatus.unapply }
+    withClient {
+      _.describeDBInstances(
+        new DescribeDBInstancesRequest().withDBInstanceIdentifier(id.unwrap)
+      ).getDBInstances.get(0).getDBInstanceStatus |> DbInstanceStatus.unapply
+    }
       .flatMap { _.fold(RDSAction.fail[DbInstanceStatus]("Unknown status"))(RDSAction.ok) }
 }

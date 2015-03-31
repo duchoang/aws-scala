@@ -1,7 +1,6 @@
 package io.atlassian.aws.dynamodb
 
-import com.amazonaws.services.dynamodbv2.model.{AttributeDefinition => AttrDef}
-
+import com.amazonaws.services.dynamodbv2.model.{ AttributeDefinition => AttrDef }
 
 object Key {
   sealed trait Type {

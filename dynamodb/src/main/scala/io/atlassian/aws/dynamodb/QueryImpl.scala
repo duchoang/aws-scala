@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
-import com.amazonaws.services.dynamodbv2.model.{ QueryRequest, Condition, AttributeValue }
+import com.amazonaws.services.dynamodbv2.model.{ QueryRequest, Condition }
 import DynamoDB.ReadConsistency
 import collection.JavaConverters._
 import scalaz.syntax.id._
@@ -51,11 +51,11 @@ private[dynamodb] object QueryImpl {
 }
 
 private[dynamodb] case class QueryImpl(table: String,
-  keyConditions: Map[String, Condition],
-  exclusiveStartKey: Option[DynamoMap],
-  scanDirection: ScanDirection,
-  consistency: ReadConsistency,
-  limit: Option[Int]) {
+                                       keyConditions: Map[String, Condition],
+                                       exclusiveStartKey: Option[DynamoMap],
+                                       scanDirection: ScanDirection,
+                                       consistency: ReadConsistency,
+                                       limit: Option[Int]) {
   def asQueryRequest: QueryRequest = {
     new QueryRequest()
       .withTableName(table)

@@ -1,9 +1,9 @@
 package io.atlassian.aws
 package swf
 
-import com.amazonaws.services.simpleworkflow.model.{Decision => ADecision, _}
+import com.amazonaws.services.simpleworkflow.model.{ Decision => ADecision, _ }
 
-import scala.concurrent.duration.{FiniteDuration, Duration}
+import scala.concurrent.duration.{ FiniteDuration, Duration }
 import scalaz.syntax.id._
 import scala.collection.JavaConverters._
 
@@ -115,13 +115,13 @@ object Decision {
     lazy val aws = new ADecision().withDecisionType(DecisionType.StartChildWorkflowExecution).withStartChildWorkflowExecutionDecisionAttributes(
       new StartChildWorkflowExecutionDecisionAttributes().withWorkflowId(id.unwrap).withWorkflowType(workflow.aws)
         .withInput(input).withTagList(tags.asJava) <| { att =>
-        control.foreach { att.setControl }
-        executionStartToCloseTimeout.foreach { d => att.setExecutionStartToCloseTimeout(d.secAws) }
-        taskList.foreach { t => att.setTaskList(t.aws) }
-        taskPriority.foreach { p => att.setTaskPriority(p.toString) }
-        taskStartToCloseTimeout.foreach { d => att.setTaskStartToCloseTimeout(d.secAws) }
-        childPolicy.foreach { p => att.setChildPolicy(p.aws) }
-      }
+          control.foreach { att.setControl }
+          executionStartToCloseTimeout.foreach { d => att.setExecutionStartToCloseTimeout(d.secAws) }
+          taskList.foreach { t => att.setTaskList(t.aws) }
+          taskPriority.foreach { p => att.setTaskPriority(p.toString) }
+          taskStartToCloseTimeout.foreach { d => att.setTaskStartToCloseTimeout(d.secAws) }
+          childPolicy.foreach { p => att.setChildPolicy(p.aws) }
+        }
     )
   }
 

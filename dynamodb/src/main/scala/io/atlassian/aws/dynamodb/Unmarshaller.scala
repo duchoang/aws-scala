@@ -3,10 +3,9 @@ package dynamodb
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import kadai.Invalid
-import scalaz.{ Functor, Kleisli, Monad }
+import scalaz.{ Kleisli, Monad }
 import scalaz.std.option._
 import scalaz.syntax.all._
-import scalaz.syntax.std.either._
 
 /**
  * Unmarshallers ake a given map of attribute values from AWS SDK

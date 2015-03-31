@@ -1,7 +1,6 @@
 package io.atlassian.aws
 package dynamodb
 
-import Unmarshaller._
 import spec.ScalaCheckSpec
 
 import scala.collection.JavaConverters.{ mapAsJavaMapConverter, mapAsScalaMapConverter }
@@ -56,7 +55,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     support querying for non-existent hash keys   $queryWorksWhenHashKeyDoesntExist
     correctly handle sort ordering of range keys  $querySortOrderWorks
     support querying for hash and range keys      $queryForHashAndRangeWorks
-    support paginated queries                     $queryWorksWithPaging
+    support paginated queries                     ${if (IS_LOCAL) queryWorksWithPaging else skipped("Not running paging test in integration mode")}
 
                                                   ${Step(deleteTestTable)}
                                                   ${Step(stopLocalDynamoDB)}

@@ -1,8 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
-import com.amazonaws.services.dynamodbv2.model.AttributeValue
-import scalaz.Contravariant, scalaz.syntax.id._
+import scalaz.Contravariant
 
 /**
  * Marshall objects into a map suitable for passing to AWS DynamoDB client

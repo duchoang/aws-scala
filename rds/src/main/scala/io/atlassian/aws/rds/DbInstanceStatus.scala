@@ -22,20 +22,20 @@ object DbInstanceStatus {
 
   def unapply(s: String): Option[DbInstanceStatus] =
     s match {
-      case "available" => Available.some
-      case "backing-up" => BackingUp.some
-      case "creating" => Creating.some
-      case "deleting" => Deleting.some
-      case "failed" => Failed.some
-      case "incompatible-network" => IncompatibleNetwork.some
-      case "incompatible-option-group" => IncompatibleOptionGroup.some
-      case "incompatible-parameters" => IncompatibleParameters.some
-      case "incompatible-restore" => IncompatibleRestore.some
-      case "modifying" => Modifying.some
-      case "rebooting" => Rebooting.some
-      case "renaming" => Renaming.some
+      case "available"                    => Available.some
+      case "backing-up"                   => BackingUp.some
+      case "creating"                     => Creating.some
+      case "deleting"                     => Deleting.some
+      case "failed"                       => Failed.some
+      case "incompatible-network"         => IncompatibleNetwork.some
+      case "incompatible-option-group"    => IncompatibleOptionGroup.some
+      case "incompatible-parameters"      => IncompatibleParameters.some
+      case "incompatible-restore"         => IncompatibleRestore.some
+      case "modifying"                    => Modifying.some
+      case "rebooting"                    => Rebooting.some
+      case "renaming"                     => Renaming.some
       case "resetting-master-credentials" => ResettingMasterCredentials.some
-      case "storage-full" => StorageFull.some
-      case _ => None
+      case "storage-full"                 => StorageFull.some
+      case _                              => None
     }
 }

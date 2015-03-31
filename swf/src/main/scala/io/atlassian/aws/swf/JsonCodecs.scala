@@ -3,7 +3,7 @@ package io.atlassian.aws.swf
 import java.util.concurrent.TimeUnit
 
 import argonaut.Argonaut._
-import argonaut.{DecodeJson, EncodeJson, CodecJson}
+import argonaut.{ DecodeJson, EncodeJson, CodecJson }
 
 import scala.concurrent.duration.FiniteDuration
 

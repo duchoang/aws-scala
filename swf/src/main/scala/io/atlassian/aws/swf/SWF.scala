@@ -12,7 +12,8 @@ object SWF {
   import AwsAction._
 
   def register(domain: Domain, config: DomainConfig): SWFAction[Domain] =
-    SWFAction.withClient { _.registerDomain(
+    SWFAction.withClient {
+      _.registerDomain(
         new RegisterDomainRequest()
           .withName(domain.unwrap)
           .withDescription(config.description)
@@ -31,20 +32,23 @@ object SWF {
     }
 
   private def status(domain: Domain): SWFAction[RegistrationStatus] =
-    SWFAction.withClient { _.describeDomain(
-      new DescribeDomainRequest().withName(domain.unwrap)).getDomainInfo.getStatus |> RegistrationStatus.fromValue
+    SWFAction.withClient {
+      _.describeDomain(
+        new DescribeDomainRequest().withName(domain.unwrap)).getDomainInfo.getStatus |> RegistrationStatus.fromValue
     }
 
   private def status(domain: Domain, workflow: Workflow): SWFAction[RegistrationStatus] =
-    SWFAction.withClient { _.describeWorkflowType(
-      new DescribeWorkflowTypeRequest().withDomain(domain.unwrap).withWorkflowType(workflow.aws))
+    SWFAction.withClient {
+      _.describeWorkflowType(
+        new DescribeWorkflowTypeRequest().withDomain(domain.unwrap).withWorkflowType(workflow.aws))
         .getTypeInfo.getStatus |> RegistrationStatus.fromValue
     }
 
   private def status(domain: Domain, activity: Activity): SWFAction[RegistrationStatus] =
-    SWFAction.withClient { _.describeActivityType(
-      new DescribeActivityTypeRequest().withDomain(domain.unwrap).withActivityType(activity.aws))
-      .getTypeInfo.getStatus |> RegistrationStatus.fromValue
+    SWFAction.withClient {
+      _.describeActivityType(
+        new DescribeActivityTypeRequest().withDomain(domain.unwrap).withActivityType(activity.aws))
+        .getTypeInfo.getStatus |> RegistrationStatus.fromValue
     }
 
   def registerWorkflow(workflow: WorkflowDefinition): SWFAction[WorkflowDefinition] =
@@ -101,7 +105,7 @@ object SWF {
             SWFAction.fail(new TypeDeprecatedException(s"Activity deprecated ${activity.name}: ${activity.version}"))
           case _ =>
             SWFAction.ok(activity)
-      }
+        }
     }
 
   def poll(query: DecisionQuery): SWFAction[Option[DecisionInstance]] =
@@ -111,15 +115,19 @@ object SWF {
     withClient { _.pollForActivityTask(query.aws) |> ActivityInstance.unapply }
 
   def startWorkflow(domain: Domain, workflow: Workflow, id: WorkflowId, input: String): SWFAction[RunId] =
-    withClient { _.startWorkflowExecution(
-      new StartWorkflowExecutionRequest().withDomain(domain.unwrap).withWorkflowId(id.unwrap).withWorkflowType(workflow.aws)
-        .withInput(input)
-    ).getRunId |> RunId.apply }
+    withClient {
+      _.startWorkflowExecution(
+        new StartWorkflowExecutionRequest().withDomain(domain.unwrap).withWorkflowId(id.unwrap).withWorkflowType(workflow.aws)
+          .withInput(input)
+      ).getRunId |> RunId.apply
+    }
 
   def completeDecision(taskToken: TaskToken, context: String, decisions: List[Decision]): SWFAction[Unit] =
-    withClient { _.respondDecisionTaskCompleted(
-      new RespondDecisionTaskCompletedRequest().withTaskToken(taskToken.unwrap).withExecutionContext(context).withDecisions(decisions.map { _.aws }.asJava)
-    ) }
+    withClient {
+      _.respondDecisionTaskCompleted(
+        new RespondDecisionTaskCompletedRequest().withTaskToken(taskToken.unwrap).withExecutionContext(context).withDecisions(decisions.map { _.aws }.asJava)
+      )
+    }
 
   def heartbeat(taskToken: TaskToken): SWFAction[ActivityTaskStatus] =
     withClient { _.recordActivityTaskHeartbeat(new RecordActivityTaskHeartbeatRequest().withTaskToken(taskToken.unwrap)) }

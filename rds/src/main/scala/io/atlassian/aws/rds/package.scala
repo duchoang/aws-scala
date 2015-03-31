@@ -9,7 +9,7 @@ package object rds extends rds.Types {
   implicit class AvailabilityZoneSyntax(val a: AvailabilityZone) extends AnyVal {
     def aws(request: CreateDBInstanceRequest): CreateDBInstanceRequest =
       a.fold(
-      { request.withMultiAZ(true).withAvailabilityZone(null) },
-      { zone => request.withMultiAZ(false).withAvailabilityZone(zone) })
+        { request.withMultiAZ(true).withAvailabilityZone(null) },
+        { zone => request.withMultiAZ(false).withAvailabilityZone(zone) })
   }
 }

@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package swf
 
-import com.amazonaws.services.simpleworkflow.model.{EventType, HistoryEvent}
+import com.amazonaws.services.simpleworkflow.model.{ EventType, HistoryEvent }
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._
@@ -55,9 +55,9 @@ object WorkflowEvent {
         val attr = h.getActivityTaskScheduledEventAttributes
         ActivityScheduled(Activity(attr.getActivityType), h.getEventTimestamp.dateTime, h.getEventId,
           ActivityScheduled.Details(ActivityId(attr.getActivityId), TaskList(attr.getTaskList),
-          attr.getTaskPriority.safeInt, Option(attr.getControl), Option(attr.getInput),
-          attr.getDecisionTaskCompletedEventId, attr.getHeartbeatTimeout.safeSecs,
-          attr.getScheduleToCloseTimeout.safeSecs, attr.getScheduleToStartTimeout.safeSecs, attr.getStartToCloseTimeout.safeSecs))
+            attr.getTaskPriority.safeInt, Option(attr.getControl), Option(attr.getInput),
+            attr.getDecisionTaskCompletedEventId, attr.getHeartbeatTimeout.safeSecs,
+            attr.getScheduleToCloseTimeout.safeSecs, attr.getScheduleToStartTimeout.safeSecs, attr.getStartToCloseTimeout.safeSecs))
       case EventType.ActivityTaskStarted =>
         val attr = h.getActivityTaskStartedEventAttributes
         ActivityStarted(h.getEventTimestamp.dateTime, h.getEventId, attr.getScheduledEventId, None)

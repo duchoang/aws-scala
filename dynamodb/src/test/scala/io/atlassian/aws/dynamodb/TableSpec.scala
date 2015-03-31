@@ -20,10 +20,10 @@ import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class TableSpec(val arguments: Arguments)
-  extends ScalaCheckSpec
-  with LocalDynamoDB
-  with DBActionMatchers {
-  import TestData._, Attempt._
+    extends ScalaCheckSpec
+    with LocalDynamoDB
+    with DBActionMatchers {
+  import TestData._
 
   object table extends Table {
     type K = Key
@@ -46,7 +46,6 @@ class TableSpec(val arguments: Arguments)
     else 1
 
   // TODO - These tests are sequential because of flakiness with integration tests.
-  //def is = s2""
   def is = stopOnFail ^ sequential ^ s2"""
 
   This is a specification to test DynamoDB actions.
@@ -64,7 +63,7 @@ class TableSpec(val arguments: Arguments)
     support querying for non-existent hash keys   $queryWorksWhenHashKeyDoesntExist
     correctly handle sort ordering of range keys  $querySortOrderWorks
     support querying for hash and range keys      $queryForHashAndRangeWorks
-    support paginated queries                     $queryWorksWithPaging
+    support paginated queries                     ${if (IS_LOCAL) queryWorksWithPaging else skipped("Not running paging test in integration mode")}
 
                                                   ${Step(deleteTestTable)}
                                                   ${Step(stopLocalDynamoDB)}

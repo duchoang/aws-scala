@@ -1,13 +1,13 @@
 package io.atlassian.aws.swf.akka
 
-import _root_.akka.actor.{Props, PoisonPill, Actor}
+import _root_.akka.actor.{ Props, PoisonPill, Actor }
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import io.atlassian.aws.swf._
 import kadai.Invalid
 import kadai.log.json.JsonLogging
 
 import scalaz.concurrent.Task
-import scalaz.{\/-, -\/, \/}
+import scalaz.{ \/-, -\/, \/ }
 import scala.concurrent.duration._
 import scalaz.syntax.std.option._
 
@@ -41,7 +41,7 @@ class ActivityActor(swf: AmazonSimpleWorkflow, activityDef: ActivityConfig, inst
     activityDef.defaultTaskHeartbeatTimeout.fold(30.seconds.some) { s =>
       if (s.isFinite()) (s.toSeconds / 2).seconds.some
       else 30.seconds.some
-  }
+    }
 
   def fail(reason: String, detail: String): Unit =
     withDebug(s"Failing activity ${instance.activity} id ${instance.id} with reason $reason:$detail") {
@@ -60,7 +60,6 @@ class ActivityActor(swf: AmazonSimpleWorkflow, activityDef: ActivityConfig, inst
       runSWFAction(SWF.cancelActivity(instance.taskToken))
       self ! PoisonPill
     }
-
 
   private def runSWFAction[A](a: SWFAction[A]): Invalid \/ A =
     a.run(swf).run

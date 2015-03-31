@@ -1,6 +1,6 @@
 package io.atlassian.aws.swf.akka
 
-import _root_.akka.actor.{Props, Actor, PoisonPill}
+import _root_.akka.actor.{ Props, Actor, PoisonPill }
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import io.atlassian.akka.Log
 import io.atlassian.aws.swf._
@@ -39,7 +39,7 @@ class Decider(config: DeciderConfig, swf: AmazonSimpleWorkflow) extends Actor wi
       }.run.fold(
         { i => error(i) },
         { identity }
-        )
+      )
       triggerPoll
       ()
     case m =>

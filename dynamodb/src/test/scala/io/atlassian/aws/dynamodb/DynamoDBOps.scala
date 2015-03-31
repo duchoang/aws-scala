@@ -13,7 +13,7 @@ object DynamoDBOps extends Logging {
   import Logging._
 
   def runAction(implicit client: AmazonDynamoDBClient): DynamoDBAction ~> (Invalid \/ ?) =
-    new (DynamoDBAction ~> (Invalid \/ ?)) {
+    new (DynamoDBAction ~>(Invalid \/ ?)) {
       def apply[A](action: DynamoDBAction[A]) =
         action.run(client).run
     }

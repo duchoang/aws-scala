@@ -1,7 +1,5 @@
 package io.atlassian.aws.dynamodb
 
-import kadai.Invalid
-
 import scalaz.{ Coyoneda, Free, Monad, ~> }
 
 /**

@@ -3,7 +3,6 @@ package dynamodb
 
 import scalaz.~>
 import scalaz.concurrent.Task
-import scalaz.std.option._
 import scalaz.std.list._
 import scalaz.syntax.id._
 import scalaz.syntax.traverse._
@@ -16,11 +15,20 @@ import Unmarshaller._
  * providing an instance of an AmazonDynamoDBClient (see AmazonClient for
  * convenient constructor functions).
  *
- * This class is generally not intended to be used directly, but used through the Table algebra and
+ * This class is generally not intended to be used directly, but used through the Table algebra with column definitions.
  *
  * Tables are represented as key-value mappings, so you need classes to represent the key and the value. In addition,
  * you need to create instances of:
  *   * TODO describe new Column based definition
+ *   * Table - specify the key, value, hash key and range key types, and a TableDefinition (which includes a name, the
+ *       key types, and a couple of other DynamoDB parameters).
+ *   * Columns - Columns map your Scala types into columns in DynamoDB i.e. start with a Column with a name for each
+ *       column in DynamoDB, and then create composite columns using Column.composeX to be able to map your high-level
+ *       Scala classes.
+ *      * Encoders/Decoders - Under the covers, we use Encoders/Decoders to convert 'primitive' or low-level Scala types
+ *          into suitable values for DynamoDB (ints, strings, dates). In most cases you don't need to be concerned with
+ *          Encoders/Decoders (they will be picked up automatically in your Column definition). However, you
+ *          you can extend the standard set if you need to.
  */
 object DynamoDB {
 
@@ -194,6 +202,6 @@ object DynamoDB {
       def queryImpl: kv.Query => DynamoDBAction[Page[kv.R, kv.V]] = {
         case Hashed(h, Config(dir, _))         => query(QueryImpl.forHash(h, scanDirection = dir)(t.name, t.hash))(t.range, t.value)
         case Ranged(h, r, cmp, Config(dir, _)) => query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir)(t.name, t.hash, t.range))(t.range, t.value)
-      } //.map { _ => ??? }
+      }
     }
 }
