@@ -6,7 +6,6 @@ import scalaz.Contravariant, scalaz.syntax.id._
 
 /**
  * Marshall objects into a map suitable for passing to AWS DynamoDB client
- * @tparam A The type of the object to marshall.
  */
 private[dynamodb] case class Marshaller[A](run: A => KeyValue) {
   /**
@@ -16,7 +15,7 @@ private[dynamodb] case class Marshaller[A](run: A => KeyValue) {
   def apply(a: A): KeyValue =
     run(a)
 
-  def toFlattenedMap(a: A): Map[String, AttributeValue] =
+  def toFlattenedMap(a: A): DynamoMap =
     this(a).collect {
       case (key, Some(value)) => key -> value
     }

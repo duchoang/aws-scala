@@ -2,6 +2,7 @@ package io.atlassian.aws.dynamodb
 
 import Marshaller._
 import Unmarshaller._
+import kadai.Attempt
 import scalaz.InvariantFunctor
 import scalaz.syntax.id._
 
@@ -39,18 +40,15 @@ object Column extends ColumnComposites {
   def apply[A: Encoder: Decoder](s: String): NamedColumn[A] =
     new NamedColumn[A](s)
 
+  private[dynamodb] def unmarshall[A, B](ca: Column[A], cb: Column[B])(map: DynamoMap): Attempt[(A, B)] =
+    for {
+      a <- ca.unmarshall(map)
+      b <- cb.unmarshall(map)
+    } yield (a, b)
+
   implicit object ColumnInvariantFunctor extends InvariantFunctor[Column] {
     def xmap[A, B](ca: Column[A], f: A => B, g: B => A): Column[B] =
       ca.xmap(f, g)
-  }
-
-  /**
-   * models the restrictions on types that can be used for keys
-   */
-  sealed trait Type
-  object Type {
-    case object Key
-    case object Composite
   }
 }
 

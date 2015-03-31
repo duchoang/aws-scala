@@ -20,7 +20,9 @@ package object dynamodb extends QueryTypes {
 
   type KeyValue = Map[String, Value]
 
+  type DynamoMap = Map[String, AttributeValue]
+
   private[dynamodb] val EMPTY_STRING_PLACEHOLDER = 0.toChar.toString // "\"" + 128169.toChar + "\""
 
-  type Unmarshaller[A] = ReaderT[Attempt, Map[String, AttributeValue], A]
+  type Unmarshaller[A] = ReaderT[Attempt, DynamoMap, A]
 }

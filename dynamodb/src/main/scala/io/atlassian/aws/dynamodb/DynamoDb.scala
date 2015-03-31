@@ -91,16 +91,9 @@ object DynamoDB {
             }.toList.asJava
           ).asJava
         }
-      }.getUnprocessedItems.asScala.get(table) match {
-        case None => Map()
-        case Some(reqs) => reqs.asScala.map { req =>
-          val item = req.getPutRequest.getItem.asScala.toMap
-          (for {
-            k <- kc.unmarshall(item)
-            v <- vc.unmarshall(item)
-          } yield k -> v).toOption
-        }.flatten.toMap
-      }
+      }.getUnprocessedItems.asScala.get(table).map {
+        _.asScala.map { req => Column.unmarshall(kc, vc)(req.getPutRequest.getItem.asScala.toMap).toOption }.flatten.toMap
+      }.getOrElse { Map() }
     }
 
   /**

@@ -9,7 +9,7 @@ import scalaz.syntax.id._
 private[dynamodb] object QueryImpl {
   def forHash[K](
     hashKey: K,
-    exclusiveStartKey: Option[Map[String, AttributeValue]] = None,
+    exclusiveStartKey: Option[DynamoMap] = None,
     scanDirection: ScanDirection = ScanDirection.Ascending,
     consistency: ReadConsistency = ReadConsistency.Eventual,
     limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn[K]): QueryImpl =
@@ -26,7 +26,7 @@ private[dynamodb] object QueryImpl {
     hashKey: K,
     rangeKey: O,
     rangeComparison: Comparison,
-    exclusiveStartKey: Option[Map[String, AttributeValue]] = None,
+    exclusiveStartKey: Option[DynamoMap] = None,
     scanDirection: ScanDirection = ScanDirection.Ascending,
     consistency: ReadConsistency = ReadConsistency.Eventual,
     limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn[K], ordCol: NamedColumn[O]): QueryImpl =
@@ -42,7 +42,7 @@ private[dynamodb] object QueryImpl {
       limit
     )
 
-  def nextFromQuery[A](query: QueryImpl, exclusiveStartKey: Map[String, AttributeValue]): QueryImpl =
+  def nextFromQuery[A](query: QueryImpl, exclusiveStartKey: DynamoMap): QueryImpl =
     QueryImpl(query.table, query.keyConditions, Some(exclusiveStartKey), query.scanDirection, query.consistency, query.limit)
 
   private def condition[K](key: K, comparator: Comparison)(kc: Column[K]) =
@@ -52,7 +52,7 @@ private[dynamodb] object QueryImpl {
 
 private[dynamodb] case class QueryImpl(table: String,
   keyConditions: Map[String, Condition],
-  exclusiveStartKey: Option[Map[String, AttributeValue]],
+  exclusiveStartKey: Option[DynamoMap],
   scanDirection: ScanDirection,
   consistency: ReadConsistency,
   limit: Option[Int]) {
