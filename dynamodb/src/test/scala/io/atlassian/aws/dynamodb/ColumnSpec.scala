@@ -16,9 +16,9 @@ class ColumnSpec extends ScalaCheckSpec {
 
   def is = s2"""
     Columns should
-      round trip Int    ${round[Int]}
-      round trip Long    ${round[Long]}
-      round trip String    ${round[String]}
+      round trip Int         ${round[Int]}
+      round trip Long        ${round[Long]}
+      round trip String      ${round[String]}
       round trip DateTime    ${round[DateTime]}
     """
 
