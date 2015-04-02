@@ -20,9 +20,9 @@ import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class TableSpec(val arguments: Arguments)
-    extends ScalaCheckSpec
-    with LocalDynamoDB
-    with DBActionMatchers {
+  extends ScalaCheckSpec
+  with LocalDynamoDB
+  with DBActionMatchers {
   import TestData._
 
   object table extends Table {
@@ -72,10 +72,12 @@ class TableSpec(val arguments: Arguments)
   def getWorksIfNoValue =
     table.get(Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L)) must returnValue(Option.empty[Value])
 
+  import Write.Mode._
+
   def newPutWorks = Prop.forAll {
     (key: Key, value: Value) =>
       (for {
-        _ <- table.put(key, value)
+        _ <- table.put(key, value, Overwrite)
         v <- table.get(key)
       } yield v) must returnValue(Some(value))
   }.set(minTestsOk = NUM_TESTS)
@@ -83,11 +85,11 @@ class TableSpec(val arguments: Arguments)
   def putReplaceWorks = Prop.forAll {
     (key: Key, value: Value, value2: Value) =>
       (for {
-        firstPut <- table.put(key, value)
+        firstPut <- table.put(key, value, Overwrite)
         firstGet <- table.get(key)
-        secondPut <- table.put(key, value2)
+        secondPut <- table.put(key, value2, Overwrite)
         secondGet <- table.get(key)
-      } yield (firstPut, firstGet, secondPut, secondGet)) must returnValue((None, Some(value), Some(value), Some(value2)))
+      } yield (firstPut, firstGet, secondPut, secondGet)) must returnValue((Overwrite.New, Some(value), Overwrite.Replaced(value), Some(value2)))
   }.set(minTestsOk = NUM_TESTS)
 
   def updateWithDeletedFieldWorks = Prop.forAll {
@@ -95,16 +97,16 @@ class TableSpec(val arguments: Arguments)
       val value1 = value.copy(deletedTimestamp = Some(date))
       val value2 = value.copy(deletedTimestamp = None)
       (for {
-        firstPut <- table.put(key, value1)
+        firstPut <- table.put(key, value1, Overwrite)
         update <- table.update(key, value1, value2)
         secondGet <- table.get(key)
-      } yield (firstPut, update, secondGet)) must returnValue((None, Some(value1), Some(value2)))
+      } yield (firstPut, update, secondGet)) must returnValue((Overwrite.New, Replace.Wrote[Value], Some(value2)))
   }.set(minTestsOk = NUM_TESTS)
 
   def deleteWorks = Prop.forAll {
     (key: Key, value: Value) =>
       (for {
-        _ <- table.put(key, value)
+        _ <- table.put(key, value, Overwrite)
         _ <- table.delete(key)
         result <- table.get(key)
       } yield result) must returnValue(None)
@@ -151,8 +153,8 @@ class TableSpec(val arguments: Arguments)
       val queryAsc = table.Query.hash(hashKey)
       val queryDesc = queryAsc.config(table.Query.Config(direction = ScanDirection.Descending))
       (for {
-        _ <- table.put(k, v1)
-        _ <- table.put(k2, v2)
+        _ <- table.put(k, v1, Overwrite)
+        _ <- table.put(k2, v2, Overwrite)
         ascResult <- table.query(queryAsc)
         descResult <- table.query(queryDesc)
       } yield (ascResult, descResult)) must returnResult {
@@ -171,9 +173,9 @@ class TableSpec(val arguments: Arguments)
       val hashKey = HashKey(k.a, k.b, k.c)
       val query = table.Query.range(hashKey, RangeKey(k2.seq), Comparison.Lte)
       (for {
-        _ <- table.put(k, v1)
-        _ <- table.put(k2, v2)
-        _ <- table.put(k3, v3)
+        _ <- table.put(k, v1, Overwrite)
+        _ <- table.put(k2, v2, Overwrite)
+        _ <- table.put(k3, v3, Overwrite)
         result <- table.query(query)
       } yield result) must returnResult { page =>
         page.result must equal(List(v1, v2)) and

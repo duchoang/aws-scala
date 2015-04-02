@@ -26,10 +26,10 @@ trait Table extends Queries {
   def get(k: K): DBAction[Option[V]] =
     Get(k).action
 
-  def put(k: K, v: V): DBAction[Option[V]] =
-    Put(k, v).action
+  def put(k: K, v: V, mode: Write.Mode): DBAction[Write.Result[V, mode.type]] =
+    Put(k, v, mode).action
 
-  def update(k: K, old: V, v: V): DBAction[Option[V]] =
+  def update(k: K, old: V, v: V): DBAction[Write.Result[V, Write.Mode.Replace[V]]] =
     Update(k, old, v).action
 
   def delete(k: K): DBAction[Unit] =
@@ -59,8 +59,12 @@ trait Table extends Queries {
   sealed trait DBOp[A]
   object DBOp {
     case class Get(key: K) extends DBOp[Option[V]]
-    case class Put(key: K, value: V) extends DBOp[Option[V]]
-    case class Update(key: K, original: V, newValue: V) extends DBOp[Option[V]]
+    case class PutOp[X] private[DBOp] (key: K, value: V, m: Write.Mode) extends DBOp[Write.Result[V, Write.Mode]]
+
+    def Put(k: K, v: V, m: Write.Mode) =
+      PutOp(k, v, m).asInstanceOf[DBOp[Write.Result[V, m.Mode]]]
+
+    case class Update(key: K, original: V, newValue: V) extends DBOp[Write.Result[V, Write.Mode.Replace[V]]]
     case class Delete(key: K) extends DBOp[Unit]
     case class QueryOp(query: Query) extends DBOp[Page[R, V]]
     case class BatchPut(keyValues: Map[K, V]) extends DBOp[Map[K, V]]

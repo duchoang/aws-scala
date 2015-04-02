@@ -9,7 +9,6 @@ case class TableDefinition[K, V, H, R] private[TableDefinition] (
   hash: NamedColumn[H],
   range: NamedColumn[R],
   value: Column[V],
-  update: ValueUpdate[V],
   attributeDefinitions: List[AttributeDefinition],
   // Schema definition representing this key
   schemaElements: List[KeySchemaElement],
@@ -26,7 +25,6 @@ object TableDefinition {
     value: Column[V],
     hash: NamedColumn[H],
     range: NamedColumn[R],
-    update: ValueUpdate[V],
     provisionedReadCapacity: Long = 5,
     provisionedWriteCapacity: Long = 5) =
     TableDefinition[K, V, H, R](
@@ -35,7 +33,6 @@ object TableDefinition {
       hash,
       range,
       value,
-      update,
       List(Decoder[H].keyType(hash.name), Decoder[R].keyType(range.name)),
       List(hashSchemaElement(hash.name), rangeSchemaElement(range.name)),
       new ProvisionedThroughput().withReadCapacityUnits(provisionedReadCapacity).withWriteCapacityUnits(provisionedWriteCapacity)

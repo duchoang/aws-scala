@@ -12,22 +12,22 @@ import scalaz.syntax.id._
  * Represents a function that tries to convert an AttributeValue into a
  * Scala value (typically that represents a field in an object).
  */
-case class Decoder[A] private[Decoder] (run: Value => Attempt[A])(val keyType: Key.Type) {
+case class Decoder[A] private[Decoder] (val keyType: Key.Type)(run: Value => Attempt[A]) {
   def decode(o: Value): Attempt[A] =
     run(o)
 
   def map[B](f: A => B): Decoder[B] =
-    Decoder { run(_).map(f) }(keyType)
+    Decoder(keyType) { run(_).map(f) }
 
   def mapPartial[B](f: PartialFunction[A, B]): Decoder[B] =
-    Decoder {
+    Decoder(keyType) {
       run(_).flatMap { a =>
         if (f.isDefinedAt(a))
           Attempt.ok(f(a))
         else
           Attempt.fail(s"'$a' is an invalid value")
       }
-    }(keyType)
+    }
 }
 
 /**
@@ -38,9 +38,7 @@ object Decoder {
     implicitly[Decoder[A]]
 
   private[Decoder] def option[A](f: Value => Attempt[A])(keyType: Key.Type): Decoder[A] =
-    Decoder(f)(keyType)
-
-  //def from[A](a: Attempt[A]): Decoder[A] = Decoder { _ => a }
+    Decoder(keyType) { f }
 
   def mandatoryField[A](f: AttributeValue => A)(label: String)(keyType: Key.Type): Decoder[A] =
     option {

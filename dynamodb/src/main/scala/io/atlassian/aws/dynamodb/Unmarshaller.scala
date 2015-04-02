@@ -47,7 +47,7 @@ private[dynamodb] object Unmarshaller {
         this(attrs.asScala.toMap).map(some)
 
     def liftOption: Unmarshaller[Option[A]] =
-      Unmarshaller { unmarshaller.run(_).toOption.point[Attempt] }
+      Unmarshaller { this(_).toOption.point[Attempt] }
 
     def unmarshall(attrs: java.util.Map[String, AttributeValue]): Attempt[A] =
       if (attrs == null)

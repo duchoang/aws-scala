@@ -54,22 +54,10 @@ object TestData extends Arbitraries with MoreEqualsInstances {
     import Mapping._
     val column =
       Column.compose4[Value](hash, metaData, length, deletedTimestamp) { case Value(h, md, len, ts) => (h, md, len, ts) } { Value.apply }
-
-    val update: ValueUpdate[Value] =
-      ValueUpdate.withUpdated[Value] {
-        (o, a) =>
-          (o.deletedTimestamp, a.deletedTimestamp) match {
-            case (None, Some(DateTimeEncode(deletedTimestamp))) =>
-              // If it is a delete just update the deleted timestamp.
-              // We probably should create a different value class for deletions (it will be neater)
-              ValueUpdate.updatedFromMap(Map("deletedTimestamp" -> ValueUpdate.put(deletedTimestamp)))
-            case _ => ValueUpdate.newFromValues(a)(column)
-          }
-      }
   }
 
   def tableNamed(tableName: String) =
-    TableDefinition.from[Key, Value, HashKey, RangeKey](tableName, Key.column, Value.column, HashKey.column, RangeKey.column, Value.update)
+    TableDefinition.from[Key, Value, HashKey, RangeKey](tableName, Key.column, Value.column, HashKey.column, RangeKey.column)
 
   implicit def KeyArbitrary: Arbitrary[Key] =
     Arbitrary {
