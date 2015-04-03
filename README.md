@@ -91,17 +91,13 @@ You use the `Table` algebra instead. Check out `io.atlassian.aws.dynamodb.TestDa
 As a summary:
 
    1. Create case classes for your `key` and `value` objects. There is no need for these to correspond directly to columns in your table. e.g. `ThingKey` and `ThingValue`
-   2. Provide a `ValueUpdate` for your `value` class. This represents what to do upon creating versus updating a value just in case you don't want
-      to clobber other values. e.g. `ThingValueDynamoStoreValue` sets the `deletedTimestamp` value only upon a `delete` operation.
-      There are useful combinators on `ValueUpdate` e.g. `ValueUpdate.newFromValues` just to put all the values.
-   3. Extend `io.atlassian.aws.dynamodb.Table` specifying the key `K` and value `V` types.
-   4. Provide a `TableDefinition` that defines the Dynamo table key types, table name and provisioned capacity (if you want to create a table). Use `TableDefinition.from` to help.
-   5. Provide a `Column` for each column in your DynamoDB table. This basically specifies a name for the column and a Scala type to we can map to that column.
-   6. Provide composite `Column`s via the `Column.composeX` functions to map you high-level Scala types (i.e. your `key` and `value` types) to the columns defined in the preceding step.
-   7. Access your table by:
+   2. Extend `io.atlassian.aws.dynamodb.Table` specifying the key `K` and value `V` types.
+   3. Provide a `TableDefinition` that defines the Dynamo table key types, table name and provisioned capacity (if you want to create a table). Use `TableDefinition.from` to help.
+   4. Provide a `Column` for each column in your DynamoDB table. This basically specifies a name for the column and a Scala type to we can map to that column.
+   5. Provide composite `Column`s via the `Column.composeX` functions to map you high-level Scala types (i.e. your `key` and `value` types) to the columns defined in the preceding step.
+   6. Access your table by:
          1. Creating `DBOp`s through your `Table`'s `get`/`put`/... functions
          2. Run the `DBOp`s by using the `DynamoDB.interpreter` to get `DynamoDBAction`, which you can then run with your AWS client. 
-
 
 #### SQS message marshallers and unmarshallers
 
