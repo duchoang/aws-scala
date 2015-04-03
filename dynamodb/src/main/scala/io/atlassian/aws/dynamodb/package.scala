@@ -5,8 +5,6 @@ import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, UpdateItemReque
 import scalaz.ReaderT
 
 package object dynamodb extends QueryTypes {
-  type UpdateItemRequestEndo = scalaz.Endo[UpdateItemRequest]
-
   type DynamoDBAction[A] = AwsAction[AmazonDynamoDBClient, A]
 
   object DynamoDBAction extends AwsAction.Functions[AmazonDynamoDBClient] {
@@ -21,7 +19,7 @@ package object dynamodb extends QueryTypes {
 
   type DynamoMap = Map[String, AttributeValue]
 
-  private[dynamodb] val EMPTY_STRING_PLACEHOLDER = 0.toChar.toString // "\"" + 128169.toChar + "\""
-
   type Unmarshaller[A] = ReaderT[Attempt, DynamoMap, A]
+
+  private[dynamodb] val EMPTY_STRING_PLACEHOLDER = 0.toChar.toString
 }

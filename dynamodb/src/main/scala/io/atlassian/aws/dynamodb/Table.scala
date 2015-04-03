@@ -24,22 +24,25 @@ trait Table extends Queries {
   import DBOp._
 
   def get(k: K): DBAction[Option[V]] =
-    Get(k).action
+    GetOp(k).action
 
-  def put(k: K, v: V, mode: Write.Mode): DBAction[Write.Result[V, mode.type]] =
-    Put(k, v, mode).action
+  def putIfAbsent(k: K, v: V): DBAction[Write.Result[V, Write.Mode.Insert.type]] =
+    writeOp(k, v, Write.Mode.Insert).action
 
-  def update(k: K, old: V, v: V): DBAction[Write.Result[V, Write.Mode.Replace[V]]] =
-    Update(k, old, v).action
+  def overwrite(k: K, v: V): DBAction[Write.Result[V, Write.Mode.Overwrite.type]] =
+    writeOp(k, v, Write.Mode.Overwrite).action
+
+  def replace(k: K, old: V, v: V): DBAction[Write.Result[V, Write.Mode.Replace.type]] =
+    ReplaceOp(k, old, v).action
 
   def delete(k: K): DBAction[Unit] =
-    Delete(k).action
+    DeleteOp(k).action
 
   def query(q: Query): DBAction[Page[R, V]] =
     QueryOp(q).action
 
   def tableExists: DBAction[Boolean] =
-    TableExists.action
+    TableExistsOp.action
 
   /**
    * Perform a batch put operation using the given key -> value pairs. DynamoDB has the following restrictions:
@@ -50,7 +53,7 @@ trait Table extends Queries {
    * @return Map of key -> values that failed to be saved
    */
   def batchPut(vals: Map[K, V]): DBAction[Map[K, V]] =
-    DBOp.BatchPut(vals).action
+    BatchPutOp(vals).action
 
   //
   // Ops
@@ -58,17 +61,17 @@ trait Table extends Queries {
 
   sealed trait DBOp[A]
   object DBOp {
-    case class Get(key: K) extends DBOp[Option[V]]
-    case class PutOp[X] private[DBOp] (key: K, value: V, m: Write.Mode) extends DBOp[Write.Result[V, Write.Mode]]
+    case class GetOp(key: K) extends DBOp[Option[V]]
+    case class WriteOp[X] private[DBOp] (key: K, value: V, m: Write.Mode) extends DBOp[Write.Result[V, Write.Mode]]
 
-    def Put(k: K, v: V, m: Write.Mode) =
-      PutOp(k, v, m).asInstanceOf[DBOp[Write.Result[V, m.Mode]]]
+    def writeOp(k: K, v: V, m: Write.Mode) =
+      WriteOp(k, v, m).asInstanceOf[DBOp[Write.Result[V, m.type]]]
 
-    case class Update(key: K, original: V, newValue: V) extends DBOp[Write.Result[V, Write.Mode.Replace[V]]]
-    case class Delete(key: K) extends DBOp[Unit]
+    case class ReplaceOp(key: K, old: V, value: V) extends DBOp[Write.Result[V, Write.Mode.Replace.type]]
+    case class DeleteOp(key: K) extends DBOp[Unit]
     case class QueryOp(query: Query) extends DBOp[Page[R, V]]
-    case class BatchPut(keyValues: Map[K, V]) extends DBOp[Map[K, V]]
-    case object TableExists extends DBOp[Boolean]
+    case class BatchPutOp(keyValues: Map[K, V]) extends DBOp[Map[K, V]]
+    case object TableExistsOp extends DBOp[Boolean]
   }
 
   implicit val MonadDBAction: Monad[DBAction] =

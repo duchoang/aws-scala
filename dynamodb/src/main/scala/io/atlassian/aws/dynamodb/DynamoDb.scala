@@ -7,10 +7,28 @@ import scalaz.std.list._
 import scalaz.syntax.id._
 import scalaz.syntax.traverse._
 import kadai.Invalid
-import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
 import Unmarshaller._
 import AwsAction._
+import com.amazonaws.services.dynamodbv2.model.{
+  AttributeAction,
+  AttributeValue,
+  AttributeValueUpdate,
+  BatchWriteItemRequest,
+  ComparisonOperator,
+  ConditionalCheckFailedException,
+  CreateTableRequest,
+  DeleteItemResult,
+  DeleteTableResult,
+  ExpectedAttributeValue,
+  PutRequest,
+  ResourceNotFoundException,
+  ReturnValue,
+  TableDescription,
+  TableStatus,
+  UpdateItemRequest,
+  WriteRequest
+}
 
 /**
  * Contains functions that perform operations on a DynamoDB table. Functions return a DynamoDBAction that can be run by
@@ -46,12 +64,50 @@ object DynamoDB {
       }
     }
 
-  def put[K, V](k: K, v: V, m: Write.Mode)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, m.Mode]] =
-    doUpdate(k, v, m)(table, kc, vc)
+  import Write.Mode._
+  /**
+   * Write a value using the supplied update mode semantics.
+   *
+   * Note that replace mode only works correctly if you supply an old value to replace.
+   */
+  def write[K, V](k: K, v: V, m: Write.Mode, old: Option[V] = None)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, m.Mode]] =
+    DynamoDBAction.withClient {
+      _.updateItem {
+        new UpdateItemRequest()
+          .withTableName { table }
+          .withReturnValues { ReturnValue.ALL_OLD }
+          .withKey { kc.marshall.toFlattenedMap(k).asJava }
+          .withAttributeUpdates { toUpdates(vc.marshall(v)).asJava } |> { req =>
+            m match {
+              case Overwrite => req
+              case Insert => // all keys shouldn't be present, should this be all values aren't present?
+                req.withExpected {
+                  kc.marshall.toFlattenedMap(k).map {
+                    case (c, _) => c -> new ExpectedAttributeValue().withExists(false)
+                  }.asJava
+                }
 
-  def update[K, V](key: K, old: V, newValue: V)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, Write.Mode.Replace[V]]] =
+              case Replace => // old value should be exactly the same
+                old.fold(req) { v =>
+                  req.withExpected {
+                    vc.marshall(v.asInstanceOf[V]).mapValues {
+                      case Some(v) => new ExpectedAttributeValue(v).withComparisonOperator(ComparisonOperator.EQ.toString)
+                      case None    => new ExpectedAttributeValue().withExists(false)
+                    }.asJava
+                  }
+                }
+            }
+          }
+      }
+    }.flatMap {
+      res => DynamoDBAction.attempt { vc.unmarshall.option(res.getAttributes) }.map { m.result }
+    }.handle {
+      case Invalid.Err(e: ConditionalCheckFailedException) => DynamoDBAction.ok { m.fail }
+    }
+
+  def update[K, V](key: K, old: V, newValue: V)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, Write.Mode.Replace.type]] =
     // TODO move this logic into the algebra
-    doUpdate(key, newValue, Write.Mode.Replace(old))(table, kc, vc).asInstanceOf[DynamoDBAction[Write.Result[V, Write.Mode.Replace[V]]]]
+    write(key, newValue, Write.Mode.Replace, Some(old))(table, kc, vc) //.asInstanceOf[DynamoDBAction[Write.Result[V, Write.Mode.Replace[V]]]]
 
   def delete[K, V](key: K)(table: String, col: Column[K]): DynamoDBAction[DeleteItemResult] =
     withClient {
@@ -160,34 +216,6 @@ object DynamoDB {
     }
   }
 
-  import Write.Mode._
-  private def doUpdate[K, V](key: K, v: V, m: Write.Mode)(tableName: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, m.Mode]] =
-    DynamoDBAction.withClient {
-      _.updateItem {
-        new UpdateItemRequest()
-          .withTableName { tableName }
-          .withReturnValues { ReturnValue.ALL_OLD }
-          .withKey { kc.marshall.toFlattenedMap(key).asJava }
-          .withAttributeUpdates { toUpdates(vc.marshall(v)).asJava } |> { req =>
-            m match {
-              case Overwrite => req
-              case Insert =>
-                req.withExpected {
-                  kc.marshall.toFlattenedMap(key).map {
-                    case (col, _) => col -> new ExpectedAttributeValue().withExists(false)
-                  }.asJava
-                }
-
-              case Replace(old) => req //TODO and test
-            }
-          }
-      }
-    }.flatMap {
-      res => DynamoDBAction.attempt { vc.unmarshall.option(res.getAttributes) }.map { m.result }
-    }.handle {
-      case Invalid.Err(e: ConditionalCheckFailedException) => DynamoDBAction.ok { m.fail }
-    }
-
   // the actual column updates
   private val toUpdates: KeyValue => Map[String, AttributeValueUpdate] =
     _.mapValues {
@@ -201,13 +229,13 @@ object DynamoDB {
       import kv.Query._
       def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
         fa match {
-          case Get(k)                 => get(k)(t.name, t.key, t.value)
-          case PutOp(k, v, mode)      => put(k, v, mode)(t.name, t.key, t.value).asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
-          case Update(v, old, newVal) => update(v, old, newVal)(t.name, t.key, t.value)
-          case Delete(k)              => delete(k)(t.name, t.key).map { _ => () }
-          case QueryOp(q)             => queryImpl(q)
-          case TableExists            => tableExists(t.name)
-          case BatchPut(kvs)          => batchPut(kvs)(t.name, t.key, t.value)
+          case GetOp(k)             => get(k)(t.name, t.key, t.value)
+          case WriteOp(k, v, mode)  => write(k, v, mode)(t.name, t.key, t.value).asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
+          case ReplaceOp(k, old, v) => write(k, v, Write.Mode.Replace, Some(old))(t.name, t.key, t.value) //.asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
+          case DeleteOp(k)          => delete(k)(t.name, t.key).map { _ => () }
+          case QueryOp(q)           => queryImpl(q)
+          case TableExistsOp        => tableExists(t.name)
+          case BatchPutOp(kvs)      => batchPut(kvs)(t.name, t.key, t.value)
         }
 
       def queryImpl: kv.Query => DynamoDBAction[Page[kv.R, kv.V]] = {

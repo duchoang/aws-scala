@@ -42,15 +42,15 @@ object Write {
      */
     case object Insert extends Mode {
       /** return the written value, it may be different for instance have a write time-stamp */
-      case object Wrote extends Result[Nothing, Insert.type]
-      case object Rejected extends Result[Nothing, Insert.type]
+      case object New extends Result[Nothing, Insert.type]
+      case object Failed extends Result[Nothing, Insert.type]
 
       // if Insert fails we get exception
       private[dynamodb] def result[V]: Option[V] => Result[V, Insert.type] = {
-        case None    => Wrote
+        case None    => New
         case Some(v) => throw new AssertionError(s"we should never get back old data if we are Inserting only, got $v")
       }
-      private[dynamodb] def fail[V] = Rejected
+      private[dynamodb] def fail[V] = Failed
     }
 
     /**
@@ -58,18 +58,19 @@ object Write {
      *
      * Update semantics
      */
-    // this being a case class and not a case object means some funky casts, but they're safe
-    case class Replace[A](a: A) extends Mode {
-      private[dynamodb] def result[V]: Option[V] => Result[V, this.Mode] = {
-        case Some(v) => Replace.Wrote().asInstanceOf[Result[V, this.Mode]]
-        case None    => throw new AssertionError("we should always get back the old data if we are Replacing")
-      }
-      private[dynamodb] def fail[V] = Replace.Rejected[V]().asInstanceOf[Result[V, this.Mode]]
-    }
-    object Replace {
+    //    // this being a case class and not a case object means some funky casts, but they're safe
+    //    case class Replace[A](a: A) extends Mode {
+    //    }
+    case object Replace extends Mode {
       /** return the written value */
-      case class Wrote[A]() extends Result[Nothing, Replace[A]]
-      case class Rejected[A]() extends Result[Nothing, Replace[A]]
+      case object Wrote extends Result[Nothing, Replace.type]
+      case object Failed extends Result[Nothing, Replace.type]
+
+      private[dynamodb] def result[V]: Option[V] => Result[V, Replace.type] = {
+        case Some(v) => Wrote
+        case None    => throw new AssertionError(s"we should always get back old data if we are Replacing")
+      }
+      private[dynamodb] def fail[V] = Failed
     }
   }
 
@@ -79,11 +80,11 @@ object Write {
       Equal.equal {
         case (Overwrite.Replaced(a1), Overwrite.Replaced(a2)) => Equal[A].equal(a1, a2)
         case (Overwrite.New, Overwrite.New) => true
-        case (Insert.Wrote, Insert.Wrote) => true
-        case (Insert.Rejected, Insert.Rejected) => true
-        case (Replace.Wrote(), Replace.Wrote()) => true
-        case (Replace.Rejected(), Replace.Rejected()) => true
-        case _ => false
+        case (Insert.New, Insert.New) => true
+        case (Insert.Failed, Insert.Failed) => true
+        case (Replace.Wrote, Replace.Wrote) => true
+        case (Replace.Failed, Replace.Failed) => true
+        case (_, _) => false
       }
   }
 }
