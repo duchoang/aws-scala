@@ -38,7 +38,7 @@ object Publishing extends Plugin {
           <developerConnection>scm:git:ssh://git@bitbucket.org:atlassian/aws-scala.git</developerConnection>
         </scm>
           <issueManagement>
-            <system>BitBucket</system>
+            <system>Bitbucket</system>
             <url>https://bitbucket.org/atlassian/aws-scala/issues</url>
           </issueManagement>
 
