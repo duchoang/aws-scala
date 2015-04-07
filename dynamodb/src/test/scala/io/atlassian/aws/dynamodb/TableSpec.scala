@@ -20,9 +20,9 @@ import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class TableSpec(val arguments: Arguments)
-  extends ScalaCheckSpec
-  with LocalDynamoDB
-  with DBActionMatchers {
+    extends ScalaCheckSpec
+    with LocalDynamoDB
+    with DBActionMatchers {
   import TestData._
 
   object table extends Table {

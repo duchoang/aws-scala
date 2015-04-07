@@ -29,7 +29,7 @@ trait Table extends Queries {
   def putIfAbsent(k: K, v: V): DBAction[Write.Result[V, Write.Mode.Insert.type]] =
     writeOp(k, v, Write.Mode.Insert).action
 
-  def overwrite(k: K, v: V): DBAction[Write.Result[V, Write.Mode.Overwrite.type]] =
+  def put(k: K, v: V): DBAction[Write.Result[V, Write.Mode.Overwrite.type]] =
     writeOp(k, v, Write.Mode.Overwrite).action
 
   def replace(k: K, old: V, v: V): DBAction[Write.Result[V, Write.Mode.Replace.type]] =
