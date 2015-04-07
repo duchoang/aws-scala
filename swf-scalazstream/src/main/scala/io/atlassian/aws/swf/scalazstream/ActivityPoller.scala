@@ -58,7 +58,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
 
   private def heartbeatDuration(config: ActivityConfig): FiniteDuration =
     config.defaultTaskHeartbeatTimeout.fold(30.seconds) { s =>
-      if (s.isFinite()) (s.toSeconds / 2).seconds
+      if (s.isFinite()) (s.toSeconds / 2.0).seconds
       else 30.seconds
     }
 
