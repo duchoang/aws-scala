@@ -39,7 +39,7 @@ class ActivityActor(swf: AmazonSimpleWorkflow, activityDef: ActivityConfig, inst
 
   lazy val heartbeatDuration: Option[FiniteDuration] =
     activityDef.defaultTaskHeartbeatTimeout.fold(30.seconds.some) { s =>
-      if (s.isFinite()) (s.toSeconds / 2).seconds.some
+      if (s.isFinite()) (s.toSeconds / 2.0).seconds.some
       else 30.seconds.some
     }
 
