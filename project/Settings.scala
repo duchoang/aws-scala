@@ -7,7 +7,6 @@ object Settings {
 
   val testSettings = testOptions in Test += Tests.Argument("console", "junitxml")
 
-  val scala210 = "2.10.5"
   val scala211 = "2.11.6"
 
   lazy val standardSettings =
@@ -19,7 +18,6 @@ object Settings {
       Seq[Def.Setting[_]] (
         organization := "io.atlassian.aws-scala"
       , scalaVersion := scala211
-      , crossScalaVersions := Seq(scala211, scala210)
       , scalacOptions := Seq(
           "-deprecation"
         , "-unchecked"
@@ -52,7 +50,7 @@ object Settings {
         , file("NOTICE")  -> "META-INF/NOTICE"
         )
       , incOptions := incOptions.value.withNameHashing(true) // SBT 0.13.2 name hashing
-      , updateOptions := updateOptions.value.withConsolidatedResolution(true)
+      , updateOptions := updateOptions.value.withCachedResolution(true)
       , ScalariformKeys.preferences := ScalariformKeys.preferences.value
           .setPreference(AlignSingleLineCaseStatements, true)
           .setPreference(AlignParameters, true)
