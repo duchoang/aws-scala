@@ -3,16 +3,16 @@ package dynamodb
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import org.joda.time.{ DateTimeZone, DateTime }
-import scalaz.{ Contravariant, Functor }
+import scalaz.Contravariant
 import scalaz.syntax.id._
 import scalaz.syntax.std.option._
 
 case class Encoder[A](run: A => Option[AttributeValue]) {
-  def apply(a: A): Option[AttributeValue] =
+  def encode(a: A): Option[AttributeValue] =
     run(a)
 
   def unapply(a: A): Option[AttributeValue] =
-    this(a)
+    encode(a)
 
   def contramap[B](f: B => A) =
     Encoder(f andThen run)
@@ -34,8 +34,7 @@ object Encoder {
   implicit def StringEncode: Encoder[String] =
     Encoder { s =>
       // Encode an empty string as no attribute value (DynamoDB doesn't support empty string for attribute value)
-      if (s.isEmpty) None
-      else new AttributeValue().withS(s).some
+      new AttributeValue().withS { if (s.isEmpty) EMPTY_STRING_PLACEHOLDER else s }.some
     }
 
   implicit val DateTimeEncode: Encoder[DateTime] =

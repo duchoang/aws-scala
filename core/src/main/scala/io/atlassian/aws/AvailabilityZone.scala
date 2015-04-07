@@ -6,7 +6,7 @@ sealed trait AvailabilityZone {
   def fold[X](multi: => X, zone: String => X): X =
     this match {
       case Multiple => multi
-      case Zone(n) => zone(n)
+      case Zone(n)  => zone(n)
     }
 }
 

@@ -3,13 +3,12 @@ package activities
 
 import argonaut.Argonaut._
 import argonaut.CodecJson
-import Decision.{StartTimer, FailWorkflowExecution}
-import WorkflowEvent.{ActivityScheduled, TimerStarted}
+import Decision.{ StartTimer, FailWorkflowExecution }
+import WorkflowEvent.{ ActivityScheduled, TimerStarted }
 
 import scala.concurrent.duration.FiniteDuration
 
 import scalaz.syntax.std.option._
-
 
 case class LoopingActivity(activity: Activity, input: Option[String], maxRetry: Int, delay: FiniteDuration, retryCount: Int = 0)
 
@@ -18,7 +17,6 @@ object LoopingActivity {
 
   implicit val delayedTaskParametersCodecJson: CodecJson[LoopingActivity] =
     casecodec5(LoopingActivity.apply, LoopingActivity.unapply)("activity", "input", "max-retry", "delay", "retry-count")
-
 
   def startLoopedActivity(timerInfo: TimerStarted): List[Decision] =
     (for {

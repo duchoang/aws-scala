@@ -3,7 +3,7 @@ package io.atlassian.aws.swf
 import com.amazonaws.services.simpleworkflow.model.WorkflowType
 
 case class Workflow(name: String, version: String) {
-  private [swf] val aws: WorkflowType =
+  private[swf] val aws: WorkflowType =
     new WorkflowType().withVersion(version).withName(name)
 }
 

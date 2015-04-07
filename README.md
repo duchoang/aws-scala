@@ -28,7 +28,7 @@ If you want the `test` JAR for some useful helpers, at the moment you will need 
         "io.atlassian.aws-scala" %% "aws-scala-s3"  % "0.1.8"  % "test" classifier "tests",
         )
 
-Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x have a Scalaz 7.1 dependency. All are cross-compiled for both Scala 2.10 and 2.11.
+Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x onwards have a Scalaz 7.1 dependency. All are cross-compiled for both Scala 2.10 and 2.11.
    
 ### Step 1 - Creating a client
 
@@ -75,39 +75,29 @@ The basic pattern for accessing AWS resources is to create `Action` instances vi
 There is a base `AwsAction` monad that is basically a reader monad that takes in a client and produces a `kadai.Attempt` (think better Scala `Try`) that when run will perform the operation safely i.e. returns either an `Invalid` for errors or the result from the operation.
 Being a monad, you can sequence them, `run` them with the client, and also `recover` or `handle` invalid cases much like Scala `Futures`. 
 
-Each AWS resource has a typedef setting the client to the appropriate AWS SDK client type. i.e. `S3Action`, `DynamoDBAction`, `CFAction`.
-Each resource also has an object that creates these actions e.g. `S3`, `DynamoDB` and `CloudFormation` objects. Where possible, we've created `scalaz` Tagged types to wrap primitive Strings.
+Each AWS resource has a typedef setting the client to the appropriate AWS SDK client type. i.e. `S3Action`, `CFAction`. NB DynamoDB is a little different, see below.
+Each resource also has an object that creates these actions e.g. `S3` and `CloudFormation` objects. Where possible, we've created `scalaz` Tagged types to wrap primitive Strings.
 
 #### Using tagged types
 
 We use tagged types in quite a few places to make sure strings like bucket names and key names can't be accidentally mixed up. With changes to Scalaz 7.1 tagged types, we've added some
 auto-converters to unwrap tagged types. To access these, you will need to import the contents of companion objects of types e.g. `import Bucket._, S3Key._`
 
-#### DynamoDB table mapping
+#### Using DynamoDB
 
-To use the DynamoDB actions, you will need to provide a mapping between your data you want to save and something that the AWS SDK understands.
-Check out `io.atlassian.aws.dynamodb.TestData` in the `test` source tree for examples.
+Like the other AWS resources, there is a `DynamoDBAction` that you run with the appropriate AWS client, however creating these actions is a little different.
+You use the `Table` algebra instead. Check out `io.atlassian.aws.dynamodb.TestData` and `io.atlassian.aws.dynamodb.TableSpec` in the `test` source tree for examples.
 
-You'll need to:
+As a summary:
 
-   1. Create case classes for your `key` and `value` objects. There is no need for these to correspond directly to columns in your table. e.g. `ThingKey` and `ThingValue`   
-   2. Provide a `TableDefinition` that defines the Dynamo table key types, table name and provisioned capacity (if you want to create a table). Use `TableDefinition.from` to help.
-   3. Provide a `Marshaller` for the `key` class. e.g. `ThingKeyDynamoMarshaller`. There are a couple of ways to do it:
-         1. Use `Marshaller.from` and specify the mapping manually via `Marshaller.set`. This is great for quick and dirty, but you probably want to use the option below. e.g. for the `ThingKey` example:
-              `implicit val ThingKeyDynamoMarshaller =
-                 Marshaller.from[ThingKey] { a =>
-                   Map(
-                     Marshaller.set("logicalKey", s"${a.tenant}/${a.app}/${a.blobId}"),
-                     Marshaller.set("seq", a.seq)
-                   )
-                 }`
-         2. Create `Column`s that map to Dynamo table columns, which needs an `Encoder` for the type. There are encoders for basic types already provided that you can build on. e.g. Check out `ThingHashKeyEncoder` and `ThingHashKeyDynamoMarshaller`
-   4. If you're using queries and table with hash and range keys, you will need separate `Marshaller`s for the hash key and the range key. e.g. `ThingHashKeyDynamoMarshaller` and `ThingRangeKeyDynamoMarshaller`
-   5. Provide a `Marshaller` and an `Unmarshaller` for your `value` class. `Unmarshaller`s are the opposite of marshallers, and you again have the option to construct them manually
-      using `Unmarshaller.Operation.get` or using the `Column`s. e.g. `ThingValueDynamoMarshaller` and `ThingValueDynamoUnmarshaller`
-   6. Provide a `StoreValue` for your `value` class. This represents what to do upon creating versus updating a value just in case you don't want
-      to clobber other values. e.g. `ThingValueDynamoStoreValue` sets the `deletedTimestamp` value only upon a `delete` operation.
-      There are useful combinators on `StoreValue` e.g. `StoreValue.newFromValues` just to put all the values.
+   1. Create case classes for your `key` and `value` objects. There is no need for these to correspond directly to columns in your table. e.g. `ThingKey` and `ThingValue`
+   2. Extend `io.atlassian.aws.dynamodb.Table` specifying the key `K` and value `V` types.
+   3. Provide a `TableDefinition` that defines the Dynamo table key types, table name and provisioned capacity (if you want to create a table). Use `TableDefinition.from` to help.
+   4. Provide a `Column` for each column in your DynamoDB table. This basically specifies a name for the column and a Scala type to we can map to that column.
+   5. Provide composite `Column`s via the `Column.composeX` functions to map you high-level Scala types (i.e. your `key` and `value` types) to the columns defined in the preceding step.
+   6. Access your table by:
+         1. Creating `DBOp`s through your `Table`'s `get`/`put`/... functions
+         2. Run the `DBOp`s by using the `DynamoDB.interpreter` to get `DynamoDBAction`, which you can then run with your AWS client. 
 
 #### SQS message marshallers and unmarshallers
 

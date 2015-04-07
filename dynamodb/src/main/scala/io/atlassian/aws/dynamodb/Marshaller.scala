@@ -1,54 +1,33 @@
 package io.atlassian.aws
 package dynamodb
 
-import com.amazonaws.services.dynamodbv2.model.AttributeValue
-import scalaz.syntax.id._
+import scalaz.Contravariant
 
 /**
- * Type class for marshalling objects into a map suitable for passing to AWS DynamoDB client
- * @tparam A The type of the object to marshall.
+ * Marshall objects into a map suitable for passing to AWS DynamoDB client
  */
-trait Marshaller[A] {
+private[dynamodb] case class Marshaller[A](run: A => KeyValue) {
   /**
    * Generates a map of field (i.e. column) names to a possible AttributeValue.
    * If the value is None, we assume that the value is deleted.
    */
-  def toMap(a: A): KeyValue
+  def apply(a: A): KeyValue =
+    run(a)
 
-  def toFlattenedMap(a: A): Map[String, AttributeValue] =
-    toMap(a).collect {
+  def toFlattenedMap(a: A): DynamoMap =
+    this(a).collect {
       case (key, Some(value)) => key -> value
     }
+
+  def contramap[B](f: B => A): Marshaller[B] =
+    Marshaller { f andThen this.apply }
+
+  def liftOption: Marshaller[Option[A]] =
+    Marshaller { _.fold(Map.empty[String, Value]) { run } }
 }
 
-object Marshaller {
-  def apply[A: Marshaller] =
-    implicitly[Marshaller[A]]
-
-  /**
-   * Convenience method to marshall a specific field in the object.
-   * Alternately, use a Column to encapsulate a named Field for reuse.
-   *
-   * @param name The name of the field. The name of the column in the DynamoDB table.
-   * @param value The value to store.
-   * @param encode Encoder for the field value to store.
-   * @return A field mapping that can be used for marshalling the object
-   */
-  def set[A](name: String, value: A)(implicit encode: Encoder[A]): Field[A] =
-    name -> encode(value)
-
-  def from[A](toKeyValue: ToKeyValue[A]): Marshaller[A] =
-    new Marshaller[A] {
-      def toMap(a: A): KeyValue = toKeyValue(a)
-    }
-
-  def fromColumn[A: Encoder](column: Column[A]): Marshaller[A] =
-    new Marshaller[A] {
-      def toMap(a: A): KeyValue = Map(column(a))
-    }
-
-  def fromColumn2[A: Encoder, B: Encoder, C](ca: Column[A], cb: Column[B])(f: C => (A, B)): Marshaller[C] =
-    new Marshaller[C] {
-      def toMap(c: C): KeyValue = f(c) |> { case (a, b) => Map(ca(a), cb(b)) }
-    }
+private[dynamodb] object Marshaller {
+  implicit object MarshallerContra extends Contravariant[Marshaller] {
+    def contramap[A, B](ma: Marshaller[A])(f: B => A): Marshaller[B] = ma contramap f
+  }
 }

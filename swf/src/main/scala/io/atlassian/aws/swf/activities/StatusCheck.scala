@@ -21,10 +21,10 @@ object StatusCheck {
         import SResult._
         val json = r.jencode.nospaces
         r.fold(
-        { i => failed(i.toString, json) },
-        { s => failed(s, json) },
-        { s => success(json)},
-        { s => success(json) }
+          { i => failed(i.toString, json) },
+          { s => failed(s, json) },
+          { s => success(json) },
+          { s => success(json) }
         )
       }
     }
@@ -35,21 +35,20 @@ object StatusCheck {
     import StatusCheck.Response._
     (for {
       resultString <- result
-      nextActivities <-
-        resultString.decodeOption[GoodStatus].map {
-          case GoodStatus(s) => onComplete(s)
-        }.orElse(resultString.decodeOption[InProgressStatus].map[List[Decision]] { _ =>
-          LoopingActivity.scheduleNextLoop(scheduledDetails)
-        })
+      nextActivities <- resultString.decodeOption[GoodStatus].map {
+        case GoodStatus(s) => onComplete(s)
+      }.orElse(resultString.decodeOption[InProgressStatus].map[List[Decision]] { _ =>
+        LoopingActivity.scheduleNextLoop(scheduledDetails)
+      })
     } yield nextActivities) | FailWorkflowExecution(s"Invalid activity completed state for ${scheduledDetails.activityId}", s"Could not decode result $result").list
   }
 
   sealed trait Response {
     import Response._
     def fold[X](e: Invalid => X, b: String => X, g: String => X, i: String => X): X = this match {
-      case Error(in) => e(in)
-      case BadStatus(s) => b(s)
-      case GoodStatus(s) => g(s)
+      case Error(in)           => e(in)
+      case BadStatus(s)        => b(s)
+      case GoodStatus(s)       => g(s)
       case InProgressStatus(s) => i(s)
     }
   }
@@ -91,10 +90,10 @@ object StatusCheck {
     implicit val ResponseEncodeJson: EncodeJson[Response] =
       EncodeJson {
         _.fold(
-        { i => ("status" := "error") ->: ("reason" := i) ->: jEmptyObject },
-        { s => ("status" := "bad") ->: ("reason" := s) ->: jEmptyObject },
-        { s => ("status" := "good") ->: ("reason" := s) ->: jEmptyObject},
-        { s => ("status" := "in-progress") ->: ("reason" := s) ->: jEmptyObject }
+          { i => ("status" := "error") ->: ("reason" := i) ->: jEmptyObject },
+          { s => ("status" := "bad") ->: ("reason" := s) ->: jEmptyObject },
+          { s => ("status" := "good") ->: ("reason" := s) ->: jEmptyObject },
+          { s => ("status" := "in-progress") ->: ("reason" := s) ->: jEmptyObject }
         )
       }
   }

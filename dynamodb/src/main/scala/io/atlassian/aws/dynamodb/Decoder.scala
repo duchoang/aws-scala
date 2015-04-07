@@ -5,23 +5,28 @@ import org.joda.time.{ DateTimeZone, DateTime }
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 
-import scalaz.Monad
+import scalaz.Functor
 import scalaz.syntax.id._
-import scalaz.syntax.monad.ToBindOps
 
 /**
  * Represents a function that tries to convert an AttributeValue into a
  * Scala value (typically that represents a field in an object).
  */
-case class Decoder[A] private[Decoder] (run: Value => Attempt[A]) extends (Value => Attempt[A]) {
-  def apply(o: Value): Attempt[A] =
+case class Decoder[A] private[Decoder] (val keyType: Key.Type)(run: Value => Attempt[A]) {
+  def decode(o: Value): Attempt[A] =
     run(o)
 
-  def map[B](f: A => B): Decoder[B] = flatMap(f andThen Decoder.ok)
+  def map[B](f: A => B): Decoder[B] =
+    Decoder(keyType) { run(_).map(f) }
 
-  def flatMap[B](f: A => Decoder[B]): Decoder[B] =
-    Decoder {
-      m => run(m) >>= { f(_)(m) }
+  def mapPartial[B](f: PartialFunction[A, B]): Decoder[B] =
+    Decoder(keyType) {
+      run(_).flatMap { a =>
+        if (f.isDefinedAt(a))
+          Attempt.ok(f(a))
+        else
+          Attempt.fail(s"'$a' is an invalid value")
+      }
     }
 }
 
@@ -32,47 +37,44 @@ object Decoder {
   def apply[A: Decoder] =
     implicitly[Decoder[A]]
 
-  private def option[A](f: PartialFunction[Value, Attempt[A]]) =
-    Decoder[A](f)
+  private[Decoder] def option[A](f: Value => Attempt[A])(keyType: Key.Type): Decoder[A] =
+    Decoder(keyType) { f }
 
-  def ok[A](strict: A): Decoder[A] = from { Attempt.ok(strict) }
-
-  def from[A](a: Attempt[A]): Decoder[A] = Decoder { _ => a }
-
-  def mandatoryField[A](f: AttributeValue => A, label: String): Decoder[A] =
+  def mandatoryField[A](f: AttributeValue => A)(label: String)(keyType: Key.Type): Decoder[A] =
     option {
       case None     => Attempt.fail(s"No $label value present")
       case Some(av) => Attempt.safe(f(av))
-    }
+    }(keyType)
 
-  implicit def LongDecode: Decoder[Long] =
-    mandatoryField(_.getN.toLong, "Long")
+  // instances
 
-  implicit def IntDecode: Decoder[Int] =
-    mandatoryField(_.getN.toInt, "Int")
+  implicit val LongDecode: Decoder[Long] =
+    mandatoryField { _.getN.toLong }("Long")(Key.NumberType)
 
-  implicit def DateTimeDecode: Decoder[DateTime] =
-    mandatoryField(_.getN.toLong |> { i => new DateTime(i, DateTimeZone.UTC) }, "DateTime")
+  implicit val IntDecode: Decoder[Int] =
+    mandatoryField { _.getN.toInt }("Int")(Key.NumberType)
 
-  implicit def StringDecode: Decoder[String] =
+  implicit val DateTimeDecode: Decoder[DateTime] =
+    mandatoryField { _.getN.toLong |> { i => new DateTime(i, DateTimeZone.UTC) } }("DateTime")(Key.NumberType)
+
+  implicit val StringDecode: Decoder[String] =
     option {
-      // No attribute value means an empty string (because DynamoDB doesn't support empty strings as attribute values)
-      case None => Attempt.ok("")
-      case Some(av) =>
-        if (av.getS == null) Attempt.fail("No string value present")
-        else Attempt.ok(av.getS)
-    }
+      case None => Attempt.fail("No string value present")
+      case Some(a) => a.getS |> { s =>
+        if (s == null) Attempt.fail("No string value present")
+        else if (s == EMPTY_STRING_PLACEHOLDER) Attempt.ok("") // TODO, nasty, nasty, nasty 
+        else Attempt.ok(s)
+      }
+    }(Key.StringType)
 
-  implicit def OptionDecode[A](implicit decode: Decoder[A]): Decoder[Option[A]] =
+  implicit def OptionDecode[A](implicit decoder: Decoder[A]): Decoder[Option[A]] =
     option {
       case None                => Attempt.ok(None)
-      case someValue @ Some(_) => decode(someValue).toOption |> Attempt.ok
-    }
+      case someValue @ Some(_) => decoder.decode(someValue).toOption |> Attempt.ok
+    }(decoder.keyType)
 
-  implicit def DecodeAttributeValueMonad: Monad[Decoder] =
-    new Monad[Decoder] {
-      def point[A](v: => A) = Decoder.ok(v)
-      def bind[A, B](m: Decoder[A])(f: A => Decoder[B]) = m flatMap f
-      override def map[A, B](m: Decoder[A])(f: A => B) = m map f
+  implicit def DecodeAttributeValueMonad: Functor[Decoder] =
+    new Functor[Decoder] {
+      def map[A, B](m: Decoder[A])(f: A => B) = m map f
     }
 }

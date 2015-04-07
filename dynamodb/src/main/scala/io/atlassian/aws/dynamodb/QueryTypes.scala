@@ -4,6 +4,9 @@ import com.amazonaws.services.dynamodbv2.model.ComparisonOperator
 
 trait QueryTypes {
 
+  // contains an option of a range key
+  case class Page[KR, V](result: List[V], next: Option[KR])
+
   sealed trait Comparison
   object Comparison {
     case object Eq extends Comparison
@@ -21,8 +24,6 @@ trait QueryTypes {
     }
   }
 
-  case class Page[A](result: List[A], next: Option[Query[A]])
-
   sealed trait ScanDirection
   object ScanDirection {
     case object Ascending extends ScanDirection
@@ -33,5 +34,4 @@ trait QueryTypes {
       case Descending => false
     }
   }
-
 }

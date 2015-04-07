@@ -1,6 +1,6 @@
 package io.atlassian.aws.swf.akka
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{ Actor, ActorRef, Props }
 import io.atlassian.aws.swf.activities.StatusCheck.Response
 
 import scala.concurrent.duration.FiniteDuration
@@ -11,7 +11,7 @@ object StatusCheckActor {
     Props(classOf[StatusCheckActor], owner, f, interval)
 
   object Protocol {
-    private [akka] case object Poll
+    private[akka] case object Poll
   }
 
   type StatusChecker = () => Response

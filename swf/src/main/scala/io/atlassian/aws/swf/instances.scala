@@ -1,6 +1,6 @@
 package io.atlassian.aws.swf
 
-import com.amazonaws.services.simpleworkflow.model.{DecisionTask, ActivityTask, WorkflowExecution}
+import com.amazonaws.services.simpleworkflow.model.{ DecisionTask, ActivityTask, WorkflowExecution }
 
 import scalaz.std.list._
 import scala.collection.JavaConverters._
@@ -29,7 +29,8 @@ object DecisionInstance {
       // order list of events in ascending order
       val sortedEvents = d.getEvents.asScala.sortBy { _.getEventId }.map { WorkflowEvent.apply }
       val transformedList = sortedEvents.foldLeft(nil[WorkflowEvent]) { (acc, event) =>
-        acc :+ WorkflowEvent(event, acc) }
+        acc :+ WorkflowEvent(event, acc)
+      }
       DecisionInstance(TaskToken(t), d.getStartedEventId, WorkflowInstance(d.getWorkflowExecution), Workflow(d.getWorkflowType), d.getPreviousStartedEventId,
         Option(d.getNextPageToken).map { EventPageToken.apply }, transformedList)
     }

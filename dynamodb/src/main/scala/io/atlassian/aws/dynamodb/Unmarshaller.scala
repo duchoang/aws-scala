@@ -3,70 +3,56 @@ package dynamodb
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import kadai.Invalid
-import scalaz.Monad, scalaz.syntax.all._
+import scalaz.{ Kleisli, Monad }
+import scalaz.std.option._
+import scalaz.syntax.all._
 
 /**
- * Type class for unmarshalling objects from a map returned from AWS DynamoDB client
- * @tparam A The type of the object to unmarshall
+ * Unmarshallers ake a given map of attribute values from AWS SDK
+ * and turn that into into a value object.
  */
-trait Unmarshaller[A] {
-  final def fromMap(m: Map[String, AttributeValue]): Attempt[A] =
-    unmarshall(m)
+private[dynamodb] object Unmarshaller {
+  def apply[A](f: DynamoMap => Attempt[A]): Unmarshaller[A] =
+    Kleisli { f }
 
-  def unmarshall: Unmarshaller.Operation[A]
-}
+  /** Convenience method for creating a single column [[Unmarshaller]]. */
+  def get[A: Decoder](name: String): Unmarshaller[A] =
+    Unmarshaller {
+      m => (m.get(name) |> Decoder[A].decode).lift { _.leftMap { _ |+| Invalid.Message(s"Cannot decode field $name") } }
+    }
 
-object Unmarshaller {
-  def apply[A: Unmarshaller] =
-    implicitly[Unmarshaller[A]]
+  def ok[A](strict: A): Unmarshaller[A] =
+    Unmarshaller { _ => Attempt.ok(strict) }
 
-  def from[A](f: Operation[A]) = new Unmarshaller[A] {
-    def unmarshall = f
-  }
+  def fail[A](error: Invalid): Unmarshaller[A] =
+    Unmarshaller { _ => Attempt(error.left) }
 
-  /**
-   * Represents an unmarshalling operation that tries to convert a map of field names to AttributeValues into an object of
-   * type A. Use the convenience functions in the companion object to create Unmarshaller.Operations.
-   * @param run The operation
-   * @tparam A The object to unmarshall into.
-   */
-  case class Operation[A](run: Map[String, AttributeValue] => Attempt[A]) {
-    def apply(m: Map[String, AttributeValue]): Attempt[A] =
-      run(m)
+  implicit def UnmarshallerMonad: Monad[Unmarshaller] =
+    new Monad[Unmarshaller] {
+      def point[A](v: => A) = Unmarshaller.ok(v)
+      def bind[A, B](m: Unmarshaller[A])(f: A => Unmarshaller[B]) = m flatMap f
+      override def map[A, B](m: Unmarshaller[A])(f: A => B) = m map f
+    }
 
-    def map[B](f: A => B): Operation[B] =
-      flatMap(f andThen Operation.ok)
+  implicit class UnmarshallerOps[A](val unmarshaller: Unmarshaller[A]) extends AnyVal {
+    def apply(m: DynamoMap) =
+      unmarshaller.run(m)
 
-    def flatMap[B](f: A => Operation[B]): Operation[B] =
-      Operation {
-        m => run(m) >>= { f(_)(m) }
-      }
-  }
+    import collection.JavaConverters._
 
-  object Operation {
-    def ok[A](strict: A): Operation[A] = Operation { _ => Attempt.ok(strict) }
-    def fail[A](error: Invalid): Operation[A] = Operation { _ => Attempt(error.left) }
+    def option(attrs: java.util.Map[String, AttributeValue]): Attempt[Option[A]] =
+      if (attrs == null)
+        Attempt.ok(none[A])
+      else
+        this(attrs.asScala.toMap).map(some)
 
-    /**
-     * Main convenience method for creating an [[Operation]].
-     * @param name The name of the field to extract.
-     * @param converter Implicit unmarshaller for a specific AttributeValue to the field.
-     *                  See [[Decoder]] for currently supported field types.
-     * @tparam A The type of the field to unmarshall.
-     * @return Unmarshall operation for unmarshalling a field in the object.
-     */
-    def get[A](name: String)(implicit converter: Decoder[A]): Operation[A] =
-      Operation { m =>
-        (m.get(name) |> converter).lift {
-          _.leftMap { _ |+| Invalid.Message(s"Cannot decode field $name") }
-        }
-      }
+    def liftOption: Unmarshaller[Option[A]] =
+      Unmarshaller { this(_).toOption.point[Attempt] }
 
-    implicit def OperationMonad: Monad[Operation] =
-      new Monad[Operation] {
-        def point[A](v: => A) = Operation.ok(v)
-        def bind[A, B](m: Operation[A])(f: A => Operation[B]) = m flatMap f
-        override def map[A, B](m: Operation[A])(f: A => B) = m map f
-      }
+    def unmarshall(attrs: java.util.Map[String, AttributeValue]): Attempt[A] =
+      if (attrs == null)
+        Attempt.fail("No values to unmarshall")
+      else
+        this(attrs.asScala.toMap)
   }
 }

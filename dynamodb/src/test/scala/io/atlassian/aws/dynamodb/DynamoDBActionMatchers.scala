@@ -9,28 +9,9 @@ import kadai.log.Logging
 import org.specs2.execute.{ Success, Failure }
 import reflect.ClassTag
 
-trait DynamoDBSpecOps extends Logging {
+trait DynamoDBActionMatchers extends Logging {
 
   import Logging._
-
-  def createTable[A, B](implicit ev: TableDefinition[A, B], client: AmazonDynamoDBClient) = {
-    runDynamoDBAction(DynamoDB.createTable[A, B]()) match {
-      case -\/(e) =>
-        error(s"Error creating table: $e")
-        Failure(s"Error creating table: $e")
-      case \/-(task) =>
-        debug(s"Creating table ${ev.name}")
-        task.run
-        debug(s"Created table ${ev.name}")
-        Success
-    }
-  }
-
-  def deleteTable[A, B](implicit ev: TableDefinition[A, B], client: AmazonDynamoDBClient) =
-    runDynamoDBAction(DynamoDB.deleteTable[A, B])
-
-  def runDynamoDBAction[A](action: DynamoDBAction[A])(implicit client: AmazonDynamoDBClient): Invalid \/ A =
-    action.run(client).run
 
   def returnFailure[A](implicit client: AmazonDynamoDBClient) =
     new ServiceMatcher[A]({
@@ -69,10 +50,9 @@ trait DynamoDBSpecOps extends Logging {
 
   class ServiceMatcher[A](check: \/[Invalid, A] => (Boolean, String))(implicit client: AmazonDynamoDBClient) extends Matcher[DynamoDBAction[A]] {
     def apply[S <: DynamoDBAction[A]](s: Expectable[S]) = {
-      val execResult = runDynamoDBAction(s.value)
+      val execResult = DynamoDBOps.runAction.apply(s.value)
       val (comparisonResult, message) = check(execResult)
       result(comparisonResult, message, message, s)
     }
   }
-
 }

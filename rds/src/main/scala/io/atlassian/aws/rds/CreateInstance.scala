@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package rds
 
-import com.amazonaws.services.rds.model.{Tag, CreateDBInstanceRequest}
+import com.amazonaws.services.rds.model.{ Tag, CreateDBInstanceRequest }
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scalaz.syntax.id._
@@ -25,7 +25,7 @@ case class CreateInstance(engine: Engine,
                           dbName: Option[String] = None,
                           autoMinorVersionUpgrade: Boolean = true,
                           publiclyAccessible: Boolean = true,
-                          backupWindow: Option[String] = None,        // TODO - Probably should be duration that formats as expected
+                          backupWindow: Option[String] = None, // TODO - Probably should be duration that formats as expected
                           maintenanceWindow: Option[String] = None,
                           port: Option[Int] = None,
                           storageEncrypted: Boolean = false,

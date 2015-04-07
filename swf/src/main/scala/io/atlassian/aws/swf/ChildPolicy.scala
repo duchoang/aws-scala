@@ -11,9 +11,9 @@ object ChildPolicy {
 
   def unapply(s: String): Option[ChildPolicy] =
     s match {
-      case "TERMINATE" => Terminate.some
-      case "REQUEST_CANCEL" =>  RequestCancel.some
-      case "ABANDON" => Abandon.some
-      case _ => None
+      case "TERMINATE"      => Terminate.some
+      case "REQUEST_CANCEL" => RequestCancel.some
+      case "ABANDON"        => Abandon.some
+      case _                => None
     }
 }

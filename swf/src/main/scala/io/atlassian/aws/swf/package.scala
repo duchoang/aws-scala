@@ -7,7 +7,7 @@ import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import com.amazonaws.services.simpleworkflow.model.{ TaskList => AWSTaskList }
 import org.joda.time.DateTime
 
-import scala.concurrent.duration.{FiniteDuration, Duration}
+import scala.concurrent.duration.{ FiniteDuration, Duration }
 import scalaz.syntax.std.option._
 
 package object swf extends swf.Types with ActivityTypes {
@@ -20,7 +20,7 @@ package object swf extends swf.Types with ActivityTypes {
       new AWSTaskList().withName(t.unwrap)
   }
 
-  private [swf] implicit class DurationSyntax(val d: Duration) extends AnyVal {
+  private[swf] implicit class DurationSyntax(val d: Duration) extends AnyVal {
     def secAws: String = if (!d.isFinite) "NONE" else d.toSeconds.toString
   }
 
@@ -29,7 +29,7 @@ package object swf extends swf.Types with ActivityTypes {
       new DateTime(date)
   }
 
-  private [swf] implicit class StringSyntax(val s: String) extends AnyVal {
+  private[swf] implicit class StringSyntax(val s: String) extends AnyVal {
     def safeSecs: Option[Duration] =
       safeInt.map { i => Duration(i.toLong, TimeUnit.SECONDS) }
 
@@ -51,7 +51,7 @@ package object swf extends swf.Types with ActivityTypes {
     def notUnknown: List[WorkflowEvent] =
       l.filterNot {
         case WorkflowEvent.UnknownEvent(_, _, _) => true
-        case _ => false
+        case _                                   => false
       }
   }
 

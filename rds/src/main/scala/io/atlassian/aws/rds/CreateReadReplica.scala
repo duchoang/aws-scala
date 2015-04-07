@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package rds
 
-import com.amazonaws.services.rds.model.{Tag, CreateDBInstanceReadReplicaRequest}
+import com.amazonaws.services.rds.model.{ Tag, CreateDBInstanceReadReplicaRequest }
 import scala.collection.JavaConverters._
 
 case class CreateReadReplica(id: DbId,

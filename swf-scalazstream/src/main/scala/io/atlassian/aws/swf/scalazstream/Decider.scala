@@ -5,7 +5,7 @@ import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import kadai.Attempt
 import kadai.log.json.JsonLogging
 
-import scalaz.{Monad, \/-, -\/}
+import scalaz.{ Monad, \/-, -\/ }
 import scalaz.syntax.monad._
 import scalaz.concurrent.Task
 import scalaz.stream.Process
