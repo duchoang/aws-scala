@@ -78,7 +78,7 @@ object Write {
     import Mode._
     implicit def ResultEqual[A: Equal, M <: Mode]: Equal[Result[A, M]] =
       Equal.equal {
-        case (Overwrite.Replaced(a1), Overwrite.Replaced(a2)) => Equal[A].equal(a1, a2)
+        case (Overwrite.Replaced(a1), Overwrite.Replaced(a2)) => Equal[A].equal(a1.asInstanceOf[A], a2.asInstanceOf[A]) // cast required for 2.10
         case (Overwrite.New, Overwrite.New) => true
         case (Insert.New, Insert.New) => true
         case (Insert.Failed, Insert.Failed) => true
