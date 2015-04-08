@@ -231,7 +231,7 @@ object DynamoDB {
         fa match {
           case GetOp(k)             => get(k)(t.name, t.key, t.value)
           case WriteOp(k, v, mode)  => write(k, v, mode)(t.name, t.key, t.value).asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
-          case ReplaceOp(k, old, v) => write(k, v, Write.Mode.Replace, Some(old))(t.name, t.key, t.value) //.asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
+          case ReplaceOp(k, old, v) => write(k, v, Write.Mode.Replace, Some(old))(t.name, t.key, t.value)
           case DeleteOp(k)          => delete(k)(t.name, t.key).map { _ => () }
           case QueryOp(q)           => queryImpl(q)
           case TableExistsOp        => tableExists(t.name)
