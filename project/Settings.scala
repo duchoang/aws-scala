@@ -40,7 +40,6 @@ object Settings {
           Resolver.defaultLocal
         , Resolver.mavenLocal
         , "atlassian-public"   at "https://maven.atlassian.com/content/groups/atlassian-public/"
-        , "atlassian-internal" at "https://maven.atlassian.com/content/groups/internal/"
         , Resolver.sonatypeRepo("public")
         , Resolver.sonatypeRepo("releases")
         , Resolver.sonatypeRepo("snapshots")

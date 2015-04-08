@@ -14,22 +14,26 @@ Currently the library has basic support for S3, DynamoDB, CloudFormation and SQS
 
 ### Step 0 - Adding the dependency
 
+Currently the artifacts are published to Atlassian's public Maven repository, so you'll need to add the following resolver:
+    
+    resolvers += "atlassian-public"   at "https://maven.atlassian.com/content/groups/atlassian-public/"
+
 The project is split into separate modules for each type of AWS API so you can import them separately if you wish (e.g. `aws-scala-s3`, `aws-scala-dynamodb`, `aws-scala-sqs`, `aws-scala-cloudformation`).
 Alternatively, you can:
 
-    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "0.1.8"
+    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "2.0.0-M2"
     
 If you want the `test` JAR for some useful helpers, at the moment you will need to import the individual modules and core, e.g.: 
     
     libraryDependencies ++= Seq(
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "0.1.8",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "0.1.8",
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "0.1.8"  % "test" classifier "tests",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "0.1.8"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "2.0.0-M2",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "2.0.0-M2",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "2.0.0-M2"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "2.0.0-M2"  % "test" classifier "tests",
         )
 
-Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x onwards have a Scalaz 7.1 dependency.
-Versions up to 2.0.0 are cross-compiled for Scala 2.10 and 2.11. Version 2.0.0 onwards supports only 2.11.
+Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x onwards have a Scalaz 7.1 dependency. Versions 1.x onwards 
+are cross-compiled for Scala 2.10 and 2.11.
    
 ### Step 1 - Creating a client
 
