@@ -30,7 +30,7 @@ sealed trait Column[A] {
  * prepare the encoded representation to the Dynamo driver, and to return
  * the de-serialized value back from the database, respectively.
  */
-final class NamedColumn[A](val name: String)(implicit encoder: Encoder[A], decoder: Decoder[A]) extends Column[A] {
+final class NamedColumn[A](val name: String)(implicit val encoder: Encoder[A], val decoder: Decoder[A]) extends Column[A] {
   override val marshall = Marshaller[A] { a => Map(name -> encoder.encode(a)) }
   override val unmarshall = Unmarshaller.get(name)
 }
