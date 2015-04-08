@@ -28,7 +28,8 @@ If you want the `test` JAR for some useful helpers, at the moment you will need 
         "io.atlassian.aws-scala" %% "aws-scala-s3"  % "0.1.8"  % "test" classifier "tests",
         )
 
-Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x onwards have a Scalaz 7.1 dependency. All are cross-compiled for both Scala 2.10 and 2.11.
+Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x onwards have a Scalaz 7.1 dependency.
+Versions up to 2.0.0 are cross-compiled for Scala 2.10 and 2.11. Version 2.0.0 onwards supports only 2.11.
    
 ### Step 1 - Creating a client
 

@@ -52,7 +52,7 @@ object Settings {
         , file("NOTICE")  -> "META-INF/NOTICE"
         )
       , incOptions := incOptions.value.withNameHashing(true) // SBT 0.13.2 name hashing
-      , updateOptions := updateOptions.value.withConsolidatedResolution(true)
+      , updateOptions := updateOptions.value.withCachedResolution(true)
       , ScalariformKeys.preferences := ScalariformKeys.preferences.value
           .setPreference(AlignSingleLineCaseStatements, true)
           .setPreference(AlignParameters, true)

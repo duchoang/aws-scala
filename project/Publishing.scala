@@ -17,8 +17,8 @@ import Keys._
 
 object Publishing extends Plugin {
   val nexus = "https://maven.atlassian.com/"
-  lazy val release = Some("releases" at nexus + "private")
-  lazy val snapshots = Some("snapshots" at nexus + "private-snapshot")
+  lazy val release = Some("releases" at nexus + "public")
+  lazy val snapshots = Some("snapshots" at nexus + "public-snapshot")
   lazy val local = Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository")))
 
   override def settings = 
@@ -33,13 +33,13 @@ object Publishing extends Plugin {
       , publishArtifact in Test := true
       , pomExtra :=
         <scm>
-          <url>https://stash.atlassian.com/projects/ES/repos/aws-scala</url>
-          <connection>scm:ssh://git@stash.atlassian.com:7997/ES/aws-scala.git</connection>
-          <developerConnection>scm:git:ssh://git@stash.atlassian.com:7997/ES/aws-scala.git</developerConnection>
+          <url>https://bitbucket.org/atlassian/aws-scala</url>
+          <connection>scm:ssh://git@bitbucket.org:atlassian/aws-scala.git</connection>
+          <developerConnection>scm:git:ssh://git@bitbucket.org:atlassian/aws-scala.git</developerConnection>
         </scm>
           <issueManagement>
-            <system>JIRA</system>
-            <url>https://sdog.jira.com/secure/RapidBoard.jspa?rapidView=93</url>
+            <system>Bitbucket</system>
+            <url>https://bitbucket.org/atlassian/aws-scala/issues</url>
           </issueManagement>
 
       , pomIncludeRepository := { (repo: MavenRepository) => false } // no repositories in the pom
