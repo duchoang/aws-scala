@@ -24,25 +24,25 @@ trait Table extends Queries {
   import DBOp._
 
   def get(k: K): DBAction[Option[V]] =
-    GetOp(k).action
+    GetOp(k)
 
   def putIfAbsent(k: K, v: V): DBAction[Write.Result[V, Write.Mode.Insert.type]] =
-    writeOp(k, v, Write.Mode.Insert).action
+    writeOp(k, v, Write.Mode.Insert)
 
-  def overwrite(k: K, v: V): DBAction[Write.Result[V, Write.Mode.Overwrite.type]] =
-    writeOp(k, v, Write.Mode.Overwrite).action
+  def put(k: K, v: V): DBAction[Write.Result[V, Write.Mode.Overwrite.type]] =
+    writeOp(k, v, Write.Mode.Overwrite)
 
   def replace(k: K, old: V, v: V): DBAction[Write.Result[V, Write.Mode.Replace.type]] =
-    ReplaceOp(k, old, v).action
+    ReplaceOp(k, old, v)
 
   def delete(k: K): DBAction[Unit] =
-    DeleteOp(k).action
+    DeleteOp(k)
 
   def query(q: Query): DBAction[Page[R, V]] =
-    QueryOp(q).action
+    QueryOp(q)
 
   def tableExists: DBAction[Boolean] =
-    TableExistsOp.action
+    TableExistsOp
 
   /**
    * Perform a batch put operation using the given key -> value pairs. DynamoDB has the following restrictions:
@@ -53,7 +53,7 @@ trait Table extends Queries {
    * @return Map of key -> values that failed to be saved
    */
   def batchPut(vals: Map[K, V]): DBAction[Map[K, V]] =
-    BatchPutOp(vals).action
+    BatchPutOp(vals)
 
   //
   // Ops
@@ -77,9 +77,8 @@ trait Table extends Queries {
   implicit val MonadDBAction: Monad[DBAction] =
     Free.freeMonad[Coyoneda[DBOp, ?]]
 
-  private implicit class FreeOps[A](op: DBOp[A]) {
-    def action: DBAction[A] = Free.liftFC(op)
-  }
+  implicit def lift[A](op: DBOp[A]): DBAction[A] =
+    Free.liftFC(op)
 
   /** Turn a natural transform from DBOp to C into a DBAction to C */
   def transform[C[_]: Monad](op2c: DBOp ~> C): DBAction ~> C =
