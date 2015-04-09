@@ -15,7 +15,7 @@ class DecodeSpec extends ScalaCheckSpec {
       not fall over if it fails to decode int       $intDecodeHandlesExceptions
       not fall over if it fails to decode DateTime  $dateTimeDecodeHandlesExceptions
       not fall over if it fails to decode String    $stringDecodeHandlesExceptions
-      not fall over if it fails to decode options   $optionDecodeandlesExceptions
+      not fall over if it fails to decode options   $optionDecodeHandlesExceptions
   """
 
   import Encoder._
@@ -33,6 +33,6 @@ class DecodeSpec extends ScalaCheckSpec {
   def stringDecodeHandlesExceptions =
     (Encoder[Int].encode(100) |> Decoder[String].decode).toOr.toEither must beLeft
 
-  def optionDecodeandlesExceptions =
+  def optionDecodeHandlesExceptions =
     (Encoder[Int].encode(100) |> Decoder[Option[String]].decode) === Attempt.ok(None)
 }

@@ -2,7 +2,7 @@ package io.atlassian.aws.dynamodb
 
 import com.amazonaws.services.dynamodbv2.model.{ AttributeDefinition => AttrDef }
 
-object Key {
+private[dynamodb] object Underlying {
   sealed trait Type {
     def apply(name: String): AttrDef
   }

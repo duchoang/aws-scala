@@ -23,33 +23,30 @@ object Encoder {
   def apply[A: Encoder] =
     implicitly[Encoder[A]]
 
-
   private def attribute[A](f: A => AttributeValue => AttributeValue): Encoder[A] =
     Encoder { a => (new AttributeValue() <| { f(a) }).some }
 
-  implicit def LongEncode: Encoder[Long] =
+  implicit val LongEncode: Encoder[Long] =
     attribute { l => _.withN(l.toString) }
 
-  implicit def IntEncode: Encoder[Int] =
+  implicit val IntEncode: Encoder[Int] =
     attribute { i => _.withN(i.toString) }
 
-  implicit def StringEncode: Encoder[String] =
-    Encoder { s =>
-      // Encode an empty string as no attribute value (DynamoDB doesn't support empty string for attribute value)
-      new AttributeValue().withS { if (s.isEmpty) EMPTY_STRING_PLACEHOLDER else s }.some
-    }
+  // Encode an empty string as no attribute value (DynamoDB doesn't support empty string for attribute value)
+  implicit val StringEncode: Encoder[String] =
+    attribute { s => _.withS { if (s.isEmpty) EMPTY_STRING_PLACEHOLDER else s } }
 
   implicit val DateTimeEncode: Encoder[DateTime] =
     attribute { d => _.withN(d.withZone(DateTimeZone.UTC).toInstant.getMillis.toString) }
 
-  implicit def OptionEncode[A](implicit e: Encoder[A]): Encoder[Option[A]] =
-    Encoder { _.flatMap { e.run } }
+  implicit def OptionEncode[A: Encoder]: Encoder[Option[A]] =
+    Encoder { _.flatMap { Encoder[A].run } }
+
+  implicit def JsonEncode[A: EncodeJson]: Encoder[A] =
+    Encoder[String].contramap(implicitly[EncodeJson[A]].apply(_).nospaces)
 
   implicit object EncoderContravariant extends Contravariant[Encoder] {
     def contramap[A, B](r: Encoder[A])(f: B => A) =
       r contramap f
   }
-
-  implicit def JsonEncode[A: EncodeJson]: Encoder[A] =
-    Encoder[String].contramap(implicitly[EncodeJson[A]].apply(_).nospaces)
 }
