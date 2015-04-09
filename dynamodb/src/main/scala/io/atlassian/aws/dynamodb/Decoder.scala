@@ -1,12 +1,15 @@
 package io.atlassian.aws
 package dynamodb
 
+import argonaut.DecodeJson
 import org.joda.time.{ DateTimeZone, DateTime }
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 
-import scalaz.Functor
+import scalaz.{Bind, Functor}
 import scalaz.syntax.id._
+import argonaut.Argonaut._
+import scalaz.syntax.monad.ToBindOps
 
 /**
  * Represents a function that tries to convert an AttributeValue into a
@@ -18,6 +21,9 @@ case class Decoder[A] private[Decoder] (val keyType: Key.Type)(run: Value => Att
 
   def map[B](f: A => B): Decoder[B] =
     Decoder(keyType) { run(_).map(f) }
+
+  def flatMap[B](f: A => Decoder[B]): Decoder[B] =
+    Decoder { m => run(m) >>= { f(_).decode(m) } }
 
   def mapPartial[B](f: PartialFunction[A, B]): Decoder[B] =
     Decoder(keyType) {
@@ -73,8 +79,11 @@ object Decoder {
       case someValue @ Some(_) => decoder.decode(someValue).toOption |> Attempt.ok
     }(decoder.keyType)
 
-  implicit def DecodeAttributeValueMonad: Functor[Decoder] =
-    new Functor[Decoder] {
+  implicit def DecodeAttributeValueMonad: Functor[Decoder] with Bind[Decoder] =
+    new Functor[Decoder] with Bind[Decoder] {
       def map[A, B](m: Decoder[A])(f: A => B) = m map f
+      def bind[A, B](m: Decoder[A])(f: A => Decoder[B]): Decoder[B] = m flatMap f
     }
+
+  implicit def JsonDecode[A: DecodeJson]: Decoder[A] = Decoder[String].flatMap(_.decodeEither.fold(Attempt.fail _, Attempt.safe _))
 }

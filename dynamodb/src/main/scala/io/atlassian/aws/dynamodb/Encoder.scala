@@ -1,6 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
+import argonaut.EncodeJson
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import org.joda.time.{ DateTimeZone, DateTime }
 import scalaz.Contravariant
@@ -21,6 +22,7 @@ case class Encoder[A](run: A => Option[AttributeValue]) {
 object Encoder {
   def apply[A: Encoder] =
     implicitly[Encoder[A]]
+
 
   private def attribute[A](f: A => AttributeValue => AttributeValue): Encoder[A] =
     Encoder { a => (new AttributeValue() <| { f(a) }).some }
@@ -47,4 +49,7 @@ object Encoder {
     def contramap[A, B](r: Encoder[A])(f: B => A) =
       r contramap f
   }
+
+  implicit def JsonEncode[A: EncodeJson]: Encoder[A] =
+    Encoder[String].contramap(implicitly[EncodeJson[A]].apply(_).nospaces)
 }
