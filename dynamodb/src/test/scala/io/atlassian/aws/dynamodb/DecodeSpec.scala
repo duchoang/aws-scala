@@ -1,8 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
-import java.nio.ByteBuffer
-
+import scodec.bits.ByteVector
 import spec.ScalaCheckSpec
 import org.junit.runner.RunWith
 import scalaz.syntax.id._
@@ -41,8 +40,8 @@ class DecodeSpec extends ScalaCheckSpec {
     (Encoder[Int].encode(100) |> Decoder[Option[String]].decode) === Attempt.ok(None)
 
   def byteBufferDecodeHandlesExceptions =
-    (Encoder[Int].encode(100) |> Decoder[ByteBuffer].decode).toOr.toEither must beLeft
+    (Encoder[Int].encode(100) |> Decoder[NonEmptyByteVector].decode).toOr.toEither must beLeft
 
   def mapAttemptPropagatesExceptions =
-    (Encoder[ByteBuffer].encode(ByteBuffer.allocate(1)) |> Decoder[TwoLongs].decode).toOr.toEither must beLeft
+    (Encoder[NonEmptyByteVector].encode(NonEmptyByteVector.unapply(ByteVector.fromByte(1)).get) |> Decoder[TwoLongs].decode).toOr.toEither must beLeft
 }

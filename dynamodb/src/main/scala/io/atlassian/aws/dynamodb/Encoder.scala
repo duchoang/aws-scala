@@ -46,8 +46,8 @@ object Encoder {
   implicit def JsonEncode[A: EncodeJson]: Encoder[A] =
     Encoder[String].contramap(implicitly[EncodeJson[A]].apply(_).nospaces)
 
-  implicit val ByteBufferEncode: Encoder[ByteBuffer] =
-    attribute { b => _.withB(b) }
+  implicit val NonEmptyByteVectorEncode: Encoder[NonEmptyByteVector] =
+    attribute { b => _.withB(b.bytes.toByteBuffer) }
 
   implicit object EncoderContravariant extends Contravariant[Encoder] {
     def contramap[A, B](r: Encoder[A])(f: B => A) =

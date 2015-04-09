@@ -34,7 +34,7 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
   case class Foo(s: String, i: Int)
   implicit val CodecFoo = casecodec2(Foo.apply, Foo.unapply)("s", "i")
   implicit val EqualFoo: Equal[Foo] = Equal.equalA
-  implicit val AbitraryFoo: Arbitrary[Foo] =
+  implicit val ArbitraryFoo: Arbitrary[Foo] =
     Arbitrary {
       for {
         s <- arbitrary[String]

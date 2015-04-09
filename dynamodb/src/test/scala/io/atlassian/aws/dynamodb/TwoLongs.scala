@@ -1,13 +1,11 @@
 package io.atlassian.aws.dynamodb
 
-import java.nio.ByteBuffer
-
 import kadai.Attempt
 import org.scalacheck.{ Gen, Arbitrary }
+import scodec.bits.ByteVector
 
 import scalaz.Order
 import scalaz.Ordering
-import scalaz.syntax.id._
 import scalaz.std.anyVal._
 
 /**
@@ -34,19 +32,21 @@ object TwoLongs {
     }
 
   implicit val TwoLongsEncoder: Encoder[TwoLongs] =
-    Encoder[ByteBuffer].contramap { longs =>
-      // ByteBuffer by default is big-endian (MSB at lowest address) so we want the primary sorting long to
-      // come first followed by the secondary
-      ByteBuffer.allocateDirect(16).putLong(longs.a).putLong(longs.b) <| { _.rewind() }
+    Encoder[NonEmptyByteVector].contramap { longs =>
+      ByteVector.fromLong(longs.a) ++ ByteVector.fromLong(longs.b) match {
+        case NonEmptyByteVector(b) => b
+      }
     }
 
   implicit val TwoLongsDecoder: Decoder[TwoLongs] =
-    Decoder[ByteBuffer].mapAttempt { bytes =>
-      Attempt.safe {
-        val buf = bytes.asLongBuffer()
-        val a = buf.get()
-        val b = buf.get()
-        TwoLongs(a, b)
-      }
+    Decoder[NonEmptyByteVector].mapAttempt { bytes =>
+      if (bytes.bytes.length != 16)
+        Attempt.fail(s"Invalid length of byte vector ${bytes.bytes.length}")
+      else
+        Attempt.safe {
+          bytes.bytes.splitAt(8) match {
+            case (abytes, bbytes) => TwoLongs(abytes.toLong(), bbytes.toLong())
+          }
+        }
     }
 }

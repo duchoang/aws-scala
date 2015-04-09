@@ -6,6 +6,7 @@ import argonaut.DecodeJson
 import org.joda.time.{ DateTimeZone, DateTime }
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
+import scodec.bits.ByteVector
 
 import scalaz.Functor
 import scalaz.syntax.id._
@@ -85,12 +86,14 @@ object Decoder {
       _.decodeEither[A].fold(Attempt.fail, Attempt.safe(_))
     }
 
-  implicit val ByteBufferDecode: Decoder[ByteBuffer] =
+  implicit val NonEmptyByteVectorDecode: Decoder[NonEmptyByteVector] =
     decoder(Underlying.BinaryType) {
       case None => Attempt.fail("No value present")
       case Some(a) => a.getB |> { bytes =>
-        if (bytes == null) Attempt.fail("No value present")
-        else Attempt.ok(bytes)
+        if (bytes == null)
+          Attempt.fail("No value present")
+        else
+          NonEmptyByteVector.unapply(ByteVector(bytes)).fold(Attempt.fail[NonEmptyByteVector]("No value present")) { Attempt.ok }
       }
     }
 
