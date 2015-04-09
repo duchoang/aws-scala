@@ -11,6 +11,7 @@ import scalaz.std.option._
 import scalaz.std.string._
 import scalaz.std.anyVal._
 import org.joda.time.DateTime
+import argonaut._, Argonaut._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class EncodeDecodeSpec extends ScalaCheckSpec {
@@ -23,9 +24,21 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     round-trip strings       ${Prop.forAll { roundTrip(_: String) }}
     round-trip date times    ${Prop.forAll { roundTrip(_: DateTime) }}
     round-trip options       ${Prop.forAll { roundTrip(_: Option[String]) }}
+    round-trip json          ${Prop.forAll { roundTrip(_: Foo) }}
     round-trip binary converted type ${Prop.forAll { roundTrip(_: TwoLongs) }}
   """
 
   def roundTrip[A: Encoder: Decoder: Equal](a: A) =
     (Encoder[A].encode(a) |> Decoder[A].decode) must equal(Attempt.ok(a))
+
+  case class Foo(s: String, i: Int)
+  implicit val CodecFoo = casecodec2(Foo.apply, Foo.unapply)("s", "i")
+  implicit val EqualFoo: Equal[Foo] = Equal.equalA
+  implicit val AbitraryFoo: Arbitrary[Foo] =
+    Arbitrary {
+      for {
+        s <- arbitrary[String]
+        i <- arbitrary[Int]
+      } yield Foo(s, i)
+    }
 }

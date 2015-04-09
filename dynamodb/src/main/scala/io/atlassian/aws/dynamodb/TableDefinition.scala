@@ -33,7 +33,7 @@ object TableDefinition {
       hash,
       range,
       value,
-      List(Decoder[H].keyType(hash.name), Decoder[R].keyType(range.name)),
+      List(Decoder[H].dynamoType(hash.name), Decoder[R].dynamoType(range.name)),
       List(hashSchemaElement(hash.name), rangeSchemaElement(range.name)),
       new ProvisionedThroughput().withReadCapacityUnits(provisionedReadCapacity).withWriteCapacityUnits(provisionedWriteCapacity)
     )
