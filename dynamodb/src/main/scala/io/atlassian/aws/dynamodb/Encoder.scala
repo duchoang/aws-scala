@@ -1,6 +1,8 @@
 package io.atlassian.aws
 package dynamodb
 
+import java.nio.ByteBuffer
+
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import org.joda.time.{ DateTimeZone, DateTime }
 import scalaz.Contravariant
@@ -39,6 +41,9 @@ object Encoder {
 
   implicit val DateTimeEncode: Encoder[DateTime] =
     attribute { d => _.withN(d.withZone(DateTimeZone.UTC).toInstant.getMillis.toString) }
+
+  implicit val ByteBufferEncode: Encoder[ByteBuffer] =
+    attribute { b => _.withB(b) }
 
   implicit def OptionEncode[A](implicit e: Encoder[A]): Encoder[Option[A]] =
     Encoder { _.flatMap { e.run } }

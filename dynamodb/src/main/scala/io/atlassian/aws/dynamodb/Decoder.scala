@@ -1,6 +1,8 @@
 package io.atlassian.aws
 package dynamodb
 
+import java.nio.ByteBuffer
+
 import org.joda.time.{ DateTimeZone, DateTime }
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
@@ -18,6 +20,11 @@ case class Decoder[A] private[Decoder] (val keyType: Key.Type)(run: Value => Att
 
   def map[B](f: A => B): Decoder[B] =
     Decoder(keyType) { run(_).map(f) }
+
+  def mapAttempt[B](f: A => Attempt[B]): Decoder[B] =
+    Decoder(keyType) {
+      m => run(m) flatMap f
+    }
 
   def mapPartial[B](f: PartialFunction[A, B]): Decoder[B] =
     Decoder(keyType) {
@@ -66,6 +73,15 @@ object Decoder {
         else Attempt.ok(s)
       }
     }(Key.StringType)
+
+  implicit val ByteBufferDecode: Decoder[ByteBuffer] =
+    option {
+      case None => Attempt.fail("No value present")
+      case Some(a) => a.getB |> { bytes =>
+        if (bytes == null) Attempt.fail("No value present")
+        else Attempt.ok(bytes)
+      }
+    }(Key.BinaryType)
 
   implicit def OptionDecode[A](implicit decoder: Decoder[A]): Decoder[Option[A]] =
     option {

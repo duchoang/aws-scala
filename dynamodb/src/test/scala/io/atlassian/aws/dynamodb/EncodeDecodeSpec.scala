@@ -23,6 +23,7 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     round-trip strings       ${Prop.forAll { roundTrip(_: String) }}
     round-trip date times    ${Prop.forAll { roundTrip(_: DateTime) }}
     round-trip options       ${Prop.forAll { roundTrip(_: Option[String]) }}
+    round-trip binary converted type ${Prop.forAll { roundTrip(_: TwoLongs) }}
   """
 
   def roundTrip[A: Encoder: Decoder: Equal](a: A) =
