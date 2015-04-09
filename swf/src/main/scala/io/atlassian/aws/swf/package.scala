@@ -44,7 +44,7 @@ package object swf extends swf.Types with ActivityTypes {
       catch { case _: Throwable => None }
 
     def shortReason: String =
-      s.substring(0, 256)
+      s.take(256)
   }
 
   implicit class EventListSyntax(val l: List[WorkflowEvent]) extends AnyVal {
