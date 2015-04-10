@@ -1,6 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
+import scodec.bits.ByteVector
 import spec.ScalaCheckSpec
 import org.junit.runner.RunWith
 import scalaz.syntax.id._
@@ -16,6 +17,8 @@ class DecodeSpec extends ScalaCheckSpec {
       not fall over if it fails to decode DateTime  $dateTimeDecodeHandlesExceptions
       not fall over if it fails to decode String    $stringDecodeHandlesExceptions
       not fall over if it fails to decode options   $optionDecodeHandlesExceptions
+      not fall over if it fails to decode binary    $byteBufferDecodeHandlesExceptions
+      propagate failure from mapAttempt function    $mapAttemptPropagatesExceptions
   """
 
   import Encoder._
@@ -35,4 +38,12 @@ class DecodeSpec extends ScalaCheckSpec {
 
   def optionDecodeHandlesExceptions =
     (Encoder[Int].encode(100) |> Decoder[Option[String]].decode) === Attempt.ok(None)
+
+  def byteBufferDecodeHandlesExceptions =
+    (Encoder[Int].encode(100) |> Decoder[NonEmptyBytes].decode).toOr.toEither must beLeft
+
+  def mapAttemptPropagatesExceptions =
+    (Encoder[NonEmptyBytes].encode(ByteVector.fromByte(1) match {
+      case NonEmptyBytes(b) => b
+    }) |> Decoder[TwoLongs].decode).toOr.toEither must beLeft
 }

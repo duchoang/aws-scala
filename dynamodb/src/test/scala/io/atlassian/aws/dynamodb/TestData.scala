@@ -59,6 +59,15 @@ object TestData extends Arbitraries with MoreEqualsInstances {
   def tableNamed(tableName: String) =
     TableDefinition.from[Key, Value, HashKey, RangeKey](tableName, Key.column, Value.column, HashKey.column, RangeKey.column)
 
+  implicit val HashKeyArbitrary: Arbitrary[HashKey] =
+    Arbitrary {
+      for {
+        a <- Gen.uuid.map { _.toString }
+        b <- Gen.uuid.map { _.toString }
+        c <- Gen.uuid.map { _.toString }
+      } yield HashKey(a, b, c)
+    }
+
   implicit def KeyArbitrary: Arbitrary[Key] =
     Arbitrary {
       for {

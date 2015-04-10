@@ -1,15 +1,16 @@
 package io.atlassian.aws
 package dynamodb
 
+import java.nio.ByteBuffer
 import argonaut.DecodeJson
 import org.joda.time.{ DateTimeZone, DateTime }
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
+import scodec.bits.ByteVector
 
-import scalaz.{ Bind, Functor }
+import scalaz.Functor
 import scalaz.syntax.id._
 import argonaut.Argonaut._
-import scalaz.syntax.monad.ToBindOps
 
 /**
  * Represents a function that tries to convert an AttributeValue into a
@@ -83,6 +84,16 @@ object Decoder {
   implicit def JsonDecode[A: DecodeJson]: Decoder[A] =
     Decoder[String].mapAttempt {
       _.decodeEither[A].fold(Attempt.fail, Attempt.safe(_))
+    }
+
+  implicit val NonEmptyBytesDecode: Decoder[NonEmptyBytes] =
+    decoder(Underlying.BinaryType) {
+      case None => Attempt.fail("No value present")
+      case Some(a) => a.getB |> { bytes =>
+        if (bytes == null) Attempt.fail("No value present")
+        else
+          NonEmptyBytes.unapply(ByteVector(bytes)).fold(Attempt.fail[NonEmptyBytes]("No value present")) { Attempt.ok }
+      }
     }
 
   implicit object DecodeAttributeValueFunctor extends Functor[Decoder] {

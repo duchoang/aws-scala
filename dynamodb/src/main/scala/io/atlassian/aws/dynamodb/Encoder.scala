@@ -1,6 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
+import java.nio.ByteBuffer
 import argonaut.EncodeJson
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import org.joda.time.{ DateTimeZone, DateTime }
@@ -44,6 +45,9 @@ object Encoder {
 
   implicit def JsonEncode[A: EncodeJson]: Encoder[A] =
     Encoder[String].contramap(implicitly[EncodeJson[A]].apply(_).nospaces)
+
+  implicit val NonEmptyBytesEncode: Encoder[NonEmptyBytes] =
+    attribute { b => _.withB(b.bytes.toByteBuffer) }
 
   implicit object EncoderContravariant extends Contravariant[Encoder] {
     def contramap[A, B](r: Encoder[A])(f: B => A) =
