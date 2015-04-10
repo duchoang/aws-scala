@@ -19,12 +19,12 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
 
   def is = s2"""
   Encode/Decode pairs should correctly:
-    round-trip longs         ${Prop.forAll { roundTrip(_: Long) }}
-    round-trip ints          ${Prop.forAll { roundTrip(_: Int) }}
-    round-trip strings       ${Prop.forAll { roundTrip(_: String) }}
-    round-trip date times    ${Prop.forAll { roundTrip(_: DateTime) }}
-    round-trip options       ${Prop.forAll { roundTrip(_: Option[String]) }}
-    round-trip json          ${Prop.forAll { roundTrip(_: Foo) }}
+    round-trip longs                 ${Prop.forAll { roundTrip(_: Long) }}
+    round-trip ints                  ${Prop.forAll { roundTrip(_: Int) }}
+    round-trip strings               ${Prop.forAll { roundTrip(_: String) }}
+    round-trip date times            ${Prop.forAll { roundTrip(_: DateTime) }}
+    round-trip options               ${Prop.forAll { roundTrip(_: Option[String]) }}
+    round-trip json                  ${Prop.forAll { roundTrip(_: Foo) }}
     round-trip binary converted type ${Prop.forAll { roundTrip(_: TwoLongs) }}
   """
 

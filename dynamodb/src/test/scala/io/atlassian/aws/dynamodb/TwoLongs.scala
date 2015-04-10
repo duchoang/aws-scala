@@ -32,14 +32,14 @@ object TwoLongs {
     }
 
   implicit val TwoLongsEncoder: Encoder[TwoLongs] =
-    Encoder[NonEmptyByteVector].contramap { longs =>
+    Encoder[NonEmptyBytes].contramap { longs =>
       ByteVector.fromLong(longs.a) ++ ByteVector.fromLong(longs.b) match {
-        case NonEmptyByteVector(b) => b
+        case NonEmptyBytes(b) => b
       }
     }
 
   implicit val TwoLongsDecoder: Decoder[TwoLongs] =
-    Decoder[NonEmptyByteVector].mapAttempt { bytes =>
+    Decoder[NonEmptyBytes].mapAttempt { bytes =>
       if (bytes.bytes.length != 16)
         Attempt.fail(s"Invalid length of byte vector ${bytes.bytes.length}")
       else

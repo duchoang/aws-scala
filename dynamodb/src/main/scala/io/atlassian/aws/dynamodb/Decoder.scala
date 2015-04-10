@@ -86,14 +86,13 @@ object Decoder {
       _.decodeEither[A].fold(Attempt.fail, Attempt.safe(_))
     }
 
-  implicit val NonEmptyByteVectorDecode: Decoder[NonEmptyByteVector] =
+  implicit val NonEmptyBytesDecode: Decoder[NonEmptyBytes] =
     decoder(Underlying.BinaryType) {
       case None => Attempt.fail("No value present")
       case Some(a) => a.getB |> { bytes =>
-        if (bytes == null)
-          Attempt.fail("No value present")
+        if (bytes == null) Attempt.fail("No value present")
         else
-          NonEmptyByteVector.unapply(ByteVector(bytes)).fold(Attempt.fail[NonEmptyByteVector]("No value present")) { Attempt.ok }
+          NonEmptyBytes.unapply(ByteVector(bytes)).fold(Attempt.fail[NonEmptyBytes]("No value present")) { Attempt.ok }
       }
     }
 
