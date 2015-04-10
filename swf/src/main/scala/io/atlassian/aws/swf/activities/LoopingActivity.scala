@@ -34,7 +34,7 @@ object LoopingActivity {
       if (taskParams.retryCount < taskParams.maxRetry)
         startLoop(taskParams.copy(retryCount = taskParams.retryCount + 1))
       else
-        FailWorkflowExecution(s"Looped activity timed out", s"Activity ${taskParams.activity} with Id: ${lastScheduled.activityId}").list
+        FailWorkflowExecution(s"Looped activity failed to complete after ${taskParams.maxRetry} attempts", s"Activity ${taskParams.activity} with Id: ${lastScheduled.activityId}").list
     }) | FailWorkflowExecution(s"Invalid state of scheduled activity event ${lastScheduled.activityId}", s"Unable to decode control for $lastScheduled").list
 
   def startLoop(parameters: LoopingActivity): List[Decision] =
