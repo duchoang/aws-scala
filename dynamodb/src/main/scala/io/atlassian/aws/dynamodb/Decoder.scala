@@ -23,15 +23,13 @@ case class Decoder[A] private[Decoder] (run: Value => Attempt[A])(private[dynamo
   def map[B](f: A => B): Decoder[B] =
     Decoder { run(_).map(f) }(dynamoType)
 
-  def mapPartial[B](f: PartialFunction[A, B]): Decoder[B] =
+  def collect[B](f: A => Option[B]): Decoder[B] =
     Decoder {
-      run(_).flatMap { a =>
-        if (f.isDefinedAt(a))
-          Attempt.ok(f(a))
-        else
-          Attempt.fail(s"'$a' is an invalid value")
-      }
+      run(_).flatMap { a => f(a).fold(Attempt.fail[B](s"'$a' is an invalid value"))(Attempt.ok) }
     }(dynamoType)
+
+  def collect[B](f: PartialFunction[A, B]): Decoder[B] =
+    collect(f.lift)
 
   def mapAttempt[B](f: A => Attempt[B]): Decoder[B] =
     Decoder { run(_) flatMap f }(dynamoType)

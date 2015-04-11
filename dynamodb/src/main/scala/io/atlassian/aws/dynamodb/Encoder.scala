@@ -14,7 +14,7 @@ case class Encoder[A](run: A => Option[AttributeValue]) {
     run(a)
 
   def unapply(a: A): Option[AttributeValue] =
-    encode(a)
+    run(a)
 
   def contramap[B](f: B => A) =
     Encoder(f andThen run)
