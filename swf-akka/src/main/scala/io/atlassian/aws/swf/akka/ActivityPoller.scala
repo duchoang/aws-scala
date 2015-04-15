@@ -3,7 +3,6 @@ package io.atlassian.aws.swf.akka
 import akka.actor.{ Actor, PoisonPill, Props }
 import akka.util.Timeout
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
-import io.atlassian.akka.Log
 import io.atlassian.aws.swf._
 import kadai.log.json.JsonLogging
 
@@ -46,7 +45,6 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
         {
           case None => triggerPoll
           case Some(ai) =>
-            debug(Log(s"Starting activity: $ai"))
             val ad = activityMap(ai.activity)
             val newActor = context.actorOf(ActivityActor.props(swf, ad.definition, ai, ad.function))
 
