@@ -1,9 +1,8 @@
-package io.atlassian.aws.swf.akka
+package io.atlassian.aws.swf
+package akka
 
 import _root_.akka.actor.{ Props, Actor, PoisonPill }
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
-import io.atlassian.akka.Log
-import io.atlassian.aws.swf._
 import kadai.Attempt
 import kadai.log.json.JsonLogging
 
@@ -31,7 +30,6 @@ class Decider(config: DeciderConfig, swf: AmazonSimpleWorkflow) extends Actor wi
     case PoisonPill =>
       context.stop(self)
     case Poll =>
-      debug(Log(s"Polling for decisions..."))
       poll.flatMap { od =>
         od.fold(Attempt.ok(())) { d =>
           complete(d.taskToken, "", config.workflow.decisionEngine(d))

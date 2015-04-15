@@ -16,7 +16,7 @@ case class DecisionQuery(domain: Domain, taskList: TaskList, start: Option[Event
 
 object DecisionQuery {
   def apply(domain: Domain, taskList: TaskList, identity: SWFIdentity): DecisionQuery =
-    DecisionQuery(domain, taskList, start = None, limit = None, reverseOrder = false, identity)
+    DecisionQuery(domain, taskList, start = None, limit = None, reverseOrder = true, identity)
 }
 
 case class ActivityQuery(domain: Domain, taskList: TaskList, identity: SWFIdentity) {

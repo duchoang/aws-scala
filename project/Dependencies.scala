@@ -29,14 +29,13 @@ object Dependencies {
 
   lazy val scalazStream = Seq(
     libraryDependencies ++= Seq(
-      "org.scalaz.stream" %% "scalaz-stream"     % SCALAZ_STREAM_VERSION
+      "org.scalaz.stream" %% "scalaz-stream"      % SCALAZ_STREAM_VERSION
     )
   )
   
   lazy val akka = Seq(
     libraryDependencies ++= Seq(
-        "com.typesafe.akka" %% "akka-actor"        % AKKA_VERSION exclude("com.chuusai", "shapeless_2.10.4")
-      , "io.atlassian.akka" %%  "atlassian-akka"   % "1.0.0"
+        "com.typesafe.akka" %% "akka-actor"       % AKKA_VERSION exclude("com.chuusai", "shapeless_2.10.4")
     )
   )
 
