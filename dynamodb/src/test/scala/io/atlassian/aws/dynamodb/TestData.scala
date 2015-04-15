@@ -25,7 +25,11 @@ object TestData extends Arbitraries with MoreEqualsInstances {
     implicit val ThingHashKeyEncoder: Encoder[HashKey] =
       Encoder[String].contramap { k => s"${k.a}/${k.b}/${k.c}" }
     implicit val ThingHashKeyDecoder: Decoder[HashKey] =
-      Decoder[String].mapPartial { case KeyRegex(a, b, c) => HashKey(a, b, c) }
+      Decoder[String] collect decodeHashKey
+
+    private lazy val decodeHashKey: PartialFunction[String, HashKey] = {
+      case KeyRegex(a, b, c) => HashKey(a, b, c)
+    }
 
     val column = Column[HashKey]("key")
   }

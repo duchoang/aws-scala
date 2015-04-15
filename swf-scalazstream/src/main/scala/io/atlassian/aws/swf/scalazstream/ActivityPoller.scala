@@ -2,7 +2,7 @@ package io.atlassian.aws
 package swf
 package scalazstream
 
-import java.util.concurrent.{ExecutorService, ScheduledExecutorService}
+import java.util.concurrent.{ ExecutorService, ScheduledExecutorService }
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
@@ -15,7 +15,7 @@ import scalaz.syntax.monad._
 import scalaz.std.option._
 import scalaz.syntax.std.option._
 
-import scalaz.concurrent.{Strategy, Task}
+import scalaz.concurrent.{ Strategy, Task }
 import scalaz.stream.Process
 
 class ActivityPoller(swf: AmazonSimpleWorkflow,
@@ -42,7 +42,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
     }.run
 
   private def runSWFAction[A](a: SWFAction[A]): Unit =
-    a.run(swf).run.fold( { i => error(i) }, { _ => () } )
+    a.run(swf).run.fold({ i => error(i) }, { _ => () })
 
   private def pollActivity =
     SWF.poll(ActivityQuery(taskList = taskList, identity = identity, domain = domain)).run(swf)
@@ -88,7 +88,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
                   error(t)
                   Result.failed(t.getMessage, t.getMessage)
               }.map { r => (ai, r).right }
-          } valueOr (_.left.point[Task])
+        } valueOr (_.left.point[Task])
         _ <- Task.delay { unitOrResult.map { case (ai, r) => r.fold(fail(ai), complete(ai)) } }
       } yield ()
     }.run.runAsyncInterruptibly {
