@@ -2,7 +2,6 @@ package io.atlassian.aws.swf.akka
 
 import akka.actor.{Actor, Props, ActorRef}
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
-import io.atlassian.akka.Log
 import io.atlassian.aws.swf._
 import kadai.Invalid
 import kadai.log.json.JsonLogging
@@ -35,7 +34,6 @@ class Heartbeat(swf: AmazonSimpleWorkflow, owner: ActorRef, taskToken: TaskToken
 
   def receive = {
     case Poll =>
-      debug(Log(s"Sending heartbeat for task: $taskToken"))
       SWF.heartbeat(taskToken).run(swf).fold(
         { i => owner ! HeartbeatError(i) },
         { r => if (r.isCancelRequested) owner ! Cancelled }
