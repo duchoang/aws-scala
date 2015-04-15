@@ -39,7 +39,7 @@ object Settings {
       , resolvers ++= Seq(
           Resolver.defaultLocal
         , Resolver.mavenLocal
-        , "atlassian-public"   at "https://maven.atlassian.com/content/groups/atlassian-public/"
+        , "atlassian-public"   at "https://maven.atlassian.com/content/groups/public/"
         , Resolver.sonatypeRepo("public")
         , Resolver.sonatypeRepo("releases")
         , Resolver.sonatypeRepo("snapshots")
