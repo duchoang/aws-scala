@@ -30,7 +30,7 @@ object Settings {
         , "-target:jvm-1.6"
         , "-Xlint"
         , "-Yno-adapted-args"
-        , "-Ywarn-dead-code"
+        //, "-Ywarn-dead-code"
         , "-Ywarn-numeric-widen"
         , "-Ywarn-value-discard"
       )

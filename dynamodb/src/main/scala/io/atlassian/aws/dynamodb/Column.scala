@@ -5,6 +5,10 @@ import kadai.Attempt
 import scalaz.InvariantFunctor
 import scalaz.syntax.id._
 
+/**
+ * A column is a pair of functions for marshalling to and from the
+ * underlying Dynamo client representation, which is basically just a Map.
+ */
 sealed trait Column[A] {
   self =>
 
@@ -18,7 +22,8 @@ sealed trait Column[A] {
       override val unmarshall = self.unmarshall.map(f)
     }
 
-  def liftOption =
+  /** lift a Column[A] into a Column[Option[A]] */
+  def liftOption: Column[Option[A]] =
     new Column[Option[A]] {
       override val marshall = self.marshall.liftOption
       override val unmarshall = self.unmarshall.liftOption
@@ -38,6 +43,9 @@ final class NamedColumn[A](val name: String)(implicit val encoder: Encoder[A], v
 object Column extends ColumnComposites {
   def apply[A: Encoder: Decoder](s: String): NamedColumn[A] =
     new NamedColumn[A](s)
+
+  def nothing: NamedColumn[Nothing] =
+    new NamedColumn[Nothing]("ignored")
 
   private[dynamodb] def unmarshall[A, B](ca: Column[A], cb: Column[B])(map: DynamoMap): Attempt[(A, B)] =
     for {

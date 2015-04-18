@@ -84,6 +84,11 @@ object Decoder {
       _.decodeEither[A].fold(Attempt.fail, Attempt.safe(_))
     }
 
+  private[dynamodb] implicit val NothingDecode: Decoder[Nothing] =
+    decoder(Underlying.BinaryType) {
+      _ => Attempt.fail("cannot decode Nothing")
+    }
+
   implicit val NonEmptyBytesDecode: Decoder[NonEmptyBytes] =
     decoder(Underlying.BinaryType) {
       case None => Attempt.fail("No value present")

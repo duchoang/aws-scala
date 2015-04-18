@@ -25,7 +25,7 @@ object Encoder {
     implicitly[Encoder[A]]
 
   private def attribute[A](f: A => AttributeValue => AttributeValue): Encoder[A] =
-    Encoder { a => (new AttributeValue() <| { f(a) }).some }
+    Encoder { a => Some { f(a)(new AttributeValue()) } }
 
   implicit val LongEncode: Encoder[Long] =
     attribute { l => _.withN(l.toString) }
@@ -48,6 +48,9 @@ object Encoder {
 
   implicit val NonEmptyBytesEncode: Encoder[NonEmptyBytes] =
     attribute { b => _.withB(b.bytes.toByteBuffer) }
+
+  implicit val NothingEncode: Encoder[Nothing] =
+    new Encoder[Nothing](_ => None)
 
   implicit object EncoderContravariant extends Contravariant[Encoder] {
     def contramap[A, B](r: Encoder[A])(f: B => A) =

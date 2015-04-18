@@ -31,6 +31,7 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
   def roundTrip[A: Encoder: Decoder: Equal](a: A) =
     (Encoder[A].encode(a) |> Decoder[A].decode) must equal(Attempt.ok(a))
 
+  // json test support
   case class Foo(s: String, i: Int)
   implicit val CodecFoo = casecodec2(Foo.apply, Foo.unapply)("s", "i")
   implicit val EqualFoo: Equal[Foo] = Equal.equalA
