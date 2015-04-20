@@ -11,7 +11,7 @@ object Dependencies {
 
   lazy val AWS_SDK_VERSION = "1.9.16"
 
-  lazy val KADAI_VERSION = "3.1.0"
+  lazy val KADAI_VERSION = "3.1.1"
   
   lazy val AKKA_VERSION = "2.3.9"
 

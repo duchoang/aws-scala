@@ -51,6 +51,7 @@ object Release {
     releaseSettings ++
     Seq(
       ReleaseKeys.releaseProcess := Release.releaseProcess
+      , ReleaseKeys.crossBuild := true
       , nextVersion    := { ver => Version(ver).map(_.bumpBugfix.asSnapshot.string).getOrElse(versionFormatError) } // bump patch numbers
     ) ++
     customVcsMessages

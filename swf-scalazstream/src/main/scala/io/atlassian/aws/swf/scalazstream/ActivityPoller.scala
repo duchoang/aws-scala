@@ -16,7 +16,7 @@ import scalaz.std.option._
 import scalaz.syntax.std.option._
 
 import scalaz.concurrent.{ Strategy, Task }
-import scalaz.stream.Process
+import scalaz.stream.{ time, Process }
 
 class ActivityPoller(swf: AmazonSimpleWorkflow,
                      domain: Domain,
@@ -34,7 +34,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
   val strategy = Strategy.Executor(es)
 
   private def heartbeat(interval: FiniteDuration, taskToken: TaskToken): Task[Unit] =
-    Process.awakeEvery(interval)(strategy, scheduledExecutorService).flatMap[Task, Unit] { d =>
+    time.awakeEvery(interval)(strategy, scheduledExecutorService).flatMap[Task, Unit] { d =>
       SWF.heartbeat(taskToken).run(swf).fold(
         { i => Process.fail(WrappedInvalidException.orUnderlying(i)) },
         { _ => Process.empty }
