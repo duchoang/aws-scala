@@ -20,9 +20,9 @@ import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class TableSpec
-    extends ScalaCheckSpec
-    with LocalDynamoDB
-    with DBActionMatchers {
+  extends ScalaCheckSpec
+  with LocalDynamoDB
+  with DBActionMatchers {
   import TestData._
 
   object table extends Table {
@@ -33,7 +33,7 @@ class TableSpec
     val schema = tableNamed(s"my_things2_${System.currentTimeMillis.toString}")
   }
 
-  def run(implicit client: AmazonDynamoDBClient) = DynamoDBOps.runAction.compose(DynamoDB.interpreter(table)(table.schema))
+  def run = DynamoDBOps.runAction.compose(DynamoDB.interpreter(table)(table.schema))
 
   val NUM_TESTS =
     if (IS_LOCAL) 100
@@ -43,9 +43,9 @@ class TableSpec
     if (IS_LOCAL) 20
     else 1
 
+  implicit val client = dynamoClient
   // TODO - These tests are sequential because of flakiness with integration tests.
   def is = {
-    implicit val c = dynamoClient
     stopOnFail ^ sequential ^ s2"""
 
   This is a specification to test Table actions integrated with a DynamoDB interpreter.
@@ -71,12 +71,12 @@ class TableSpec
   """
   }
 
-  def getWorksIfNoValue(implicit client: AmazonDynamoDBClient) =
+  def getWorksIfNoValue =
     table.get(Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L)) must returnValue(Option.empty[Value])
 
   import Write.Mode._
 
-  def newWriteWorks(implicit client: AmazonDynamoDBClient) =
+  def newWriteWorks =
     Prop.forAll { (key: Key, value: Value) =>
       (for {
         _ <- table.putIfAbsent(key, value)
@@ -84,7 +84,7 @@ class TableSpec
       } yield v) must returnValue(Some(value))
     }.set(minTestsOk = NUM_TESTS)
 
-  def writeReplaceWorks(implicit client: AmazonDynamoDBClient) =
+  def writeReplaceWorks =
     Prop.forAll { (key: Key, value: Value, value2: Value) =>
       (for {
         firstWrite <- table.putIfAbsent(key, value)
@@ -95,7 +95,7 @@ class TableSpec
       ) must returnValue((Insert.New, Some(value), Replace.Wrote, Some(value2)))
     }.set(minTestsOk = NUM_TESTS)
 
-  def updateWithDeletedFieldWorks(implicit client: AmazonDynamoDBClient) =
+  def updateWithDeletedFieldWorks =
     Prop.forAll { (key: Key, value: Value, date: DateTime) =>
       val value1 = value.copy(deletedTimestamp = Some(date))
       val value2 = value.copy(deletedTimestamp = None)
@@ -106,7 +106,7 @@ class TableSpec
       } yield (firstWrite, update, secondGet)) must returnValue((Insert.New, Replace.Wrote, Some(value2)))
     }.set(minTestsOk = NUM_TESTS)
 
-  def updateFailsIfDifferent(implicit client: AmazonDynamoDBClient) =
+  def updateFailsIfDifferent =
     Prop.forAll { (key: Key, value: Value, date: DateTime) =>
       val value1 = value.copy(deletedTimestamp = Some(date))
       val value2 = value.copy(deletedTimestamp = None)
@@ -116,7 +116,7 @@ class TableSpec
       } yield update) must returnValue(Replace.Failed)
     }.set(minTestsOk = NUM_TESTS)
 
-  def deleteWorks(implicit client: AmazonDynamoDBClient) =
+  def deleteWorks =
     Prop.forAll { (key: Key, value: Value) =>
       (for {
         _ <- table.putIfAbsent(key, value)
@@ -125,10 +125,10 @@ class TableSpec
       } yield result) must returnValue(None)
     }.set(minTestsOk = NUM_TESTS)
 
-  def deleteWorksForNonExistentKey(implicit client: AmazonDynamoDBClient) =
+  def deleteWorksForNonExistentKey =
     table.delete(Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L)) must returnSuccess
 
-  def queryWorksWhenHashKeyDoesntExist(implicit client: AmazonDynamoDBClient) =
+  def queryWorksWhenHashKeyDoesntExist =
     Prop.forAll { (k: Key) =>
       val hashKey = HashKey(k.a, k.b, k.c)
       table.query(table.Query.hash(hashKey)) must returnResult {
@@ -136,7 +136,7 @@ class TableSpec
       }
     }.set(minTestsOk = NUM_TESTS)
 
-  def queryWorksWithPaging(implicit client: AmazonDynamoDBClient) =
+  def queryWorksWithPaging =
     Prop.forAll { (k: Key, v: Value) =>
       // Generate a really long string to max out item size
       val str = (1 to 12000).toList.map { _ => 'a' }.mkString
@@ -146,7 +146,7 @@ class TableSpec
         val valuesToSave = window.map { i =>
           k.copy(seq = i.toLong) -> valueToSave.copy(length = i.toLong)
         }.toMap
-        runFree(client)(table.batchPut(valuesToSave))
+        runFree(table.batchPut(valuesToSave))
       }
 
       val hashKey = HashKey(k.a, k.b, k.c)
@@ -159,7 +159,7 @@ class TableSpec
       }
     }.set(minTestsOk = NUM_PAGING_TESTS) // This test takes ages, so don't run it that much
 
-  def querySortOrderWorks(implicit client: AmazonDynamoDBClient) =
+  def querySortOrderWorks =
     Prop.forAll { (k: Key, v1: Value, v2: Value) =>
       val k2 = k.copy(seq = k.seq + 1)
       val hashKey = HashKey(k.a, k.b, k.c)
@@ -179,7 +179,7 @@ class TableSpec
       }
     }.set(minTestsOk = NUM_TESTS)
 
-  def queryForHashAndRangeWorks(implicit client: AmazonDynamoDBClient) =
+  def queryForHashAndRangeWorks =
     Prop.forAll { (k: Key, v1: Value, v2: Value, v3: Value) =>
       val k2 = k.copy(seq = k.seq + 1)
       val k3 = k2.copy(seq = k2.seq + 1)
@@ -196,9 +196,9 @@ class TableSpec
       }
     }.set(minTestsOk = NUM_TESTS)
 
-  def createTestTable(implicit client: AmazonDynamoDBClient) =
+  def createTestTable =
     DynamoDBOps.createTable[Key, Value, HashKey, RangeKey](table.schema)
 
-  def deleteTestTable(implicit client: AmazonDynamoDBClient) =
+  def deleteTestTable =
     DynamoDBOps.deleteTable[Key, Value, HashKey, RangeKey](table.schema)
 }
