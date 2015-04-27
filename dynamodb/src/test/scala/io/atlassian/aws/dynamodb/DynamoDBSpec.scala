@@ -1,6 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import spec.ScalaCheckSpec
 
 import scala.collection.JavaConverters.{ mapAsJavaMapConverter, mapAsScalaMapConverter }
@@ -8,8 +9,6 @@ import scala.collection.JavaConverters.{ mapAsJavaMapConverter, mapAsScalaMapCon
 import org.joda.time.DateTime
 import org.junit.runner.RunWith
 import org.scalacheck.Prop
-import org.specs2.main.Arguments
-import org.specs2.specification.Step
 
 import com.amazonaws.services.dynamodbv2.model.{ ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
 
@@ -17,7 +16,7 @@ import java.util.UUID.randomUUID
 import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
-class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDynamoDB with DynamoDBActionMatchers {
+class DynamoDBSpec extends ScalaCheckSpec with LocalDynamoDB with DynamoDBActionMatchers {
   import TestData._, Attempt._
 
   val NUM_TESTS =
@@ -28,17 +27,17 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     if (IS_LOCAL) 20
     else 1
 
-  implicit val DYNAMO_CLIENT = dynamoClient
-
   val table = tableNamed(s"my_things2_${System.currentTimeMillis.toString}")
 
   // TODO - These tests are sequential because of flakiness with integration tests.
-  def is = stopOnFail ^ sequential ^ s2"""
+  def is = {
+    implicit val c = dynamoClient
+    stopOnFail ^ sequential ^ s2"""
 
   This is a specification to test DynamoDB actions.
 
-  Set up local DB if required                     ${Step(startLocalDynamoDB)}
-  DynamoDB library should                         ${Step(createTestTable)}
+  Set up local DB if required                     ${step(startLocalDynamoDB)}
+  DynamoDB library should                         ${step(createTestTable)}
     have a working get                            $getWorks
     returns none if there is no value             $getWorksIfNoValue
     fails gracefully if there is a deserialisation error $getWorksIfCantDeserialize
@@ -58,18 +57,19 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     support querying for hash and range keys      $queryForHashAndRangeWorks
     support paginated queries                     ${if (IS_LOCAL) queryWorksWithPaging else skipped("Not running paging test in integration mode")}
 
-                                                  ${Step(deleteTestTable)}
-                                                  ${Step(stopLocalDynamoDB)}
+                                                  ${step(deleteTestTable)}
+                                                  ${step(stopLocalDynamoDB)}
   """
+  }
 
-  def getWorks =
+  def getWorks(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (key: Key, value: Value) =>
       val keyAttr = Key.column.marshall.toFlattenedMap(key)
       val valueAttr = Value.column.marshall.toFlattenedMap(value).mapValues {
         av => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(av)
       }
 
-      DYNAMO_CLIENT.updateItem {
+      client.updateItem {
         new UpdateItemRequest()
           .withTableName(table.name)
           .withKey(keyAttr.asJava)
@@ -79,10 +79,10 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column) must returnValue(Some(value))
     }.set(minTestsOk = NUM_TESTS)
 
-  def getWorksIfNoValue =
+  def getWorksIfNoValue(implicit client: AmazonDynamoDBClient) =
     DynamoDB.get[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.name, Key.column, Value.column) must returnValue(None)
 
-  def getWorksIfCantDeserialize =
+  def getWorksIfCantDeserialize(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (key: Key, value: Value, str: String) =>
       case class Value2(foo: String)
       implicit val Value2Encoder = Encoder[String].contramap[Value2] { _.foo }
@@ -94,7 +94,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         av => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(av)
       }
 
-      DYNAMO_CLIENT.updateItem {
+      client.updateItem {
         new UpdateItemRequest()
           .withTableName(table.name)
           .withKey(keyAttr.asJava)
@@ -106,15 +106,15 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
   import Write.Mode._
 
-  def newPutWorks =
+  def newPutWorks(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (key: Key, value: Value) =>
       DynamoDB.write[Key, Value](key, value, Overwrite)(table.name, Key.column, Value.column) must returnValue(Overwrite.New) and (
-        (DYNAMO_CLIENT.getItem(table.name, Key.column.marshall.toFlattenedMap(key).asJava).getItem.asScala.toMap |> Value.column.unmarshall)
+        (client.getItem(table.name, Key.column.marshall.toFlattenedMap(key).asJava).getItem.asScala.toMap |> Value.column.unmarshall)
         must equal(Attempt.ok(value))
       )
     }.set(minTestsOk = NUM_TESTS)
 
-  def writeReplaceWorks =
+  def writeReplaceWorks(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (key: Key, value: Value, value2: Value) =>
       (for {
         firstPut <- DynamoDB.write[Key, Value](key, value, Overwrite)(table.name, Key.column, Value.column)
@@ -124,7 +124,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       } yield (firstPut, firstGet, secondPut, secondGet)) must returnValue((Overwrite.New, Some(value), Overwrite.Replaced(value), Some(value2)))
     }.set(minTestsOk = NUM_TESTS)
 
-  def updateWithDeletedFieldWorks =
+  def updateWithDeletedFieldWorks(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (key: Key, value: Value, date: DateTime) =>
       val value1 = value.copy(deletedTimestamp = Some(date))
       val value2 = value.copy(deletedTimestamp = None)
@@ -135,7 +135,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       } yield (firstPut, update, secondGet)) must returnValue((Overwrite.New, Replace.Wrote, Some(value2)))
     }.set(minTestsOk = NUM_TESTS)
 
-  def updateWithIncorrectValueFails =
+  def updateWithIncorrectValueFails(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (key: Key, value: Value, date: DateTime) =>
       val value1 = value.copy(deletedTimestamp = Some(date))
       val value2 = value.copy(deletedTimestamp = None)
@@ -146,7 +146,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       } yield (update, get)) must returnValue((Replace.Failed, Some(value1)))
     }.set(minTestsOk = NUM_TESTS)
 
-  def deleteWorks =
+  def deleteWorks(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (key: Key, value: Value) =>
       (for {
         _ <- DynamoDB.write[Key, Value](key, value, Overwrite)(table.name, Key.column, Value.column)
@@ -155,10 +155,10 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       } yield result) must returnValue(None)
     }.set(minTestsOk = NUM_TESTS)
 
-  def deleteWorksForNonExistentKey =
+  def deleteWorksForNonExistentKey(implicit client: AmazonDynamoDBClient) =
     DynamoDB.delete[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.name, Key.column) must returnSuccess
 
-  def noOverwriteWorks =
+  def noOverwriteWorks(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (key: Key, value: Value, value2: Value) =>
       (for {
         firstPut <- DynamoDB.write[Key, Value](key, value, Overwrite)(table.name, Key.column, Value.column)
@@ -167,13 +167,13 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       } yield secondPut) must returnValue(Insert.Failed)
     }.set(minTestsOk = NUM_TESTS)
 
-  def describeTableWorks =
+  def describeTableWorks(implicit client: AmazonDynamoDBClient) =
     DynamoDB.describeTable(table.name).map(_.getTableName) must returnValue(table.name)
 
-  def describeTableHandlesUnknownTable =
+  def describeTableHandlesUnknownTable(implicit client: AmazonDynamoDBClient) =
     DynamoDB.describeTable("some_dodgy_table") must returnFailure
 
-  def queryWorksWhenHashKeyDoesntExist =
+  def queryWorksWhenHashKeyDoesntExist(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (k: Key) =>
       val hashKey = HashKey(k.a, k.b, k.c)
       DynamoDB.query(QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column))(RangeKey.column, Value.column) must returnResult { page =>
@@ -181,7 +181,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
     }.set(minTestsOk = NUM_TESTS)
 
-  def queryWorksWithPaging =
+  def queryWorksWithPaging(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (k: Key, v: Value) =>
       // Generate a really long string to max out item size
       val str = (1 to 12000).toList.map { _ => 'a' }.mkString
@@ -191,7 +191,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         val valuesToSave = window.map { i =>
           k.copy(seq = i.toLong) -> valueToSave.copy(length = i.toLong)
         }.toMap
-        DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column).run(DYNAMO_CLIENT).run
+        DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column).run(client).run
       }
 
       val hashKey = HashKey(k.a, k.b, k.c)
@@ -204,7 +204,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
     }.set(minTestsOk = NUM_PAGING_TESTS) // This test takes ages, so don't run it that much
 
-  def querySortOrderWorks =
+  def querySortOrderWorks(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (k: Key, v1: Value, v2: Value) =>
       val k2 = k.copy(seq = k.seq + 1)
       val hashKey = HashKey(k.a, k.b, k.c)
@@ -224,7 +224,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
     }.set(minTestsOk = NUM_TESTS)
 
-  def queryForHashAndRangeWorks =
+  def queryForHashAndRangeWorks(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (k: Key, v1: Value, v2: Value, v3: Value) =>
       val k2 = k.copy(seq = k.seq + 1)
       val k3 = k2.copy(seq = k2.seq + 1)
@@ -249,9 +249,9 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
   }
 
-  def createTestTable() =
+  def createTestTable(implicit client: AmazonDynamoDBClient) =
     DynamoDBOps.createTable[Key, Value, HashKey, RangeKey](table)
 
-  def deleteTestTable =
+  def deleteTestTable(implicit client: AmazonDynamoDBClient) =
     DynamoDBOps.deleteTable[Key, Value, HashKey, RangeKey](table)
 }

@@ -15,6 +15,8 @@ object Dependencies {
   
   lazy val AKKA_VERSION = "2.3.9"
 
+  lazy val SPECS2_VERSION = "3.5"
+
   lazy val common = Seq(
     libraryDependencies ++= Seq(
       "org.scalaz"        %% "scalaz-core"        % SCALAZ_VERSION
@@ -40,12 +42,15 @@ object Dependencies {
   )
 
   lazy val test = libraryDependencies ++= Seq(
-    "org.specs2"     %% "specs2"     % "2.4.9"    % "test"
-  , "org.scalacheck" %% "scalacheck" % "1.11.6"   % "test"
-  , "junit"          %  "junit"      % "4.11"     % "test"
+    "org.specs2"                 %% "specs2-core"        % SPECS2_VERSION  % "test"
+    , "org.specs2"               %% "specs2-junit"       % SPECS2_VERSION  % "test"
+    , "org.specs2"               %% "specs2-scalacheck"  % SPECS2_VERSION  % "test"
+    , "org.specs2"               %% "specs2-mock"        % SPECS2_VERSION  % "test"
+    , "org.scalacheck"           %% "scalacheck"         % "1.12.2"        % "test"
+    , "junit"                    %  "junit"              % "4.11"          % "test"
   )
 
   lazy val scodecBits = libraryDependencies ++= Seq(
-    "org.typelevel" %% "scodec-bits" % "1.0.4"
+    "org.scodec" %% "scodec-bits" % "1.0.6"
   )
 }

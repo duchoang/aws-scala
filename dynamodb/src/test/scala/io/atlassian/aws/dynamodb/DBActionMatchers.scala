@@ -16,11 +16,11 @@ trait DBActionMatchers extends Logging {
   type InvalidOr[A] = Invalid \/ A
   val table: Table
 
-  def run: table.DBOp ~> InvalidOr
-  def runFree: table.DBAction ~> InvalidOr =
+  def run(implicit client: AmazonDynamoDBClient): table.DBOp ~> InvalidOr
+  def runFree(implicit client: AmazonDynamoDBClient): table.DBAction ~> InvalidOr =
     table.transform[InvalidOr](run)
 
-  def returnFailure[A] =
+  def returnFailure[A](implicit client: AmazonDynamoDBClient) =
     new ServiceMatcher[A]({
       case -\/(f) => (true, s"Expected failure $f")
       case \/-(v) => (false, s"Expected failure but got value $v")
@@ -29,7 +29,7 @@ trait DBActionMatchers extends Logging {
   private def checkType(klass: Class[_], e: Any): (Boolean, String) =
     (klass.isAssignableFrom(e.getClass), s"Expected class of type $klass, got ${e.getClass}")
 
-  def returnException[A, B <: Throwable](implicit m: ClassTag[B]) =
+  def returnException[A, B <: Throwable](implicit m: ClassTag[B], client: AmazonDynamoDBClient) =
     new ServiceMatcher[A]({
       case -\/(Invalid.Err(e)) =>
         m.toString match {
@@ -40,24 +40,24 @@ trait DBActionMatchers extends Logging {
       case \/-(v) => (false, s"Expected failure but got value $v")
     })
 
-  def returnSuccess[A] =
+  def returnSuccess[A](implicit client: AmazonDynamoDBClient) =
     new ServiceMatcher[A]({
       case -\/(f) => (false, s"Expected success but got failure: $f")
       case \/-(v) => (true, s"Expected success $v")
     })
 
-  def returnValue[A](expected: A)(implicit E: Equal[A]): Matcher[table.DBAction[A]] =
+  def returnValue[A](expected: A)(implicit E: Equal[A], client: AmazonDynamoDBClient): Matcher[table.DBAction[A]] =
     returnResult[A](a => E.equal(a, expected))
 
-  def returnResult[A](check: A => Boolean) =
+  def returnResult[A](check: A => Boolean)(implicit client: AmazonDynamoDBClient) =
     new ServiceMatcher[A]({
       case -\/(f) => (false, s"Expected value, but was failure $f")
       case \/-(v) => (check(v), s"Expected value, but match failed with value $v")
     })
 
-  class ServiceMatcher[A](check: Invalid \/ A => (Boolean, String)) extends Matcher[table.DBAction[A]] {
+  class ServiceMatcher[A](check: Invalid \/ A => (Boolean, String))(implicit client: AmazonDynamoDBClient) extends Matcher[table.DBAction[A]] {
     def apply[S <: table.DBAction[A]](s: Expectable[S]) = {
-      val (comparisonResult, message) = check(runFree(s.value))
+      val (comparisonResult, message) = check(runFree(client)(s.value))
       result(comparisonResult, message, message, s)
     }
   }

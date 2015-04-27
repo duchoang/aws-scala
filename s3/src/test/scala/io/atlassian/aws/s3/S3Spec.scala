@@ -10,26 +10,28 @@ import kadai.Invalid
 import org.junit.runner.RunWith
 import org.specs2.ScalaCheck
 import org.specs2.SpecificationWithJUnit
-import org.specs2.main.Arguments
+import org.specs2.main.CommandLine
 import com.amazonaws.services.s3.{ AmazonS3Client => SDKS3Client, AmazonS3 }
 import org.specs2.mock.Mockito
-import org.specs2.specification.Step
+import org.specs2.specification.CommandLineArguments
 import org.scalacheck.Prop
 import java.io.{ IOException, InputStream, ByteArrayInputStream }
+
 import scalaz.syntax.id._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
-class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaCheck with S3Arbitraries with S3SpecOps with Mockito {
+class S3Spec extends SpecificationWithJUnit with ScalaCheck with S3Arbitraries with S3SpecOps with Mockito with CommandLineArguments {
 
   import S3Key._, LargeObjectToStore._, spec.NumericTypes._
 
   implicit val S3_CLIENT = new SDKS3Client()
 
-  def is = skipAllUnless(arguments.commandLine.contains("aws-integration")) ^ s2"""
+  override def is(commandLine: CommandLine) =
+    skipAllUnless(commandLine.contains("aws-integration")) ^ s2"""
 
     This is a specification to test S3 actions.
 
-    S3 library should                                       ${Step(createTestFolder(BUCKET, TEST_FOLDER))}
+    S3 library should                                       ${step(createTestFolder(bucket, TEST_FOLDER))}
       have a working get and put i.e. I can get what I put  $getWhatWasPut
       have a working createFolders                          $createFoldersWorks
       have a put that creates folders as necessary          $putWithFoldersWorks
@@ -44,26 +46,28 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       have a safeGet that doesn't fail if the object doesn't exist $safeGetWorksIfNoObject
       have a safeGet that returns the object                $safeGetWorksIfThereIsObject
       have a function to get the region for a bucket        $regionForWorks
-      have a function to get the region for a non-existent bucket work        $regionForWorksForNonExistentBucket
+      have a function to get the region for a non-existent bucket work        $regionForWorksForNonExistentbucket
       have a working multipart upload                       $multipartUploadWorks
       have a multipart that aborts on failed upload         $multipartUploadAbortsOnUploadFailure
       have a multipart that aborts on failed read           $multipartUploadAbortsOnInputStreamFailure
       have a multipart that doesn't stack overflow          $multipartUploadDoesntStackOverflow
       bail if an invalid range is requested                 $invalidRangeRequestGivesCorrectError
 
-                                                            ${Step(deleteTestFolder(BUCKET, TEST_FOLDER))}
-  """
+                                                            ${step(deleteTestFolder(bucket, TEST_FOLDER))}
+  """ <| (_ => initBucket(commandLine))
 
   lazy val TEST_FOLDER = s"s3-test-${System.currentTimeMillis}"
 
-  val BUCKET = Bucket(arguments.commandLine.value("bucket").getOrElse("sawa-syd-dev"))
+  var bucket: Bucket = Bucket("sawa-syd-dev")
+
+  def initBucket(commandLine: CommandLine) = commandLine.value("bucket").foreach(v => bucket = Bucket(v))
 
   def getWhatWasPut = Prop.forAll {
     data: ObjectToStore =>
       {
         val dataStream = new ByteArrayInputStream(data.data)
         val key = S3Key(s"$TEST_FOLDER/${data.key}")
-        val location = ContentLocation(BUCKET, key)
+        val location = ContentLocation(bucket, key)
 
         (for {
           _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
@@ -80,8 +84,8 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
         val s3Key = S3Key(TEST_FOLDER :: folders.folders, key)
         val s3KeyWithoutLastElement = s3Key.prefix
         (for {
-          _ <- S3.createFoldersFor(ContentLocation(BUCKET, s3Key))
-          keys <- S3.listKeys(BUCKET, s3KeyWithoutLastElement)
+          _ <- S3.createFoldersFor(ContentLocation(bucket, s3Key))
+          keys <- S3.listKeys(bucket, s3KeyWithoutLastElement)
         } yield keys) must returnResult { keys =>
           keys.getObjectSummaries.toList.map { _.getKey } must contain(s3KeyWithoutLastElement)
         }
@@ -93,7 +97,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       {
         val dataStream = new ByteArrayInputStream(data.data)
         val key = S3Key(s"$TEST_FOLDER/${folders.toPrefix}${data.key}")
-        val location = ContentLocation(BUCKET, key)
+        val location = ContentLocation(bucket, key)
 
         (for {
           _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
@@ -108,8 +112,8 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
         val dataStream = new ByteArrayInputStream(data.data)
         val key = S3Key(s"$TEST_FOLDER/${data.key}")
         val newKeyNamespaced = S3Key(s"$TEST_FOLDER/${newKey}")
-        val oldLocation = ContentLocation(BUCKET, key)
-        val newLocation = ContentLocation(BUCKET, newKeyNamespaced)
+        val oldLocation = ContentLocation(bucket, key)
+        val newLocation = ContentLocation(bucket, newKeyNamespaced)
 
         (for {
           _ <- S3.putStream(oldLocation, dataStream, Some(data.data.length.toLong))
@@ -134,8 +138,8 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
         val dataStream2 = new ByteArrayInputStream(data2.data)
         val key = S3Key(s"$TEST_FOLDER/${data.key}")
         val newKeyNamespaced = S3Key(s"$TEST_FOLDER/${data2.key}")
-        val oldLocation = ContentLocation(BUCKET, key)
-        val newLocation = ContentLocation(BUCKET, newKeyNamespaced)
+        val oldLocation = ContentLocation(bucket, key)
+        val newLocation = ContentLocation(bucket, newKeyNamespaced)
 
         (for {
           _ <- S3.putStream(oldLocation, dataStream1, Some(data.data.length.toLong))
@@ -168,8 +172,8 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
         val dataStream = new ByteArrayInputStream(data.data)
         val key = S3Key(s"$TEST_FOLDER/${data.key}")
         val newKeyNamespaced = S3Key(s"$TEST_FOLDER/${folders.toPrefix}${newKey}")
-        val oldLocation = ContentLocation(BUCKET, key)
-        val newLocation = ContentLocation(BUCKET, newKeyNamespaced)
+        val oldLocation = ContentLocation(bucket, key)
+        val newLocation = ContentLocation(bucket, newKeyNamespaced)
 
         (for {
           _ <- S3.putStream(oldLocation, dataStream, Some(data.data.length.toLong))
@@ -193,7 +197,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       {
         val dataStream = new ByteArrayInputStream(data.data)
         val key = S3Key(s"$TEST_FOLDER/${data.key}")
-        val location = ContentLocation(BUCKET, key)
+        val location = ContentLocation(bucket, key)
 
         (for {
           _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
@@ -206,7 +210,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
     s3key: S3Key =>
       {
         val key = S3Key(s"$TEST_FOLDER/$s3key")
-        val location = ContentLocation(BUCKET, key)
+        val location = ContentLocation(bucket, key)
 
         (for {
           exists <- S3.exists(location)
@@ -219,7 +223,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       {
         val dataStream = new ByteArrayInputStream(data.data)
         val key = S3Key(s"$TEST_FOLDER/${data.key}")
-        val location = ContentLocation(BUCKET, key)
+        val location = ContentLocation(bucket, key)
         val metaData = S3.DefaultObjectMetadata <| { _.addUserMetadata("foo", data.key.unwrap) }
 
         (for {
@@ -233,7 +237,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
     s3key: S3Key =>
       {
         val key = S3Key(s"$TEST_FOLDER/$s3key")
-        val location = ContentLocation(BUCKET, key)
+        val location = ContentLocation(bucket, key)
 
         S3.metaData(location) must fail
       }
@@ -242,7 +246,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
   def safeGetWorksIfNoObject = Prop.forAll {
     (s3key: S3Key, range: Range) =>
       val key = S3Key(s"$TEST_FOLDER/$s3key")
-      val location = ContentLocation(BUCKET, key)
+      val location = ContentLocation(bucket, key)
 
       S3.safeGet(location, range) must returnResult { _.isEmpty }
   }.set(minTestsOk = 5)
@@ -252,7 +256,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       {
         val dataStream = new ByteArrayInputStream(data.data)
         val key = S3Key(s"$TEST_FOLDER/${data.key}")
-        val location = ContentLocation(BUCKET, key)
+        val location = ContentLocation(bucket, key)
 
         (for {
           _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
@@ -263,18 +267,18 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
   }.set(minTestsOk = 10)
 
   def regionForWorks =
-    S3.regionFor(BUCKET) must returnResult { (r: Region) =>
-      S3_CLIENT.getBucketLocation(BUCKET.unwrap) === r.getName
+    S3.regionFor(bucket) must returnResult { (r: Region) =>
+      S3_CLIENT.getBucketLocation(bucket.unwrap) === r.getName
     }
 
-  def regionForWorksForNonExistentBucket =
+  def regionForWorksForNonExistentbucket =
     S3.regionFor(Bucket(java.util.UUID.randomUUID().toString)) must fail
 
   def multipartUploadWorks = Prop.forAll {
     data: LargeObjectToStore =>
       val dataStream = new ByteArrayInputStream(data.data)
       val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val location = ContentLocation(BUCKET, key)
+      val location = ContentLocation(bucket, key)
 
       (for {
         _ <- S3.putStreamWithMultipart(location, dataStream)
@@ -286,7 +290,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
     (data: ObjectToStore) =>
       val dataStream = new ByteArrayInputStream(data.data)
       val key = S3Key(s"$TEST_FOLDER/${data.key}")
-      val location = ContentLocation(BUCKET, key)
+      val location = ContentLocation(bucket, key)
       val invalidRange = Range.From(data.data.length.toLong + 1)
       (for {
         _ <- S3.putStream(location, dataStream, Some(data.data.length.toLong))
@@ -304,7 +308,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       s3client.initiateMultipartUpload(any[InitiateMultipartUploadRequest]) returns (new InitiateMultipartUploadResult() <| { _.setUploadId("1") })
       s3client.uploadPart(any[UploadPartRequest]) returns new UploadPartResult
       s3client.abortMultipartUpload(any[AbortMultipartUploadRequest]) answers { _ => () }
-      S3.putStreamWithMultipart(ContentLocation(BUCKET, key), dataStream).run(s3client).run.toEither must beLeft and
+      S3.putStreamWithMultipart(ContentLocation(bucket, key), dataStream).run(s3client).run.toEither must beLeft and
         (there was one(s3client).initiateMultipartUpload(any[InitiateMultipartUploadRequest])) and
         (there was one(s3client).abortMultipartUpload(any[AbortMultipartUploadRequest]))
   }
@@ -316,7 +320,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       s3client.initiateMultipartUpload(any[InitiateMultipartUploadRequest]) returns (new InitiateMultipartUploadResult() <| { _.setUploadId("1") })
       s3client.uploadPart(any[UploadPartRequest]) throws new AmazonServiceException("FOO")
       s3client.abortMultipartUpload(any[AbortMultipartUploadRequest]) answers { _ => () }
-      S3.putStreamWithMultipart(ContentLocation(BUCKET, key), dataStream).run(s3client).run.toEither must beLeft and
+      S3.putStreamWithMultipart(ContentLocation(bucket, key), dataStream).run(s3client).run.toEither must beLeft and
         (there was one(s3client).initiateMultipartUpload(any[InitiateMultipartUploadRequest])) and
         (there was one(s3client).abortMultipartUpload(any[AbortMultipartUploadRequest]))
   }
@@ -326,6 +330,6 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       val s3client = mock[AmazonS3]
       val dataStream = new ByteArrayInputStream(new Array[Byte](len.i))
       s3client.uploadPart(any[UploadPartRequest]) returns new UploadPartResult
-      S3.putChunks(ContentLocation(BUCKET, key), dataStream, "FOO", new Array[Byte](1000)).run(s3client).run.toEither must beRight
+      S3.putChunks(ContentLocation(bucket, key), dataStream, "FOO", new Array[Byte](1000)).run(s3client).run.toEither must beRight
   }
 }

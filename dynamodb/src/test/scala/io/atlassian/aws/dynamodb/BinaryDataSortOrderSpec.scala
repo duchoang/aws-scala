@@ -1,6 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import org.scalacheck.Prop
 import org.specs2.specification.Step
 import spec.ScalaCheckSpec
@@ -12,23 +13,26 @@ import scalaz.std.AllInstances._
 /**
  * Test the sort order of binary range key in Dynamo
  */
-class BinaryDataSortOrderSpec(val arguments: Arguments)
+class BinaryDataSortOrderSpec
     extends ScalaCheckSpec
     with LocalDynamoDB
     with DBActionMatchers {
 
   import TestData._
 
-  def is = stopOnFail ^ s2"""
+  def is = {
+    implicit val c = dynamoClient
+    stopOnFail ^ s2"""
      This specification tests the sort order of binary range keys in Dynamo
 
-     Set up local DB if required                     ${Step(startLocalDynamoDB)}
-                                                     ${Step(createTestTable)}
+     Set up local DB if required                     ${step(startLocalDynamoDB)}
+                                                     ${step(createTestTable)}
      Sort ordering should work                       $querySortOrderWorks
-                                                     ${Step(deleteTestTable)}
-                                                     ${Step(stopLocalDynamoDB)}
+                                                     ${step(deleteTestTable)}
+                                                     ${step(stopLocalDynamoDB)}
 
   """
+  }
 
   case class ComplexKey(h: HashKey, r: TwoLongs)
   object ComplexKey {
@@ -48,21 +52,19 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
     tableNamed(s"my_things3_${System.currentTimeMillis.toString}")
   }
 
-  implicit val DYNAMO_CLIENT = dynamoClient
-
-  def run = DynamoDBOps.runAction.compose(DynamoDB.interpreter(table)(table.schema))
+  def run(implicit client: AmazonDynamoDBClient) = DynamoDBOps.runAction.compose(DynamoDB.interpreter(table)(table.schema))
 
   val NUM_TESTS =
     if (IS_LOCAL) 100
     else 10
 
-  def createTestTable() =
+  def createTestTable(implicit client: AmazonDynamoDBClient) =
     DynamoDBOps.createTable[ComplexKey, TestData.Value, HashKey, TwoLongs](table.schema)
 
-  def deleteTestTable =
+  def deleteTestTable(implicit client: AmazonDynamoDBClient) =
     DynamoDBOps.deleteTable[ComplexKey, TestData.Value, HashKey, TwoLongs](table.schema)
 
-  def querySortOrderWorks =
+  def querySortOrderWorks(implicit client: AmazonDynamoDBClient) =
     Prop.forAll { (hashKey: HashKey, r1: TwoLongs, r2: TwoLongs, v1: TestData.Value, v2: TestData.Value) =>
       (r1 != r2) ==> {
         val k1 = ComplexKey(hashKey, Order[TwoLongs].min(r1, r2))

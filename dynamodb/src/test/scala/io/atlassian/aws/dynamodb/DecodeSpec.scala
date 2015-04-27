@@ -43,7 +43,7 @@ class DecodeSpec extends ScalaCheckSpec {
     (Encoder[Int].encode(100) |> Decoder[NonEmptyBytes].decode).toOr.toEither must beLeft
 
   def mapAttemptPropagatesExceptions =
-    (Encoder[NonEmptyBytes].encode(ByteVector.fromByte(1) match {
+    (Encoder[NonEmptyBytes].encode(ByteVector.fromByte(1.toByte) match {
       case NonEmptyBytes(b) => b
     }) |> Decoder[TwoLongs].decode).toOr.toEither must beLeft
 }

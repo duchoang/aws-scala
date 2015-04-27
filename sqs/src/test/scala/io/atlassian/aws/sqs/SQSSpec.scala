@@ -5,8 +5,9 @@ import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.sqs.AmazonSQSClient
 import org.scalacheck.Prop
-import org.specs2.main.Arguments
-import org.specs2.specification.Step
+import org.specs2.main.CommandLine
+import org.specs2.specification.CommandLineArguments
+import org.specs2.specification.core.Env
 import spec.ScalaCheckSpec
 import org.junit.runner.RunWith
 
@@ -14,30 +15,33 @@ import scalaz.syntax.id._
 import scala.concurrent.duration.Duration
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
-class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
+class SQSSpec extends ScalaCheckSpec with CommandLineArguments {
 
   import Examples._, Arbitraries._, SQSSpecOps._
 
-  val IS_LOCAL = !arguments.commandLine.contains("aws-integration")
-  val REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
+  def region(commandLine: CommandLine) =
+    commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
 
-  implicit val CLIENT = AmazonClient.default[AmazonSQSClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
+  def client(region: String) = AmazonClient.default[AmazonSQSClient] <| { _.setRegion(AmazonRegion.orDefault(region)) }
 
-  def is = skipAllIf(IS_LOCAL) ^ stopOnFail ^
-    s2"""
+  def is(commandLine: CommandLine) = {
+    implicit val c = client(region(commandLine))
+    skipAllIf(!commandLine.contains("aws-integration")) ^ stopOnFail ^
+      s2"""
        This specification tests SQS functionality
 
-         Create a test queue                                   ${Step(createTestQueue(TEST_QUEUE_NAME))}
+         Create a test queue                                   ${step(createTestQueue(TEST_QUEUE_NAME))}
 
          Send, receive, change visibility and delete a message $normalFlow
 
-         Delete test queue                                     ${Step(deleteTestQueue(TEST_QUEUE_NAME))}
+         Delete test queue                                     ${step(deleteTestQueue(TEST_QUEUE_NAME))}
 
     """
+  }
 
   lazy val TEST_QUEUE_NAME = s"sqs-test-${System.currentTimeMillis}"
 
-  def normalFlow = Prop.forAll {
+  def normalFlow(implicit client: AmazonSQSClient) = Prop.forAll {
     req: RetriedMessage[Replicate] =>
 
       (for {
@@ -57,7 +61,7 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
       }
   }.set(minTestsOk = 10)
 
-  def abnormalFlow = Prop.forAll {
+  def abnormalFlow(implicit client: AmazonSQSClient) = Prop.forAll {
     req: Person =>
 
       (for {

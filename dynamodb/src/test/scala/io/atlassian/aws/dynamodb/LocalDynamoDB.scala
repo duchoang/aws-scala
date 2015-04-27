@@ -7,7 +7,8 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import io.atlassian.aws.spec.MoreEqualsInstances
 import org.specs2.execute.{ StandardResults, Failure }
-import org.specs2.main.Arguments
+import org.specs2.main.{ CommandLine, Arguments }
+import org.specs2.specification.core.{ Env, SpecificationStructure }
 
 import scala.sys.process.{ ProcessLogger, stringSeqToProcess }
 
@@ -22,7 +23,7 @@ import scalaz.syntax.id._
  *
  * You can also optionally override various command line argument names to configure the spec.
  */
-trait LocalDynamoDB {
+trait LocalDynamoDB { self: SpecificationStructure =>
   /**
    * Override this to provide a custom command line argument name that represents 'use AWS resources' mode
    */
@@ -45,21 +46,26 @@ trait LocalDynamoDB {
     port
   }
 
+  override def structure = (env: Env) => {
+    commandLine = env.arguments.commandLine
+    decorate(is, env)
+  }
+
   /**
    * Override this to provide a custom command line argument name for Dynamo DB region
    */
   def region = "region"
 
-  def arguments: Arguments
+  @volatile var commandLine: CommandLine = CommandLine.create()
 
   /**
    * Override this to specify custom location for start/stop scripts for a local Dynamo instance
    */
   def scriptDirectory = "scripts"
 
-  def IS_LOCAL = !arguments.commandLine.contains("aws-integration")
-  def REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
-  def LOCAL_DB_PORT = arguments.commandLine.int("db-port").getOrElse(defaultDbPort)
+  def IS_LOCAL = !commandLine.contains("aws-integration")
+  def REGION = commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
+  def LOCAL_DB_PORT = commandLine.int("db-port").getOrElse(defaultDbPort)
 
   def startLocalDynamoDB =
     withLocalDb {
