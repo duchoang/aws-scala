@@ -2,7 +2,6 @@ package io.atlassian.aws
 package dynamodb
 
 import org.scalacheck.Prop
-import org.specs2.specification.Step
 import spec.ScalaCheckSpec
 import org.specs2.main.Arguments
 
@@ -22,11 +21,11 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
   def is = stopOnFail ^ s2"""
      This specification tests the sort order of binary range keys in Dynamo
 
-     Set up local DB if required                     ${Step(startLocalDynamoDB)}
-                                                     ${Step(createTestTable)}
+     Set up local DB if required                     ${step(startLocalDynamoDB)}
+                                                     ${step(createTestTable)}
      Sort ordering should work                       $querySortOrderWorks
-                                                     ${Step(deleteTestTable)}
-                                                     ${Step(stopLocalDynamoDB)}
+                                                     ${step(deleteTestTable)}
+                                                     ${step(stopLocalDynamoDB)}
 
   """
 
