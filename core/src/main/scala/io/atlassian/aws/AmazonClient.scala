@@ -93,7 +93,7 @@ object AmazonClient extends AmazonClientOps {
   )
 
   private lazy val awsCredentialsProvider = new DefaultAWSCredentialsProviderChain
-  private lazy val defaultConfig = AmazonClientConnectionDef(None, None, None, None, None, None, None)
+  private lazy val defaultConfig = AmazonClientConnectionDef(None, None, None, None, None, None, None, None)
 }
 
 sealed class AmazonClient[A <: AmazonWebServiceClient](val constructor: AmazonClient.Constructor[A], serviceName: String)
@@ -109,5 +109,5 @@ trait AmazonClientOps {
         config.proxyHost.foreach { c.setProxyHost }
         config.proxyPort.foreach { c.setProxyPort }
       }
-    }, metricsCollector.orNull) <| { a => config.region.foreach { a.setRegion } }
+    }, metricsCollector.orNull) <| { a => config.region.foreach { a.setRegion } } <| { a => config.endpointUrl.foreach { a.setEndpoint } }
 }
