@@ -9,16 +9,14 @@ import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import kadai.log.json.JsonLogging
 
 import scala.concurrent.duration._
-import scalaz.{ Monad, \/-, -\/ }
-import scalaz.syntax.either._
+import scalaz.{ \/-, -\/ }
 import scalaz.syntax.monad._
 import scalaz.std.option._
 import scalaz.syntax.std.option._
 
 import scalaz.concurrent.{ Strategy, Task }
-import scalaz.stream.{sink, Sink, time, Process}
-
 import io.atlassian.aws.swf.{Result => SWFResult}
+import scalaz.stream.{time, Process, Channel, channel, Sink, sink}
 
 class ActivityPoller(swf: AmazonSimpleWorkflow,
                      domain: Domain,
@@ -66,26 +64,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
       else 30.seconds
     }
 
-  def pollingStream: Process[Task, Option[(ActivityInstance, ActivityDefinition[Task])]] =
-    Process.repeatEval {
-       val t = Task {
-        pollActivity.run
-      }(executorService) flatMap {
-        res => res fold (
-          i =>
-            Task.fail(WrappedInvalidException.apply(i)),
-          oAi =>
-            Task.now(oAi.flatMap (ai => activityMap.get(ai.activity).strengthL(ai)))
-          )
-      }
-      t.handle {
-        case thrown =>
-          error(thrown)
-          None
-       }
-    }
-
-  def executeActivity(ai: ActivityInstance, ad: ActivityDefinition[Task]): Task[(ActivityInstance, SWFResult)] = {
+  private def executeActivity(ai: ActivityInstance, ad: ActivityDefinition[Task]): Task[(ActivityInstance, SWFResult)] = {
     val cancel = new AtomicBoolean(false)
     heartbeat(heartbeatDuration(ad.definition), ai.taskToken).runAsyncInterruptibly({
       case -\/(t) => error(t)
@@ -104,23 +83,35 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
     }.strengthL(ai)
   }
 
-  private def executionStream: Process[Task, Option[(ActivityInstance, SWFResult)]] =
-    pollingStream flatMap {
-      case None => Process.emit(None)
-      case Some((ai, ad)) => Process.await(executeActivity(ai, ad))(a => Process.emit(Some(a)))
+  private def pollingStream: Process[Task, Option[(ActivityInstance, ActivityDefinition[Task])]] =
+    Process.repeatEval {
+      Task {
+        pollActivity.run
+      }(executorService) flatMap {
+        case -\/(invalid) => Task.fail(WrappedInvalidException.apply(invalid))
+        case \/-(oAi)     => Task.now(oAi flatMap (ai => activityMap.get(ai.activity) strengthL ai ))
+      } handle {
+        case thrown =>
+          error(thrown)
+          None
+      }
+    }
+
+  private def executionChannel: Channel[Task, Option[(ActivityInstance, ActivityDefinition[Task])], Option[(ActivityInstance, SWFResult)]] =
+    channel.lift {
+      case None           => Task.now(None)
+      case Some((ai, ad)) => executeActivity(ai, ad) map (_.some)
     }
 
   private def activityCompletionSink: Sink[Task, Option[(ActivityInstance, SWFResult)]] =
-    sink.lift[Task, Option[(ActivityInstance, SWFResult)]] {
-      case None => Task.now(())
-      case Some((ai, swfResult)) => Task {
-        swfResult.fold(fail(ai), complete(ai))
-      }(executorService)
+    sink.lift {
+      case None                  => Task.now(())
+      case Some((ai, swfResult)) => Task { swfResult.fold(fail(ai), complete(ai)) } (executorService)
     }
 
   private def activityPollers: Process[Task, Process[Task, Unit]] =
     Process.repeatEval {
-      Task.now(executionStream.to(activityCompletionSink))
+      Task.now(pollingStream through executionChannel to activityCompletionSink)
     }
 
   def poller(maxConcurrentActivityExecutions: Int): Task[Unit] =
