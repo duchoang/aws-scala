@@ -2,21 +2,19 @@ package io.atlassian.aws
 package swf
 package scalazstream
 
-import java.util.concurrent.{ ExecutorService, ScheduledExecutorService }
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.{ ExecutorService, ScheduledExecutorService }
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
+import io.atlassian.aws.swf.{ Result => SWFResult }
 import kadai.log.json.JsonLogging
 
 import scala.concurrent.duration._
-import scalaz.{ \/-, -\/ }
-import scalaz.syntax.monad._
-import scalaz.std.option._
-import scalaz.syntax.std.option._
-
 import scalaz.concurrent.{ Strategy, Task }
-import io.atlassian.aws.swf.{Result => SWFResult}
-import scalaz.stream.{time, Process, Channel, channel, Sink, sink}
+import scalaz.std.option._
+import scalaz.stream.{ Channel, Process, Sink, channel, sink, time }
+import scalaz.syntax.monad._
+import scalaz.{ -\/, \/- }
 
 class ActivityPoller(swf: AmazonSimpleWorkflow,
                      domain: Domain,
@@ -71,28 +69,25 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
       case \/-(_) => ()
     }, cancel)
 
-    val task = Task {
-      ad.function(ai).run
-    }(es)
-    task.timed(activityExecutionTimeout)(scheduledExecutorService).onFinish {
-      _ => Task.delay { cancel.set(true) }
-    }.handle {
-      case t =>
-        error(t)
-        Result.failed("Activity execution failed", t.toString)
-    }.strengthL(ai)
+    Task { ad.function(ai).run }(executorService)
+      .timed(activityExecutionTimeout)(scheduledExecutorService)
+      .onFinish {
+        _ => Task.delay { cancel.set(true) }
+      }.handle {
+        case throwable =>
+          error(throwable)
+          Result.failed("Activity execution failed", throwable.toString)
+      }.strengthL(ai)
   }
 
   private def pollingStream: Process[Task, Option[(ActivityInstance, ActivityDefinition[Task])]] =
     Process.repeatEval {
-      Task {
-        pollActivity.run
-      }(executorService) flatMap {
+      Task { pollActivity.run }(executorService) flatMap {
         case -\/(invalid) => Task.fail(WrappedInvalidException.orUnderlying(invalid))
-        case \/-(oAi)     => Task.now(oAi flatMap (ai => activityMap.get(ai.activity) strengthL ai ))
+        case \/-(oAi)     => Task.now(oAi flatMap { activityInstance => activityMap.get(activityInstance.activity) strengthL activityInstance })
       } handle {
-        case thrown =>
-          error(thrown)
+        case throwable =>
+          error(throwable)
           None
       }
     }
@@ -100,13 +95,13 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
   private def executionChannel: Channel[Task, Option[(ActivityInstance, ActivityDefinition[Task])], Option[(ActivityInstance, SWFResult)]] =
     channel.lift {
       case None           => Task.now(None)
-      case Some((ai, ad)) => executeActivity(ai, ad) map (_.some)
+      case Some((ai, ad)) => executeActivity(ai, ad) map Some.apply
     }
 
   private def activityCompletionSink: Sink[Task, Option[(ActivityInstance, SWFResult)]] =
     sink.lift {
       case None                  => Task.now(())
-      case Some((ai, swfResult)) => Task { swfResult.fold(fail(ai), complete(ai)) } (executorService)
+      case Some((ai, swfResult)) => Task { swfResult.fold(fail(ai), complete(ai)) }(executorService)
     }
 
   private def activityPollers: Process[Task, Process[Task, Unit]] =
