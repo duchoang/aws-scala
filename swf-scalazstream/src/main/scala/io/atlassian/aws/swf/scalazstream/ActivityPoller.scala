@@ -88,7 +88,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
       Task {
         pollActivity.run
       }(executorService) flatMap {
-        case -\/(invalid) => Task.fail(WrappedInvalidException.apply(invalid))
+        case -\/(invalid) => Task.fail(WrappedInvalidException.orUnderlying(invalid))
         case \/-(oAi)     => Task.now(oAi flatMap (ai => activityMap.get(ai.activity) strengthL ai ))
       } handle {
         case thrown =>
