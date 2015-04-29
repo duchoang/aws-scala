@@ -11,6 +11,6 @@ object WrappedInvalidException {
     }
 }
 
-case class WrappedInvalidException(invalid: Invalid) extends RuntimeException {
+case class WrappedInvalidException private (invalid: Invalid) extends RuntimeException {
   override def toString: String = s"WrappedInvalidException(${invalid.shows})"
 }
