@@ -13,7 +13,6 @@ import org.specs2.SpecificationWithJUnit
 import org.specs2.main.Arguments
 import com.amazonaws.services.s3.{ AmazonS3Client => SDKS3Client, AmazonS3 }
 import org.specs2.mock.Mockito
-import org.specs2.specification.Step
 import org.scalacheck.Prop
 import java.io.{ IOException, InputStream, ByteArrayInputStream }
 import scalaz.syntax.id._
@@ -29,7 +28,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
 
     This is a specification to test S3 actions.
 
-    S3 library should                                       ${Step(createTestFolder(BUCKET, TEST_FOLDER))}
+    S3 library should                                       ${step(createTestFolder(BUCKET, TEST_FOLDER))}
       have a working get and put i.e. I can get what I put  $getWhatWasPut
       have a working createFolders                          $createFoldersWorks
       have a put that creates folders as necessary          $putWithFoldersWorks
@@ -51,7 +50,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       have a multipart that doesn't stack overflow          $multipartUploadDoesntStackOverflow
       bail if an invalid range is requested                 $invalidRangeRequestGivesCorrectError
 
-                                                            ${Step(deleteTestFolder(BUCKET, TEST_FOLDER))}
+                                                            ${step(deleteTestFolder(BUCKET, TEST_FOLDER))}
   """
 
   lazy val TEST_FOLDER = s"s3-test-${System.currentTimeMillis}"

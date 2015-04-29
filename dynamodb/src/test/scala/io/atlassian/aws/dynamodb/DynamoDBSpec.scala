@@ -9,7 +9,6 @@ import org.joda.time.DateTime
 import org.junit.runner.RunWith
 import org.scalacheck.Prop
 import org.specs2.main.Arguments
-import org.specs2.specification.Step
 
 import com.amazonaws.services.dynamodbv2.model.{ ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
 
@@ -37,8 +36,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
   This is a specification to test DynamoDB actions.
 
-  Set up local DB if required                     ${Step(startLocalDynamoDB)}
-  DynamoDB library should                         ${Step(createTestTable)}
+  Set up local DB if required                     ${step(startLocalDynamoDB)}
+  DynamoDB library should                         ${step(createTestTable)}
     have a working get                            $getWorks
     returns none if there is no value             $getWorksIfNoValue
     fails gracefully if there is a deserialisation error $getWorksIfCantDeserialize
@@ -58,8 +57,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     support querying for hash and range keys      $queryForHashAndRangeWorks
     support paginated queries                     ${if (IS_LOCAL) queryWorksWithPaging else skipped("Not running paging test in integration mode")}
 
-                                                  ${Step(deleteTestTable)}
-                                                  ${Step(stopLocalDynamoDB)}
+                                                  ${step(deleteTestTable)}
+                                                  ${step(stopLocalDynamoDB)}
   """
 
   def getWorks =

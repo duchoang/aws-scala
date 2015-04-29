@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit
 import com.amazonaws.services.sqs.AmazonSQSClient
 import org.scalacheck.Prop
 import org.specs2.main.Arguments
-import org.specs2.specification.Step
 import spec.ScalaCheckSpec
 import org.junit.runner.RunWith
 
@@ -27,11 +26,11 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
     s2"""
        This specification tests SQS functionality
 
-         Create a test queue                                   ${Step(createTestQueue(TEST_QUEUE_NAME))}
+         Create a test queue                                   ${step(createTestQueue(TEST_QUEUE_NAME))}
 
          Send, receive, change visibility and delete a message $normalFlow
 
-         Delete test queue                                     ${Step(deleteTestQueue(TEST_QUEUE_NAME))}
+         Delete test queue                                     ${step(deleteTestQueue(TEST_QUEUE_NAME))}
 
     """
 

@@ -9,7 +9,6 @@ import org.joda.time.DateTime
 import org.junit.runner.RunWith
 import org.scalacheck.Prop
 import org.specs2.main.Arguments
-import org.specs2.specification.Step
 
 import com.amazonaws.services.dynamodbv2.model.{ ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
 
@@ -50,8 +49,8 @@ class TableSpec(val arguments: Arguments)
 
   This is a specification to test Table actions integrated with a DynamoDB interpreter.
 
-  Set up local DB if required                     ${Step(startLocalDynamoDB)}
-  Table should                         ${Step(createTestTable)}
+  Set up local DB if required                     ${step(startLocalDynamoDB)}
+  Table should                                    ${step(createTestTable)}
     returns none if there is no value             $getWorksIfNoValue
     write a new value correctly                   $newWriteWorks
     write replaces a value correctly              $writeReplaceWorks
@@ -66,8 +65,8 @@ class TableSpec(val arguments: Arguments)
     support querying for hash and range keys      $queryForHashAndRangeWorks
     support paginated queries                     ${if (IS_LOCAL) queryWorksWithPaging else skipped("Not running paging test in integration mode")}
 
-                                                  ${Step(deleteTestTable)}
-                                                  ${Step(stopLocalDynamoDB)}
+                                                  ${step(deleteTestTable)}
+                                                  ${step(stopLocalDynamoDB)}
   """
 
   def getWorksIfNoValue =

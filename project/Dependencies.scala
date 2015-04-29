@@ -3,49 +3,54 @@ import Keys._
 
 object Dependencies {
 
-  lazy val SCALAZ_VERSION = "7.1.1"
-  
-  lazy val SCALAZ_STREAM_VERSION = "0.7a"
+  object Version {
+    val scalaz        = "7.1.1"
+    val scalazStream  = "0.7a"
+    val argonaut      = "6.1-M6"
+    val aws_sdk       = "1.9.16"
+    val kadai         = "3.1.1"
+    val akka          = "2.3.9"
+    val specs2        = "3.5-20150428120937-48c299f"
+    val scalacheck    = "1.12.2"
+    val junit         = "4.11"
+    val scodecBits    = "1.0.6"
 
-  lazy val ARGONAUT_VERSION = "6.1-M6"
-
-  lazy val AWS_SDK_VERSION = "1.9.16"
-
-  lazy val KADAI_VERSION = "3.1.1"
-  
-  lazy val AKKA_VERSION = "2.3.9"
+  }
 
   lazy val common = Seq(
     libraryDependencies ++= Seq(
-      "org.scalaz"        %% "scalaz-core"        % SCALAZ_VERSION
-    , "org.scalaz"        %% "scalaz-concurrent"  % SCALAZ_VERSION
-    , "io.argonaut"       %% "argonaut"           % ARGONAUT_VERSION
-    , "com.amazonaws"     %  "aws-java-sdk"       % AWS_SDK_VERSION
-    , "io.atlassian"      %% "kadai-core"         % KADAI_VERSION
-    , "io.atlassian"      %% "kadai-config"       % KADAI_VERSION
-    , "io.atlassian"      %% "kadai-logging-json" % KADAI_VERSION
+      "org.scalaz"        %% "scalaz-core"        % Version.scalaz
+    , "org.scalaz"        %% "scalaz-concurrent"  % Version.scalaz
+    , "io.argonaut"       %% "argonaut"           % Version.argonaut
+    , "com.amazonaws"     %  "aws-java-sdk"       % Version.aws_sdk
+    , "io.atlassian"      %% "kadai-core"         % Version.kadai
+    , "io.atlassian"      %% "kadai-config"       % Version.kadai
+    , "io.atlassian"      %% "kadai-logging-json" % Version.kadai
     )
   )
 
   lazy val scalazStream = Seq(
     libraryDependencies ++= Seq(
-      "org.scalaz.stream" %% "scalaz-stream"      % SCALAZ_STREAM_VERSION
+      "org.scalaz.stream" %% "scalaz-stream"      % Version.scalazStream
     )
   )
   
   lazy val akka = Seq(
     libraryDependencies ++= Seq(
-        "com.typesafe.akka" %% "akka-actor"       % AKKA_VERSION exclude("com.chuusai", "shapeless_2.10.4")
+        "com.typesafe.akka" %% "akka-actor"       % Version.akka exclude("com.chuusai", "shapeless_2.10.4")
     )
   )
 
   lazy val test = libraryDependencies ++= Seq(
-    "org.specs2"     %% "specs2"     % "2.4.9"    % "test"
-  , "org.scalacheck" %% "scalacheck" % "1.11.6"   % "test"
-  , "junit"          %  "junit"      % "4.11"     % "test"
+      "org.specs2"          %% "specs2-core"        % Version.specs2     % "test"
+    , "org.specs2"          %% "specs2-junit"       % Version.specs2     % "test"
+    , "org.specs2"          %% "specs2-scalacheck"  % Version.specs2     % "test"
+    , "org.specs2"          %% "specs2-mock"        % Version.specs2     % "test"
+    , "org.scalacheck"      %% "scalacheck"         % Version.scalacheck % "test"
+    , "junit"                % "junit"              % Version.junit      % "test"
   )
 
   lazy val scodecBits = libraryDependencies ++= Seq(
-    "org.typelevel" %% "scodec-bits" % "1.0.4"
+    "org.scodec"            %% "scodec-bits"        % Version.scodecBits
   )
 }
