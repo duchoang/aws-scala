@@ -16,7 +16,7 @@ Currently the library has basic support for S3, DynamoDB, CloudFormation and SQS
 
 Currently the artifacts are published to Atlassian's public Maven repository, so you'll need to add the following resolver:
     
-    resolvers += "atlassian-public"   at "https://maven.atlassian.com/content/groups/atlassian-public/"
+    resolvers += "atlassian-public"   at "https://maven.atlassian.com/content/groups/public/"
 
 The project is split into separate modules for each type of AWS API so you can import them separately if you wish (e.g. `aws-scala-s3`, `aws-scala-dynamodb`, `aws-scala-sqs`, `aws-scala-cloudformation`).
 Alternatively, you can:
