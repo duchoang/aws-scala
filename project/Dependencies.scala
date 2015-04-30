@@ -7,11 +7,11 @@ object Dependencies {
   
   lazy val SCALAZ_STREAM_VERSION = "0.6a"
 
-  lazy val ARGONAUT_VERSION = "6.1-M4"
+  lazy val ARGONAUT_VERSION = "6.1-M6"
 
   lazy val AWS_SDK_VERSION = "1.9.16"
 
-  lazy val KADAI_VERSION = "3.0.0"
+  lazy val KADAI_VERSION = "3.1.1"
   
   lazy val AKKA_VERSION = "2.3.9"
 
