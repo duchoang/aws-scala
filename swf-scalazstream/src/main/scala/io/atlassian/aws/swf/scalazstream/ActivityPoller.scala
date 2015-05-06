@@ -15,7 +15,7 @@ import scalaz.syntax.monad._
 import scalaz.syntax.std.option._
 
 import scalaz.concurrent.Task
-import scalaz.stream.Process
+import scalaz.stream.{ Process, time }
 
 class ActivityPoller(swf: AmazonSimpleWorkflow,
                      domain: Domain,
@@ -30,7 +30,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
   lazy val activityMap = activities.map { ad => ad.activity -> ad }.toMap
 
   private def heartbeat(interval: FiniteDuration, taskToken: TaskToken): Task[Unit] =
-    Process.awakeEvery(interval).flatMap[Task, Unit] { d =>
+    time.awakeEvery(interval).flatMap[Task, Unit] { d =>
       SWF.heartbeat(taskToken).run(swf).fold(
         { i => Process.fail(new WrappedInvalidException(i)) },
         { _ => Process.empty }
