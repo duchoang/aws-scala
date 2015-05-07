@@ -9,7 +9,7 @@ import kadai.Attempt
 import kadai.log.json.JsonLogging
 
 import scalaz.concurrent.Task
-import scalaz.stream._
+import scalaz.stream.{Process, sink, Sink}
 import scalaz.syntax.monad._
 import scalaz.{ -\/, \/-, Monad }
 
@@ -18,19 +18,19 @@ class Decider(swf: AmazonSimpleWorkflow, workflow: WorkflowDefinition, identity:
 
   implicit val es = executor
 
-  def deciderStream: Process[Task, Option[DecisionInstance]] =
+  private def deciderStream: Process[Task, Option[DecisionInstance]] =
     Process.repeatEval {
-      Task { pollDecision(swf, workflow, identity).run }(executor) flatMap {
-        case -\/(invalid) => Task.fail(WrappedInvalidException.orUnderlying(invalid))
-        case \/-(oDi)     => Task.now(oDi)
-      } handle {
+      Task { pollDecision(swf, workflow, identity).run }(executor) flatMap {_.fold(
+        invalid => Task.fail(WrappedInvalidException.orUnderlying(invalid)),
+        Task.now
+      )} handle {
         case throwable =>
           error(throwable)
           None
       }
     }
 
-  def decisionCompletionSink: Sink[Task, Option[DecisionInstance]] =
+  private def decisionCompletionSink: Sink[Task, Option[DecisionInstance]] =
     sink.lift {
       case None     => Task.now(())
       case Some(di) => Task {

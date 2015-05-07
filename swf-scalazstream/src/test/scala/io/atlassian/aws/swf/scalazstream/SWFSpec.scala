@@ -26,14 +26,16 @@ import scalaz.syntax.id._
 import scalaz.syntax.std.option._
 
 /**
- * Copyright Atlassian: 5/05/2015
+ * Test for SWF.  Note that this test will connect to AWS using credentials obtained from environment variables, and will
+ * register a test workflow, and exercise it.  The workflow is left enabled at the end of the test - the assumption being
+ * that the test will be re-run, and/or other tests run that also exercise this workflow.
+ *
+ * To be run via (nb. the " -- " is important):
+ *   sbt "test:testOnly *SWFSpec -- aws-integration"
  */
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   import Logging._
-
-  // run with (nb. the " -- " is important):
-  //   sbt "test:testOnly *SWFSpec -- aws-integration"
 
   val IS_LOCAL = !arguments.commandLine.contains("aws-integration")
   val REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
