@@ -79,6 +79,25 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
       }
   }
 
+  // the main workflow decision function...
+  def decisionFunction: DecisionFunction = {
+    decisionInstance =>
+
+      val pf: PartialFunction[WorkflowEvent, List[Decision]] = {
+        case WorkflowExecutionStarted(_, _, details) if details.input.contains(DeciderCrash) =>
+          activityExecutionLatches(decisionInstance.workflowInstance.workflowId).countDown()
+          throw new RuntimeException("Decider crash!")
+
+        case WorkflowExecutionStarted(_, _, details) =>
+          Decision.ScheduleActivity(activity1, ActivityId("testActivity1Id"), details.input) :: Nil
+
+        case ActivityCompleted(Some(ActivityScheduled(_, _, _, details)), _, _, _, _) =>
+          Decision.CompleteWorkflowExecution(details.input) :: Nil
+      }
+
+      decisionInstance.events.notUnknown.lastOption.map(pf).getOrElse(Nil)
+    }
+
   // warning, there are a limited total number of domains per account.  Don't go changing this repeatedly.
   val testDomain = Domain("testingDomain")
   val taskList = TaskList("taskList")
@@ -90,23 +109,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     def domainConfig: DomainConfig = DomainConfig("test", 1.hour)
     def activityTaskList: TaskList = taskList
     def workflow: Workflow = testWorkflow
-    def decisionEngine: DecisionFunction = {
-      decisionInstance => {
-        val pf: PartialFunction[WorkflowEvent, List[Decision]] = {
-          case WorkflowExecutionStarted(_, _, details) if details.input.contains(DeciderCrash) =>
-            activityExecutionLatches(decisionInstance.workflowInstance.workflowId).countDown(); throw new RuntimeException("Decider crash!")
-            
-          case WorkflowExecutionStarted(_, _, details) =>
-            Decision.ScheduleActivity(activity1, ActivityId("testActivity1Id"), details.input) :: Nil
-            
-          case ActivityCompleted(Some(ActivityScheduled(_, _, _, details)), _, _, _, _) =>
-            Decision.CompleteWorkflowExecution(details.input) :: Nil
-        }
-
-        decisionInstance.events.notUnknown.lastOption.map(pf).getOrElse(Nil)
-      }
-    }
-    
+    def decisionEngine: DecisionFunction = decisionFunction
     def activities[F[_] : Monad]: List[ActivityDefinition[F]] = {
       ActivityDefinition(activity1, ActivityConfig("testActivity1", taskList), activity1Fn[F]) :: Nil
     }
