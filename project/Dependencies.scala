@@ -26,6 +26,7 @@ object Dependencies {
     , "io.atlassian"      %% "kadai-core"         % Version.kadai
     , "io.atlassian"      %% "kadai-config"       % Version.kadai
     , "io.atlassian"      %% "kadai-logging-json" % Version.kadai
+    , "io.atlassian"      %% "kadai-concurrent"   % Version.kadai
     )
   )
 
