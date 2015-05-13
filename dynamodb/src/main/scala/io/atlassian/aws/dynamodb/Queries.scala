@@ -1,5 +1,7 @@
 package io.atlassian.aws.dynamodb
 
+import DynamoDB.ReadConsistency
+
 /**
  * Queries is defined in terms of Hash and Range types.
  *
@@ -30,6 +32,6 @@ trait Queries {
       def config(c: Query.Config) = copy(config = c)
     }
 
-    case class Config(direction: ScanDirection = ScanDirection.Ascending, limit: Option[Int] = None)
+    case class Config(direction: ScanDirection = ScanDirection.Ascending, limit: Option[Int] = None, consistency: ReadConsistency = ReadConsistency.Eventual)
   }
 }
