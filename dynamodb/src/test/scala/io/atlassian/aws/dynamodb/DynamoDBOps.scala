@@ -4,7 +4,7 @@ package dynamodb
 import scalaz.{ Equal, \/, \/-, -\/, ~> }
 import kadai.Invalid
 import org.specs2.matcher.{ Expectable, Matcher }
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import kadai.log.Logging
 import org.specs2.execute.{ Success, Failure }
 import reflect.ClassTag
@@ -12,13 +12,13 @@ import reflect.ClassTag
 object DynamoDBOps extends Logging {
   import Logging._
 
-  def runAction(implicit client: AmazonDynamoDBClient): DynamoDBAction ~> (Invalid \/ ?) =
+  def runAction(implicit client: AmazonDynamoDB): DynamoDBAction ~> (Invalid \/ ?) =
     new (DynamoDBAction ~>(Invalid \/ ?)) {
       def apply[A](action: DynamoDBAction[A]) =
         action.run(client).run
     }
 
-  def createTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDBClient) = {
+  def createTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDB) = {
     runAction.apply(DynamoDB.createTable[K, V, H, R](table)) match {
       case -\/(e) =>
         error(s"Error creating table: $e")
@@ -31,6 +31,6 @@ object DynamoDBOps extends Logging {
     }
   }
 
-  def deleteTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDBClient) =
+  def deleteTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDB) =
     runAction.apply(DynamoDB.deleteTable(table))
 }
