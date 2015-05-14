@@ -1,6 +1,8 @@
 package io.atlassian.aws
 package dynamodb
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
+import io.atlassian.aws.dynamodb.DynamoDB.ReadConsistency
 import spec.ScalaCheckSpec
 
 import scala.collection.JavaConverters.{ mapAsJavaMapConverter, mapAsScalaMapConverter }
@@ -10,7 +12,7 @@ import org.junit.runner.RunWith
 import org.scalacheck.Prop
 import org.specs2.main.Arguments
 
-import com.amazonaws.services.dynamodbv2.model.{ ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
+import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryResult, QueryRequest, ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
 
 import java.util.UUID.randomUUID
 import scalaz.syntax.id._, scalaz.std.AllInstances._
@@ -56,6 +58,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     correctly handle sort ordering of range keys  $querySortOrderWorks
     support querying for hash and range keys      $queryForHashAndRangeWorks
     support paginated queries                     ${if (IS_LOCAL) queryWorksWithPaging else skipped("Not running paging test in integration mode")}
+    support consistency options                   $consistencyTest
 
                                                   ${step(deleteTestTable)}
                                                   ${step(stopLocalDynamoDB)}
@@ -239,6 +242,39 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
           (page.next must beNone)
       }
     }.set(minTestsOk = NUM_TESTS)
+
+  def consistencyTest = {
+    import java.util.{ Collection => JCollection, HashMap => JHashMap, Map => JMap }
+    import java.util.Collections.{ emptySet, singleton }
+    import org.mockito.Mockito.{ mock, when }
+    import org.mockito.Matchers.any
+    import org.mockito.invocation.InvocationOnMock
+    import org.mockito.stubbing.Answer
+
+    val query = TestTable.Query.hash(HashKey("A", "B", "C"), TestTable.Query.Config(consistency = ReadConsistency
+      .Strong))
+    val client: AmazonDynamoDB = mock(classOf[AmazonDynamoDB])
+    when(client.query(any[QueryRequest])).thenAnswer(new Answer[QueryResult] {
+      override def answer(invocation: InvocationOnMock): QueryResult = {
+        val consistentRead: Boolean = invocation.getArguments()(0).asInstanceOf[QueryRequest].getConsistentRead |> {b => if (b == null) false else b.booleanValue() }
+        val items: JCollection[JMap[String, AttributeValue]] = if (consistentRead) {
+          val map = new JHashMap[String, AttributeValue]()
+          map.put("hash", new AttributeValue().withS("aHash"))
+          map.put("metaData", new AttributeValue().withS("meta"))
+          map.put("length", new AttributeValue().withN("1"))
+          singleton(map)
+        } else {
+          emptySet[JMap[String, AttributeValue]]
+        }
+        new QueryResult() <| { _.setItems(items) }
+      }
+    })
+    val action: DynamoDBAction[Page[TestTable.R, TestTable.V]] =
+      DynamoDB.interpreter(TestTable)(table)(TestTable.DBOp.QueryOp(query))
+    action must returnResult[Page[TestTable.R, TestTable.V]] {
+      _.result.length == 1
+    }(client)
+  }
 
   object TestTable extends Table {
     type K = Key

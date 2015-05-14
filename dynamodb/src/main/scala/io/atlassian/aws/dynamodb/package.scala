@@ -1,13 +1,13 @@
 package io.atlassian.aws
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
-import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, UpdateItemRequest }
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
+import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import scalaz.ReaderT
 
 package object dynamodb extends QueryTypes {
-  type DynamoDBAction[A] = AwsAction[AmazonDynamoDBClient, A]
+  type DynamoDBAction[A] = AwsAction[AmazonDynamoDB, A]
 
-  object DynamoDBAction extends AwsAction.Functions[AmazonDynamoDBClient] {
+  object DynamoDBAction extends AwsAction.Functions[AmazonDynamoDB] {
     override type Action[A] = DynamoDBAction[A]
   }
 
