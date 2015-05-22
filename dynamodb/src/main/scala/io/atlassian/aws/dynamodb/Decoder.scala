@@ -1,8 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
-import java.nio.ByteBuffer
-import argonaut.DecodeJson
+import argonaut._, Argonaut._
 import org.joda.time.{ DateTimeZone, DateTime }
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
@@ -10,7 +9,6 @@ import scodec.bits.ByteVector
 
 import scalaz.Functor
 import scalaz.syntax.id._
-import argonaut.Argonaut._
 
 /**
  * Represents a function that tries to convert an AttributeValue into a
@@ -79,11 +77,6 @@ object Decoder {
       case None        => Attempt.ok(None)
     }
 
-  implicit def JsonDecode[A: DecodeJson]: Decoder[A] =
-    Decoder[String].mapAttempt {
-      _.decodeEither[A].fold(Attempt.fail, Attempt.safe(_))
-    }
-
   implicit val NonEmptyBytesDecode: Decoder[NonEmptyBytes] =
     decoder(Underlying.BinaryType) {
       case None => Attempt.fail("No value present")
@@ -97,4 +90,36 @@ object Decoder {
   implicit object DecodeAttributeValueFunctor extends Functor[Decoder] {
     def map[A, B](m: Decoder[A])(f: A => B) = m map f
   }
+
+  private def decodeJson: Decoder[Json] =
+    decoder(Underlying.StringType) {
+      case None => Attempt.fail("No value present")
+      case Some(a) =>
+        import scala.collection.JavaConverters._
+        import scalaz.syntax.traverse._, scalaz.std.list._
+        lazy val optBool: Option[Json] = Option(a.getBOOL).map { b => jBool(b.booleanValue) }
+        lazy val optNull: Option[Json] = Option(a.getNULL).flatMap { b => if (b) Some(jNull) else None }
+        lazy val optNum: Option[Json] = Option(a.getN).flatMap { jNumber }
+        lazy val optString: Option[Json] = Option(a.getS).map { s => if (s == EMPTY_STRING_PLACEHOLDER) "" else s }.map { jString }
+        lazy val optArray: Option[Json] =
+          Option(a.getL).flatMap {
+            _.asScala.toList.traverseU { av =>
+              decodeJson.decode(Some(av))
+            }.map { lj => jArray(lj) }.toOption
+          }
+
+        lazy val optObj: Option[Json] = Option(a.getM).flatMap {
+          _.asScala.toList.traverseU {
+            case (f, av) =>
+              decodeJson.decode(Some(av)).map { decoded => f -> decoded }
+          }.map { lj => jObjectFields(lj: _*) }.toOption
+        }
+        optBool orElse optNull orElse optNum orElse optString orElse optArray orElse optObj match {
+          case None    => Attempt.fail("Could not parse JSON")
+          case Some(j) => Attempt.ok(j)
+        }
+    }
+
+  implicit def decodeJsonDecoder[A: DecodeJson]: Decoder[A] =
+    decodeJson.mapAttempt { _.as[A].fold({ case (msg, h) => Attempt.fail(msg) }, { a => Attempt.ok(a) }) }
 }

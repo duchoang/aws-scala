@@ -15,7 +15,7 @@ import argonaut._, Argonaut._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class EncodeDecodeSpec extends ScalaCheckSpec {
-  import Attempt._
+  import Attempt._, JsonData._
 
   def is = s2"""
   Encode/Decode pairs should correctly:
@@ -24,8 +24,9 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     round-trip strings               ${Prop.forAll { roundTrip(_: String) }}
     round-trip date times            ${Prop.forAll { roundTrip(_: DateTime) }}
     round-trip options               ${Prop.forAll { roundTrip(_: Option[String]) }}
-    round-trip json                  ${Prop.forAll { roundTrip(_: Foo) }}
+    round-trip object with CodecJson ${Prop.forAll { roundTrip(_: Foo) }}
     round-trip binary converted type ${Prop.forAll { roundTrip(_: TwoLongs) }}
+    round-trip JSON                  ${Prop.forAll { roundTrip(_: Json) }}
   """
 
   def roundTrip[A: Encoder: Decoder: Equal](a: A) =
