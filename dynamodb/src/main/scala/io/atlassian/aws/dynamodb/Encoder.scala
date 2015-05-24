@@ -5,6 +5,7 @@ import argonaut._
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import org.joda.time.{ DateTimeZone, DateTime }
 import scalaz.Contravariant
+import scalaz.Free.Trampoline
 import scalaz.syntax.id._
 import scalaz.syntax.std.option._
 
@@ -56,38 +57,38 @@ object Encoder {
 
 private[dynamodb] object JsonEncoder {
   import scala.collection.JavaConverters._
-  def encode: Encoder[Json] =
-    Encoder { json =>
-      new AttributeValue() <| { a =>
-        json.fold(
-          a.setNULL(true),
-          { b => a.setBOOL(b) },
-          { n =>
+  import scalaz.Trampoline
+  import scalaz.syntax.traverse._, scalaz.std.list._
+  private def trampolinedJsonEncoder(json: Json): Trampoline[Option[AttributeValue]] =
+    new AttributeValue() |> { a =>
+      json.fold(
+        Trampoline.done(a.withNULL(true).some),
+        { b => Trampoline.done(a.withBOOL(b).some) },
+        { n =>
+          Trampoline.done {
             if (n.asJsonOrNull.isNull)
-              a.setNULL(true)
+              a.withNULL(true).some
             else
-              a.setN(asString(n))
-          },
-          { s =>
-            a.setS { if (s.isEmpty) EMPTY_STRING_PLACEHOLDER else s }
-          },
-          { array =>
-            a.setL {
-              array.flatMap { j =>
-                encode.encode(j)
-              }.asJava
-            }
-          },
-          { obj =>
-            a.setM {
-              obj.toMap.flatMap {
-                case (f, j) =>
-                  encode.encode(j).map { encoded => f -> encoded }
-              }.asJava
-            }
+              a.withN(asString(n)).some
           }
-        )
-      } |> { _.some }
+        },
+        { s =>
+          Trampoline.done(a.withS { if (s.isEmpty) EMPTY_STRING_PLACEHOLDER else s }.some)
+        },
+        { array =>
+          array.traverse { trampolinedJsonEncoder }.map { loa => a.withL(loa.flatten.asJava).some }
+        },
+        { obj =>
+          obj.toList.traverseU {
+            case (f, j) =>
+              trampolinedJsonEncoder(j).map { oa => oa.map { a => f -> a } }
+          }.map { l => a.withM(l.flatten.toMap.asJava).some }
+        })
+    }
+
+  def encode: Encoder[Json] =
+    Encoder { json => trampolinedJsonEncoder(json).run
+
     }
 
   private def asString(n: JsonNumber): String =

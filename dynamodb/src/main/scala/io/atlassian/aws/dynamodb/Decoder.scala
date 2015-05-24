@@ -7,7 +7,8 @@ import org.joda.time.{ DateTimeZone, DateTime }
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import scodec.bits.ByteVector
 
-import scalaz.Functor
+import scalaz.Free.Trampoline
+import scalaz.{ Traverse, Foldable, Functor }
 import scalaz.syntax.id._
 
 /**
@@ -91,7 +92,40 @@ object Decoder {
     def map[A, B](m: Decoder[A])(f: A => B) = m map f
   }
 
-  private def decodeJson: Decoder[Json] =
+  private def decodeJson: Decoder[Json] = {
+    import scalaz.syntax.traverse._, scalaz.std.list._
+    import scalaz.Trampoline
+    import scala.collection.JavaConverters._
+    import scalaz.Free._
+    import scalaz.std.function._
+    def trampolinedDecode(a: AttributeValue): Trampoline[Attempt[Json]] = {
+      lazy val optBool = Option(a.getBOOL).map { b => Trampoline.done(jBool(b.booleanValue)) }
+      lazy val optNull = Option(a.getNULL).flatMap { b => { if (b) Some(jNull) else None }.map { Trampoline.done } }
+      lazy val optNum = Option(a.getN).flatMap { n => jNumber(n).map { Trampoline.done } }
+      lazy val optString = Option(a.getS).map { s => if (s == EMPTY_STRING_PLACEHOLDER) "" else s }.map { s => Trampoline.done { jString(s) } }
+      lazy val optArray: Option[Trampoline[Json]] =
+        Option(a.getL).flatMap { lav =>
+          lav.asScala.toList.traverseU {
+            trampolinedDecode
+          }.map { laj =>
+            laj.sequence.map { jArray }
+          }.sequence.toOption
+        }
+
+      lazy val optObj: Option[Trampoline[Json]] =
+        Option(a.getM).flatMap { lav =>
+          lav.asScala.toList.traverseU {
+            case (f, av) =>
+              trampolinedDecode(av).map { _.map { j => (f, j) } }
+          }.map { _.sequence.map { lsj => jObjectFields(lsj: _*) } }.sequence.toOption
+        }
+
+      optBool orElse optNull orElse optNum orElse optString orElse optArray orElse optObj match {
+        case None    => Trampoline.done(Attempt.fail("Could not parse JSON"))
+        case Some(j) => j.map { Attempt.ok }
+      }
+    }
+
     decoder(Underlying.StringType) {
       case None => Attempt.fail("No value present")
       case Some(a) =>
@@ -119,6 +153,8 @@ object Decoder {
           case Some(j) => Attempt.ok(j)
         }
     }
+
+  }
 
   implicit def decodeJsonDecoder[A: DecodeJson]: Decoder[A] =
     decodeJson.mapAttempt { _.as[A].fold({ case (msg, h) => Attempt.fail(msg) }, { a => Attempt.ok(a) }) }

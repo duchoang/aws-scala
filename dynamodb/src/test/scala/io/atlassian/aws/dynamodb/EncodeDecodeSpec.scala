@@ -15,7 +15,7 @@ import argonaut._, Argonaut._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class EncodeDecodeSpec extends ScalaCheckSpec {
-  import Attempt._, JsonData._
+  import Attempt._
 
   def is = s2"""
   Encode/Decode pairs should correctly:
@@ -42,4 +42,5 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
         i <- arbitrary[Int]
       } yield Foo(s, i)
     }
+  implicit def ArbitraryJson: Arbitrary[Json] = Arbitrary(JsonData.jsonValueGenerator(8))
 }

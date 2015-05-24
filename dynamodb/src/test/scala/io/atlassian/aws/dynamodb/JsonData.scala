@@ -2,14 +2,13 @@ package io.atlassian.aws.dynamodb
 
 import scalaz._, Scalaz._
 import org.scalacheck.Arbitrary._
-import org.scalacheck.Gen.{ frequency, choose, listOfN, const => value, oneOf }
+import org.scalacheck.Gen.{ frequency, listOfN, const => value, oneOf }
 import argonaut._, Argonaut._
 import org.scalacheck.{ Gen, Arbitrary }
 import scala.util.Random.shuffle
 
 /**
- * Taken from Argonaut argonaut.Data
- * TODO - Check if we can just import this from Argonaut test.
+ * Taken from Argonaut argonaut.Data because argonaut test isn't published.
  */
 object JsonData {
   val maxJsonStructureDepth = 8
