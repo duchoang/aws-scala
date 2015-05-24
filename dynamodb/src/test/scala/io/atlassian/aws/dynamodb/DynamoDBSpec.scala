@@ -256,7 +256,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     val client: AmazonDynamoDB = mock(classOf[AmazonDynamoDB])
     when(client.query(any[QueryRequest])).thenAnswer(new Answer[QueryResult] {
       override def answer(invocation: InvocationOnMock): QueryResult = {
-        val consistentRead: Boolean = invocation.getArguments()(0).asInstanceOf[QueryRequest].getConsistentRead |> {b => if (b == null) false else b.booleanValue() }
+        val consistentRead: Boolean = invocation.getArguments()(0).asInstanceOf[QueryRequest].getConsistentRead |> { b => if (b == null) false else b.booleanValue() }
         val items: JCollection[JMap[String, AttributeValue]] = if (consistentRead) {
           val map = new JHashMap[String, AttributeValue]()
           map.put("hash", new AttributeValue().withS("aHash"))

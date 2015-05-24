@@ -2,26 +2,26 @@ package io.atlassian.aws.swf
 package scalazstream
 
 import java.util.UUID
-import java.util.concurrent.{TimeUnit, CountDownLatch, Executors}
+import java.util.concurrent.{ TimeUnit, CountDownLatch, Executors }
 
 import com.amazonaws.regions.Region
-import com.amazonaws.{ResponseMetadata, AmazonWebServiceRequest}
-import com.amazonaws.services.simpleworkflow.{AmazonSimpleWorkflowClient, model, AmazonSimpleWorkflow}
+import com.amazonaws.{ ResponseMetadata, AmazonWebServiceRequest }
+import com.amazonaws.services.simpleworkflow.{ AmazonSimpleWorkflowClient, model, AmazonSimpleWorkflow }
 import io.atlassian.aws.swf.Decision.CompleteWorkflowExecution
-import io.atlassian.aws.swf.WorkflowEvent.{ActivityScheduled, ActivityCompleted, WorkflowExecutionStarted}
-import io.atlassian.aws.{swf, AmazonRegion, AmazonClient}
+import io.atlassian.aws.swf.WorkflowEvent.{ ActivityScheduled, ActivityCompleted, WorkflowExecutionStarted }
+import io.atlassian.aws.{ swf, AmazonRegion, AmazonClient }
 import io.atlassian.aws.spec.ScalaCheckSpec
-import io.atlassian.aws.swf.{Decision, WorkflowDefinition, SWF, DecisionInstance}
+import io.atlassian.aws.swf.{ Decision, WorkflowDefinition, SWF, DecisionInstance }
 import kadai.concurrent.ThreadFactories
 import kadai.log.Logging
 import org.junit.runner.RunWith
-import org.specs2.execute.{Success, Failure}
+import org.specs2.execute.{ Success, Failure }
 import org.specs2.main.Arguments
 
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scalaz.concurrent.Task
-import scalaz.{\/-, -\/, Monad, @@}
+import scalaz.{ \/-, -\/, Monad, @@ }
 import scalaz.syntax.id._
 import scalaz.syntax.std.option._
 
@@ -68,16 +68,16 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   val activityExecutionLatches = mutable.Map[WorkflowId, CountDownLatch]()
 
   val activity1 = Activity("testActivity1", "1.0")
-  def activity1Fn[F[_] : Monad]: ActivityFunction[F] = {
+  def activity1Fn[F[_]: Monad]: ActivityFunction[F] = {
     activityInstance =>
       activityResultMap.put(activityInstance.workflow.workflowId, activityInstance.input)
       activityExecutionLatches(activityInstance.workflow.workflowId).countDown()
 
       activityInstance.input match {
-        case Some(ActivityCrash)    => throw new RuntimeException("Activity crash!")
-        case Some(ActivitySuccess)  => ActivityResult.success("blah")
-        case Some(ActivityFail)     => ActivityResult.failed("blah", "someone asked me to fail")
-        case _                      => ActivityResult.failed("blah", "noone told me what to do!")
+        case Some(ActivityCrash)   => throw new RuntimeException("Activity crash!")
+        case Some(ActivitySuccess) => ActivityResult.success("blah")
+        case Some(ActivityFail)    => ActivityResult.failed("blah", "someone asked me to fail")
+        case _                     => ActivityResult.failed("blah", "noone told me what to do!")
       }
   }
 
@@ -98,7 +98,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
       }
 
       decisionInstance.events.notUnknown.lastOption.map(pf).getOrElse(Nil)
-    }
+  }
 
   // warning, there are a limited total number of domains per account.  Don't go changing this repeatedly.
   val testDomain = Domain("testingDomain")
@@ -112,7 +112,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     def activityTaskList: TaskList = taskList
     def workflow: Workflow = testWorkflow
     def decisionEngine: DecisionFunction = decisionFunction
-    def activities[F[_] : Monad]: List[ActivityDefinition[F]] = {
+    def activities[F[_]: Monad]: List[ActivityDefinition[F]] = {
       ActivityDefinition(activity1, ActivityConfig("testActivity1", taskList), activity1Fn[F]) :: Nil
     }
   }
@@ -135,19 +135,19 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   val deciderExecutorService = Executors.newFixedThreadPool(4, ThreadFactories.named("swfDecider").build)
 
   def startActivityPollers() = {
-    new ActivityPoller(CLIENT, workflowDef.domain, SWFIdentity("activityPoller"), workflowDef.activityTaskList, workflowDef.activities, activityPollerExecutorService, activityPollerHeartbeatScheduledExecutorService, 5.minutes).poller(maxConcurrentActivityExecutions = 8) runAsync  {
+    new ActivityPoller(CLIENT, workflowDef.domain, SWFIdentity("activityPoller"), workflowDef.activityTaskList, workflowDef.activities, activityPollerExecutorService, activityPollerHeartbeatScheduledExecutorService, 5.minutes).poller(maxConcurrentActivityExecutions = 8) runAsync {
       case -\/(throwable) => error(s"Activity poller error: $throwable")
       case \/-(_)         => ()
     }
   }
 
   def startDeciders() = {
-      val task: Task[Unit] = new Decider(CLIENT, workflowDef, SWFIdentity("decider"), deciderExecutorService).decider
-      task runAsync {
-        case -\/(throwable) => error(s"Decider error: $throwable")
-        case \/-(_)         => ()
-      }
+    val task: Task[Unit] = new Decider(CLIENT, workflowDef, SWFIdentity("decider"), deciderExecutorService).decider
+    task runAsync {
+      case -\/(throwable) => error(s"Decider error: $throwable")
+      case \/-(_)         => ()
     }
+  }
 
   def postToWorkflowTriggersDeciderCrash() = {
     val workflowId = WorkflowId(UUID.randomUUID().toString)

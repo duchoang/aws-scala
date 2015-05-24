@@ -96,9 +96,11 @@ trait LocalDynamoDB {
   def dynamoClient =
     if (IS_LOCAL) {
       // Create a client with dummy credentials pointing to the local DB.
-      val dynamoClient = new AmazonDynamoDBClient(new BasicAWSCredentials("FOO", "BAR"))
-      dynamoClient.setEndpoint(s"http://localhost:$LOCAL_DB_PORT")
-      dynamoClient
+      AmazonClient.withClientConfiguration[AmazonDynamoDBClient](
+        AmazonClientConnectionDef.default.copy(endpointUrl = Some(s"http://localhost:$LOCAL_DB_PORT"),
+          credential = Some(Credential.static("FOO", "BAR"))),
+        None,
+        None)
     } else {
       AmazonClient.default[AmazonDynamoDBClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
     }
