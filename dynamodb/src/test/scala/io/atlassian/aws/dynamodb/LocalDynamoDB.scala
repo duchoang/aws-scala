@@ -97,10 +97,10 @@ trait LocalDynamoDB {
     if (IS_LOCAL) {
       // Create a client with dummy credentials pointing to the local DB.
       AmazonClient.withClientConfiguration[AmazonDynamoDBClient](
-        AmazonClientConnectionDef.default.copy(endpointUrl = Some(s"http://localhost:$LOCAL_DB_PORT")),
+        AmazonClientConnectionDef.default.copy(endpointUrl = Some(s"http://localhost:$LOCAL_DB_PORT"),
+          credential = Some(Credential.static("FOO", "BAR"))),
         None,
-        None,
-        Some(Credential.static("FOO", "BAR")))
+        None)
     } else {
       AmazonClient.default[AmazonDynamoDBClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
     }

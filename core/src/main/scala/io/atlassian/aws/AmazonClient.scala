@@ -24,9 +24,8 @@ object AmazonClient extends AmazonClientOps {
    */
   def withClientConfiguration[A <: AmazonWebServiceClient: AmazonClient](config: AmazonClientConnectionDef,
                                                                          fallback: Option[AmazonClientConnectionDef] = None,
-                                                                         metricsCollector: Option[RequestMetricCollector] = None,
-                                                                         credential: Option[Credential] = None): A =
-    fromClientConfigurationDef[A] { fallback.fold(config)(config.withFallback) }(metricsCollector, credential)
+                                                                         metricsCollector: Option[RequestMetricCollector] = None): A =
+    fromClientConfigurationDef[A] { fallback.fold(config)(config.withFallback) }(metricsCollector)
 
   /**
    * Creates a client of the requested type. Configuration options can be passed in as config parameter. Any gaps in the
@@ -39,9 +38,8 @@ object AmazonClient extends AmazonClientOps {
    */
   def create[A <: AmazonWebServiceClient: AmazonClient](config: Option[AmazonClientConnectionDef] = None,
                                                         fallback: Option[AmazonClientConnectionDef] = None,
-                                                        metricsCollector: Option[RequestMetricCollector] = None,
-                                                        credential: Option[Credential] = None): A =
-    withClientConfiguration(config.orElse(fallback).getOrElse(AmazonClientConnectionDef.default), fallback, metricsCollector, credential)
+                                                        metricsCollector: Option[RequestMetricCollector] = None): A =
+    withClientConfiguration(config.orElse(fallback).getOrElse(AmazonClientConnectionDef.default), fallback, metricsCollector)
 
   /**
    * Creates a client of the requested type with default configuration options
@@ -98,12 +96,9 @@ object AmazonClient extends AmazonClientOps {
 sealed class AmazonClient[A <: AmazonWebServiceClient](val constructor: AmazonClient.Constructor[A], serviceName: String)
 
 trait AmazonClientOps {
-  private lazy val defaultCredentialsProvider = new DefaultAWSCredentialsProviderChain
-
-  def fromClientConfigurationDef[A <: AmazonWebServiceClient: AmazonClient](config: AmazonClientConnectionDef)(metricsCollector: Option[RequestMetricCollector],
-                                                                                                               credential: Option[Credential]): A =
+  def fromClientConfigurationDef[A <: AmazonWebServiceClient: AmazonClient](config: AmazonClientConnectionDef)(metricsCollector: Option[RequestMetricCollector]): A =
     AmazonClient[A].constructor(
-      credential.map { _.run }.getOrElse(defaultCredentialsProvider),
+      config.credential.getOrElse(Credential.default).run,
       new ClientConfiguration() <| { c =>
         config.connectionTimeoutMs.foreach { c.setConnectionTimeout }
         config.maxConnections.foreach { c.setMaxConnections }
