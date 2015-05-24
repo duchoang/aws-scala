@@ -50,6 +50,9 @@ object AmazonClientConnectionDef {
   import AmazonRegionDef._
   import AmazonRegion._
 
+  val default: AmazonClientConnectionDef =
+    AmazonClientConnectionDef(None, None, None, None, None, None, None, None)
+
   implicit object AmazonClientConnectionAccessor extends Accessor[AmazonClientConnectionDef] {
     def apply(c: Config, s: String) =
       Configuration(c).apply[Configuration](s) |> { config =>
