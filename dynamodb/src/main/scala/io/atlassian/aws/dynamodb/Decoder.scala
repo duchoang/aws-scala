@@ -39,6 +39,8 @@ case class Decoder[A] private[Decoder] (run: Value => Attempt[A])(private[dynamo
  * Custom decoders are derived from this base set.
  */
 object Decoder {
+  import DynamoString.syntax._
+
   def apply[A: Decoder] =
     implicitly[Decoder[A]]
 
@@ -62,15 +64,14 @@ object Decoder {
   implicit val DateTimeDecode: Decoder[DateTime] =
     mandatoryField(Underlying.StringType)("DateTime") { _.getN.toLong |> { i => new DateTime(i, DateTimeZone.UTC) } }
 
-  implicit val StringDecode: Decoder[String] =
+  implicit val DynamoStringDecode: Decoder[DynamoString] =
     decoder(Underlying.StringType) {
-      case None => Attempt.fail("No string value present")
-      case Some(a) => a.getS |> { s =>
-        if (s == null) Attempt.fail("No string value present")
-        else if (s == EMPTY_STRING_PLACEHOLDER) Attempt.ok("") // TODO, nasty, nasty, nasty 
-        else Attempt.ok(s)
-      }
+      case None    => Attempt.fail("No string value present")
+      case Some(a) => a.getS |> { s => Attempt.ok(DynamoString.apply(s)) }
     }
+
+  implicit val StringDecode: Decoder[String] =
+    DynamoStringDecode.mapAttempt { _.asString.fold(Attempt.fail[String]("No string value present")) { Attempt.ok } }
 
   implicit def OptionDecode[A](implicit d: Decoder[A]): Decoder[Option[A]] =
     decoder(d.dynamoType) {
@@ -103,7 +104,7 @@ object Decoder {
       lazy val optBool = Option(a.getBOOL).map { b => Trampoline.done(jBool(b.booleanValue)) }
       lazy val optNull = Option(a.getNULL).flatMap { b => { if (b) Some(jNull) else None }.map { Trampoline.done } }
       lazy val optNum = Option(a.getN).flatMap { n => jNumber(n).map { Trampoline.done } }
-      lazy val optString = Option(a.getS).map { s => if (s == EMPTY_STRING_PLACEHOLDER) "" else s }.map { s => Trampoline.done { jString(s) } }
+      lazy val optString = Option(a.getS).flatMap { s => DynamoString(s).asString }.map { s => Trampoline.done { jString(s) } }
       lazy val optArray: Option[Trampoline[Json]] =
         Option(a.getL).flatMap { lav =>
           lav.asScala.toList.traverseU {

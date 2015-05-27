@@ -27,15 +27,21 @@ object Encoder {
   private def attribute[A](f: A => AttributeValue => AttributeValue): Encoder[A] =
     Encoder { a => (new AttributeValue() <| { f(a) }).some }
 
+  implicit val BooleanEncode: Encoder[Boolean] =
+    attribute { b => _.withBOOL(b) }
+
   implicit val LongEncode: Encoder[Long] =
     attribute { l => _.withN(l.toString) }
 
   implicit val IntEncode: Encoder[Int] =
     attribute { i => _.withN(i.toString) }
 
+  implicit val DynamoStringEncode: Encoder[DynamoString] =
+    attribute { s => _.withS { s.unwrap } }
+
   // Encode an empty string as no attribute value (DynamoDB doesn't support empty string for attribute value)
   implicit val StringEncode: Encoder[String] =
-    attribute { s => _.withS { if (s.isEmpty) EMPTY_STRING_PLACEHOLDER else s } }
+    DynamoStringEncode.contramap { DynamoString.apply }
 
   implicit val DateTimeEncode: Encoder[DateTime] =
     attribute { d => _.withN(d.withZone(DateTimeZone.UTC).toInstant.getMillis.toString) }
@@ -63,27 +69,21 @@ private[dynamodb] object JsonEncoder {
     new AttributeValue() |> { a =>
       json.fold(
         Trampoline.done(a.withNULL(true).some),
-        { b => Trampoline.done(a.withBOOL(b).some) },
-        { n =>
+        b => Trampoline.done(Encoder.BooleanEncode.encode(b)),
+        n =>
           Trampoline.done {
             if (n.asJsonOrNull.isNull)
               a.withNULL(true).some
             else
               a.withN(asString(n)).some
-          }
-        },
-        { s =>
-          Trampoline.done(a.withS { if (s.isEmpty) EMPTY_STRING_PLACEHOLDER else s }.some)
-        },
-        { array =>
-          array.traverse { trampolinedJsonEncoder }.map { loa => a.withL(loa.flatten.asJava).some }
-        },
-        { obj =>
-          obj.toList.traverseU {
-            case (f, j) =>
-              trampolinedJsonEncoder(j).map { oa => oa.map { a => f -> a } }
-          }.map { l => a.withM(l.flatten.toMap.asJava).some }
-        })
+          },
+        s => Trampoline.done(Encoder.StringEncode.encode(s)),
+        _.traverse { trampolinedJsonEncoder }.map { loa => a.withL(loa.flatten.asJava).some },
+        _.toList.traverseU {
+          case (f, j) =>
+            trampolinedJsonEncoder(j).map { oa => oa.map { a => f -> a } }
+        }.map { l => a.withM(l.flatten.toMap.asJava).some }
+      )
     }
 
   def encode: Encoder[Json] =
