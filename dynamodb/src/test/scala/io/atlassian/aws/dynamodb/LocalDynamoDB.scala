@@ -34,9 +34,17 @@ trait LocalDynamoDB {
   def db_port = "db-port"
 
   /**
-   * Override this to provde a custom default DB port programmatically. By default it will try to pick a random port.
+   * Override this to provide a custom default DB port programmatically. By default it will try to pick a random port.
    */
   def defaultDbPort = randomPort
+
+  /**
+   * Override this to specify whether to use AWS Local DynamoDB or Dynalite
+   * @return
+   */
+  def useAwsLocalDynamo = true
+
+  private def runDynamoTypeOption = if (useAwsLocalDynamo) "" else "-d"
 
   lazy val randomPort = {
     val ss = new ServerSocket(0)
@@ -65,7 +73,7 @@ trait LocalDynamoDB {
     withLocalDb {
       runAttemptStep(for {
         _ <- runCmd(s"$scriptDirectory/install_dynamodb_local.sh", "Install Local DynamoDB")
-        _ <- runCmd(s"$scriptDirectory/run_dynamodb_local.sh ${LOCAL_DB_PORT.toString}", "Start Local DynamoDB")
+        _ <- runCmd(s"$scriptDirectory/run_dynamodb_local.sh $runDynamoTypeOption -p ${LOCAL_DB_PORT.toString}", "Start Local DynamoDB")
       } yield ())
     }
 
