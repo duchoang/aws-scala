@@ -4,7 +4,6 @@ package rds
 import scalaz.@@
 
 trait Types {
-  sealed trait DbIdMarker
-  type DbId = String @@ DbIdMarker
-  object DbId extends Tagger[String, DbIdMarker]
+  type DbId = String @@ DbId.Marker
+  object DbId extends Tagger[String]
 }

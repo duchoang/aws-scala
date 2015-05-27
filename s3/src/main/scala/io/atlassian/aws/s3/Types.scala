@@ -5,17 +5,14 @@ import scalaz.{ @@, Tag }
 import scalaz.syntax.std.list._
 
 trait Types {
-  sealed trait ContentLengthMarker
-  type ContentLength = Long @@ ContentLengthMarker
-  object ContentLength extends Tagger[Long, ContentLengthMarker]
+  type ContentLength = Long @@ ContentLength.Marker
+  object ContentLength extends Tagger[Long]
 
-  sealed trait BucketMarker
-  type Bucket = String @@ BucketMarker
-  object Bucket extends Tagger[String, BucketMarker]
+  type Bucket = String @@ Bucket.Marker
+  object Bucket extends Tagger[String]
 
-  sealed trait S3KeyMarker
-  type S3Key = String @@ S3KeyMarker
-  object S3Key extends Tagger[String, S3KeyMarker] {
+  type S3Key = String @@ S3Key.Marker
+  object S3Key extends Tagger[String] {
     def apply(folders: List[String], key: S3Key): S3Key =
       Tag(s"${folders.mkString("/")}/$key")
 
