@@ -87,9 +87,7 @@ private[dynamodb] object JsonEncoder {
     }
 
   def encode: Encoder[Json] =
-    Encoder { json => trampolinedJsonEncoder(json).run
-
-    }
+    Encoder { json => trampolinedJsonEncoder(json).run }
 
   private def asString(n: JsonNumber): String =
     n match {

@@ -1,7 +1,6 @@
 package io.atlassian.aws
 package dynamodb
 
-import com.amazonaws.services.dynamodbv2.model._
 import io.atlassian.aws.dynamodb.TestData._
 import io.atlassian.aws.dynamodb.Write.Mode.Overwrite
 import io.atlassian.aws.spec.ScalaCheckSpec
