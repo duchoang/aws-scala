@@ -121,10 +121,11 @@ The `test` JAR includes a few useful helpers:
    * `io.atlassian.aws.DynamoDBSpecOps` and `io.atlassian.aws.LocalDynamoDBSpec` - Has a bunch of useful functions for creating and deleting temporary tables for testing, and also spinning up a local DynamoDB. Check out `DynamoDBSpec` to see how to use it. 
       If you want to use `LocalDynamoDBSpec`, the key things to do are:
           * Extend the trait
-          * Copy the scripts in the `scripts` directory for installing, starting and stopping local Dynamo. You will need to have `timeout/gtimeout` and `wget` installed.
+          * Copy the scripts in the `scripts` directory for installing, starting and stopping local Dynamo. You will need to have `timeout/gtimeout` and `wget` installed as well as `npm` if you want to use [dynalite](https://github.com/mhart/dynalite) instead of AWS's local DynamoDB (needed if you use JSON encoding).
           * Add a `arguments` constructor argument to your spec class i.e. `(val arguments: org.specs2.main.Arguments)`
           * Add an implicit value pointing to the client factory function i.e. `implicit val DYNAMO_CLIENT = dynamoClient`
           * Override the `scriptDirectory` function to point to where you store your scripts. e.g. `override val scriptDirectory = "../scripts"`. It is a relative path from the root of the module typically.
+          * **If you want to use dynalite instead of AWS's Local DynamoDB, then override `useAwsLocalDynamo` to be `false`. You will need to do this if you use JSON encoding for any columns.** 
           * In your spec list, ensure you have steps to start local dynamo, create a test table, delete the test table and stop dynamo i.e.
             
                   ${Step(startLocalDynamoDB)}
@@ -134,7 +135,7 @@ The `test` JAR includes a few useful helpers:
           
    * `io.atlassian.aws.SQSSpecOps` - Has a bunch of useful functions for creating and deleting temporary queues for testing. Check out `SQSSpec` to see how to use it.
    
-If you want to spin up a local DynamoDB, you'll need to copy the `scripts` directory in this repository into your project. You'll need `gtimeout` on your box that is running the scripts (e.g. via `brew install coreutils` on Mac OS X).
+If you want to spin up a local DynamoDB, you'll need to copy the `scripts` directory in this repository into your project. You'll need `gtimeout`, `wget` and `npm` on your box that is running the scripts (e.g. via `brew install coreutils` on Mac OS X).
 
 ### Step 3 - Profit
 
@@ -158,14 +159,14 @@ your `.git/hooks` directory that will run Scalariform before all commits.
 
 There are a bunch of local tests for things that can be tested locally, and integration tests for things that need to talk to AWS resources.
 DynamoDB specs are a little different in that the spec spins up a [local DynamoDB](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Tools.DynamoDBLocal.html)
-in local mode, and in integration mode it talks with actual DynamoDB
+in local mode (or [dynalite](https://github.com/mhart/dynalite) for JSON encoding tests), and in integration mode it talks with actual DynamoDB
 
 To run the local tests, just do the normal `sbt test`.
 
 To run integration tests, you will need to:
 
   1. Set up AWS access keys as per standard AWS Java SDK settings (e.g. `AWS_SECRET_KEY` and `AWS_ACCESS_KEY_ID` environment variables)
-  2. Ensure that you have `gtimeout` and `wget` installed e.g. `brew install coreutils` and `brew install wget` on Mac OS X
+  2. Ensure that you have `gtimeout`, `wget` and `npm` installed e.g. `brew install coreutils` and `brew install wget` on Mac OS X
   3. Run the integration tests via `sbt 'test-only -- aws-integration'`
   
 
