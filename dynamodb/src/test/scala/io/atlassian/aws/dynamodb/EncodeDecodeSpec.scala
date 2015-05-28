@@ -22,6 +22,7 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
   Encode/Decode pairs should correctly:
     round-trip longs                                             ${Prop.forAll { roundTrip(_: Long) }}
     round-trip ints                                              ${Prop.forAll { roundTrip(_: Int) }}
+    round-trip booleans                                          ${Prop.forAll { roundTrip(_: Boolean) }}
     round-trip strings                                           ${Prop.forAll { roundTrip(_: String) }}
     round-trip date times                                        ${Prop.forAll { roundTrip(_: DateTime) }}
     round-trip options                                           ${Prop.forAll { roundTrip(_: Option[String]) }}
@@ -37,8 +38,9 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
   type DeepJson = Json @@ DeepJson.Marker
   object DeepJson extends Tagger[Json]
 
+  // The max limit without trampolining is about 320
   implicit val deepJsonArbitrary: Arbitrary[DeepJson] =
-    Arbitrary(deepJsonValueGenerator(642).map { DeepJson.apply })
+    Arbitrary(deepJsonValueGenerator(320).map { DeepJson.apply })
 
   private def deepJsonValueGenerator(depth: Int): Gen[Json] = {
     if (depth > 1) {

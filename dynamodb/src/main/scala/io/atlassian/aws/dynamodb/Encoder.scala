@@ -63,31 +63,34 @@ object Encoder {
 
 private[dynamodb] object JsonEncoder {
   import scala.collection.JavaConverters._
-  import scalaz.Trampoline
-  import scalaz.syntax.traverse._, scalaz.std.list._
-  private def trampolinedJsonEncoder(json: Json): Trampoline[Option[AttributeValue]] =
-    new AttributeValue() |> { a =>
-      json.fold(
-        Trampoline.done(a.withNULL(true).some),
-        b => Trampoline.done(Encoder.BooleanEncode.encode(b)),
-        n =>
-          Trampoline.done {
-            if (n.asJsonOrNull.isNull)
-              a.withNULL(true).some
-            else
-              a.withN(asString(n)).some
-          },
-        s => Trampoline.done(Encoder.StringEncode.encode(s)),
-        _.traverse { trampolinedJsonEncoder }.map { loa => a.withL(loa.flatten.asJava).some },
-        _.toList.traverseU {
-          case (f, j) =>
-            trampolinedJsonEncoder(j).map { oa => oa.map { a => f -> a } }
-        }.map { l => a.withM(l.flatten.toMap.asJava).some }
-      )
-    }
 
   def encode: Encoder[Json] =
-    Encoder { json => trampolinedJsonEncoder(json).run }
+    Encoder { json =>
+      new AttributeValue() <| { a =>
+        json.fold(
+          a.setNULL(true),
+          b => a.setBOOL(b),
+          n =>
+            if (n.asJsonOrNull.isNull)
+              a.setNULL(true)
+            else
+              a.setN(asString(n)),
+          s => a.setS { DynamoString(s).unwrap },
+          array =>
+            a.setL {
+              array.flatMap { j =>
+                encode.encode(j)
+              }.asJava
+            },
+          obj =>
+            a.setM {
+              obj.toMap.flatMap {
+                case (f, j) =>
+                  encode.encode(j).map { encoded => f -> encoded }
+              }.asJava
+            })
+      } |> { _.some }
+    }
 
   private def asString(n: JsonNumber): String =
     n match {

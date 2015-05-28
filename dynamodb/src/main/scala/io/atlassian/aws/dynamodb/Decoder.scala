@@ -93,48 +93,34 @@ object Decoder {
     def map[A, B](m: Decoder[A])(f: A => B) = m map f
   }
 
-  private def decodeJson: Decoder[Json] = {
-    import scalaz.syntax.traverse._, scalaz.std.list._
-    import scalaz.Trampoline
-    import scala.collection.JavaConverters._
-    import scalaz.Free._
-    import scalaz.std.function._
-
-    def trampolinedDecode(a: AttributeValue): Trampoline[Attempt[Json]] = {
-      lazy val optBool = Option(a.getBOOL).map { b => Trampoline.done(jBool(b.booleanValue)) }
-      lazy val optNull = Option(a.getNULL).flatMap { b => { if (b) Some(jNull) else None }.map { Trampoline.done } }
-      lazy val optNum = Option(a.getN).flatMap { n => jNumber(n).map { Trampoline.done } }
-      lazy val optString = Option(a.getS).flatMap { s => DynamoString(s).asString }.map { s => Trampoline.done { jString(s) } }
-      lazy val optArray: Option[Trampoline[Json]] =
-        Option(a.getL).flatMap { lav =>
-          lav.asScala.toList.traverseU {
-            trampolinedDecode
-          }.map { laj =>
-            laj.sequence.map { jArray }
-          }.sequence.toOption
-        }
-
-      lazy val optObj: Option[Trampoline[Json]] =
-        Option(a.getM).flatMap { lav =>
-          lav.asScala.toList.traverseU {
-            case (f, av) =>
-              trampolinedDecode(av).map { _.map { j => (f, j) } }
-          }.map { _.sequence.map { lsj => jObjectFields(lsj: _*) } }.sequence.toOption
-        }
-
-      optBool orElse optNull orElse optNum orElse optString orElse optArray orElse optObj match {
-        case None    => Trampoline.done(Attempt.fail("Could not parse JSON"))
-        case Some(j) => j.map { Attempt.ok }
-      }
-    }
-
-    // TODO - Unfortunately we don't really have proper underlying type we can use (there is nothing from AWS to map this to)
+  private def decodeJson: Decoder[Json] =
     decoder(Underlying.StringType) {
-      case None    => Attempt.fail("No value present")
-      case Some(a) => trampolinedDecode(a).run
-    }
+      case None => Attempt.fail("No value present")
+      case Some(a) =>
+        import scala.collection.JavaConverters._
+        import scalaz.syntax.traverse._, scalaz.std.list._
+        lazy val optBool: Option[Json] = Option(a.getBOOL).map { b => jBool(b.booleanValue) }
+        lazy val optNull: Option[Json] = Option(a.getNULL).flatMap { b => if (b) Some(jNull) else None }
+        lazy val optNum: Option[Json] = Option(a.getN).flatMap { jNumber }
+        lazy val optString: Option[Json] = Option(a.getS).flatMap { s => DynamoString(s).asString }.map { jString }
+        lazy val optArray: Option[Json] =
+          Option(a.getL).flatMap {
+            _.asScala.toList.traverseU { av =>
+              decodeJson.decode(Some(av))
+            }.map { lj => jArray(lj) }.toOption
+          }
 
-  }
+        lazy val optObj: Option[Json] = Option(a.getM).flatMap {
+          _.asScala.toList.traverseU {
+            case (f, av) =>
+              decodeJson.decode(Some(av)).map { decoded => f -> decoded }
+          }.map { lj => jObjectFields(lj: _*) }.toOption
+        }
+        optBool orElse optNull orElse optNum orElse optString orElse optArray orElse optObj match {
+          case None    => Attempt.fail("Could not parse JSON")
+          case Some(j) => Attempt.ok(j)
+        }
+    }
 
   implicit def decodeJsonDecoder[A: DecodeJson]: Decoder[A] =
     decodeJson.mapAttempt { _.as[A].fold({ case (msg, h) => Attempt.fail(msg) }, { a => Attempt.ok(a) }) }
