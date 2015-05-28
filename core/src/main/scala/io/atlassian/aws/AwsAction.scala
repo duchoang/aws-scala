@@ -14,7 +14,10 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
       AwsAction { _ => Attempt.ok(v) }
 
     def ask[R]: AwsAction[R, R] =
-      AwsAction(Attempt.ok)
+      Kleisli.ask
+
+    def local[A, R](f: R => R)(fa: AwsAction[R, A]): AwsAction[R, A] =
+      Kleisli.local(f)(fa)
 
     def ok[R, A](strict: A): AwsAction[R, A] =
       value(strict)
