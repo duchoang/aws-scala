@@ -34,22 +34,26 @@ else
 fi
 
 
-if [[ ! -e $expectedBinary ]] || [[ ! -z "$force" ]]; then
-    if [ $? -eq 0 -o -n "$force" ]; then
-        echo "Installing to ${DYNAMO_DB_LIB_HOME}"
-        if [[ ! -z "$dynalite" ]]; then
-            echo "Installing Dynalite"
-            mkdir -p "$DYNAMO_DB_LIB_HOME/node_modules"
-            npm install --prefix $DYNAMO_DB_LIB_HOME dynalite
-        else
-            echo "Installing AWS Local DynamoDB"
-            mkdir -p "$DYNAMO_DB_LIB_HOME"
-            curl -sL "$JAR_HREF" | tar zx -C "$DYNAMO_DB_LIB_HOME"
-        fi
+mkdir -p "$DYNAMO_DB_LIB_HOME"; WAS_CREATED=$?
+if [ $WAS_CREATED -eq 0 -o -n "$force" ]; then
+    if [[ ! -z "$dynalite" ]]; then
+        # create the node_modules subdir and call npm to install
+        echo "Installing Dynalite"
+        mkdir -p "$DYNAMO_DB_LIB_HOME/node_modules"
+        npm install --prefix $DYNAMO_DB_LIB_HOME dynalite
+    else
+        # d/l the JAR with curl
+        echo "Installing AWS Local DynamoDB"
+        mkdir -p "$DYNAMO_DB_LIB_HOME"
+        curl -sL "$JAR_HREF" | tar zx -C "$DYNAMO_DB_LIB_HOME"
     fi
+
+    # all done, unblock other processes
+    touch "$DYNAMO_DB_LIB_HOME/.ready"
 fi
 
-if [ \! -e $expectedBinary ]; then
+if [ \! -e "${DYNAMO_DB_LIB_HOME}"/.ready ]; then
+    # do timeout stuff
     echo "Waiting for DynamoDB to become ready"
-    ${TIMEOUT_CMD} --foreground ${TIMEOUT_SECONDS} bash -c "until test -e ${expectedBinary}; do sleep 2; done; exit 0"
+    ${TIMEOUT_CMD} --foreground ${TIMEOUT_SECONDS} bash -c "until test -e ${DYNAMO_DB_LIB_HOME}/.ready; do sleep 2; done; exit 0"
 fi

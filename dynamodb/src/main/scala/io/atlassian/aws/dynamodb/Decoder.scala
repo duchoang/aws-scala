@@ -66,8 +66,13 @@ object Decoder {
 
   implicit val DynamoStringDecode: Decoder[DynamoString] =
     decoder(Underlying.StringType) {
-      case None    => Attempt.fail("No string value present")
-      case Some(a) => a.getS |> { s => Attempt.ok(DynamoString.apply(s)) }
+      case None => Attempt.fail("No string value present")
+      case Some(a) => a.getS |> { s =>
+        if (s == null)
+          Attempt.fail("No string value present")
+        else
+          Attempt.ok(DynamoString.apply(s))
+      }
     }
 
   implicit val StringDecode: Decoder[String] =
