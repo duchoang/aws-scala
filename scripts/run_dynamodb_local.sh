@@ -15,11 +15,7 @@ DYNAMO_DB_LIB_HOME="$SCRIPT_DIR/../../dynamodb"
 DYNAMO_DB_HOME="$DYNAMO_DB_LIB_HOME/$PORT"
 TIMEOUT_SECONDS=${timeoutOpt:-30}
 
-echo $PORT
-echo $TIMEOUT_SECONDS
-echo $dynalite
-
-mkdir -p $DYNAMO_DB_HOME
+mkdir -p $DYNAMO_DB_HOME/$PORT
 
 # find the timeout command ('timeout' on ubuntu, 'gtimeout' on MacOS X)
 for cmd in gtimeout timeout; do

@@ -17,7 +17,7 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
     if (IS_LOCAL) 100
     else 10
 
-  // Because AWS Local Dynamo doesn't support JSON
+  // Because we hit some issues with number sizes with AWS Local Dynamo
   override val useAwsLocalDynamo = false
   implicit val DYNAMO_CLIENT = dynamoClient
 

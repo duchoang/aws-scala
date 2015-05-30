@@ -35,7 +35,7 @@ fi
 
 
 mkdir -p "$DYNAMO_DB_LIB_HOME"; WAS_CREATED=$?
-if [ $WAS_CREATED -eq 0 -o -n "$force" ]; then
+if [ ! -e $expectedBinary -o -n "$force" ]; then
     if [[ ! -z "$dynalite" ]]; then
         # create the node_modules subdir and call npm to install
         echo "Installing Dynalite"
@@ -47,13 +47,10 @@ if [ $WAS_CREATED -eq 0 -o -n "$force" ]; then
         mkdir -p "$DYNAMO_DB_LIB_HOME"
         curl -sL "$JAR_HREF" | tar zx -C "$DYNAMO_DB_LIB_HOME"
     fi
-
-    # all done, unblock other processes
-    touch "$DYNAMO_DB_LIB_HOME/.ready"
 fi
 
-if [ \! -e "${DYNAMO_DB_LIB_HOME}"/.ready ]; then
+if [ \! -e $expectedBinary ]; then
     # do timeout stuff
     echo "Waiting for DynamoDB to become ready"
-    ${TIMEOUT_CMD} --foreground ${TIMEOUT_SECONDS} bash -c "until test -e ${DYNAMO_DB_LIB_HOME}/.ready; do sleep 2; done; exit 0"
+    ${TIMEOUT_CMD} --foreground ${TIMEOUT_SECONDS} bash -c "until test -e ${expectedBinary}; do sleep 2; done; exit 0"
 fi

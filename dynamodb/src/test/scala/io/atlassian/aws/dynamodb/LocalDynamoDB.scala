@@ -72,7 +72,7 @@ trait LocalDynamoDB {
   def startLocalDynamoDB =
     withLocalDb {
       runAttemptStep(for {
-        _ <- runCmd(s"$scriptDirectory/install_dynamodb_local.sh", "Install Local DynamoDB")
+        _ <- runCmd(s"$scriptDirectory/install_dynamodb_local.sh $runDynamoTypeOption", "Install Local DynamoDB")
         _ <- runCmd(s"$scriptDirectory/run_dynamodb_local.sh $runDynamoTypeOption -p ${LOCAL_DB_PORT.toString}", "Start Local DynamoDB")
       } yield ())
     }
