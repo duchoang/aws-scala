@@ -1,12 +1,15 @@
 package io.atlassian.aws
 
 import scalaz.{ @@, Tag }
+import scalaz.syntax.std.option._
 
 import argonaut._, Argonaut._
 
 trait Types {
-  private[aws] trait Tagger[A, T] {
-    def apply(a: A): A @@ T = Tag(a)
+  private[aws] trait Tagger[A] {
+    sealed trait Marker
+    def apply(a: A): A @@ Marker = Tag(a)
+    def unapply(tagged: A @@ Marker): Option[A] = Tag.unwrap(tagged).some
   }
 
   sealed trait OverwriteMode

@@ -4,7 +4,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import scalaz.ReaderT
 
-package object dynamodb extends QueryTypes {
+package object dynamodb extends QueryTypes with DynamoStringType {
   type DynamoDBAction[A] = AwsAction[AmazonDynamoDB, A]
 
   object DynamoDBAction extends AwsAction.Functions[AmazonDynamoDB] {
@@ -20,6 +20,4 @@ package object dynamodb extends QueryTypes {
   type DynamoMap = Map[String, AttributeValue]
 
   type Unmarshaller[A] = ReaderT[Attempt, DynamoMap, A]
-
-  private[dynamodb] val EMPTY_STRING_PLACEHOLDER = 0.toChar.toString
 }

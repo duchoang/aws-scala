@@ -7,42 +7,33 @@ import com.amazonaws.services.simpleworkflow.model.{ TaskList => ATaskList }
 trait Types {
   type EventId = Long
 
-  sealed trait DomainNameMarker
-  type Domain = String @@ DomainNameMarker
-  object Domain extends Tagger[String, DomainNameMarker]
+  type Domain = String @@ Domain.Marker
+  object Domain extends Tagger[String]
 
-  sealed trait TaskListNameMarker
-  type TaskList = String @@ TaskListNameMarker
-  object TaskList extends Tagger[String, TaskListNameMarker] {
+  type TaskList = String @@ TaskList.Marker
+  object TaskList extends Tagger[String] {
     def apply(t: ATaskList): TaskList =
       TaskList(t.getName)
   }
 
-  sealed trait TaskTokenMarker
-  type TaskToken = String @@ TaskTokenMarker
-  object TaskToken extends Tagger[String, TaskTokenMarker]
+  type TaskToken = String @@ TaskToken.Marker
+  object TaskToken extends Tagger[String]
 
-  sealed trait IdentityMarker
-  type SWFIdentity = String @@ IdentityMarker
-  object SWFIdentity extends Tagger[String, IdentityMarker]
+  type SWFIdentity = String @@ SWFIdentity.Marker
+  object SWFIdentity extends Tagger[String]
 
-  sealed trait WorkflowIdMarker
-  type WorkflowId = String @@ WorkflowIdMarker
-  object WorkflowId extends Tagger[String, WorkflowIdMarker]
+  type WorkflowId = String @@ WorkflowId.Marker
+  object WorkflowId extends Tagger[String]
 
-  sealed trait RunIdMarker
-  type RunId = String @@ RunIdMarker
-  object RunId extends Tagger[String, RunIdMarker]
+  type RunId = String @@ RunId.Marker
+  object RunId extends Tagger[String]
 
-  sealed trait PageTokenMarker
-  type EventPageToken = String @@ PageTokenMarker
-  object EventPageToken extends Tagger[String, PageTokenMarker]
+  type EventPageToken = String @@ EventPageToken.Marker
+  object EventPageToken extends Tagger[String]
 
-  sealed trait ActivityIdMarker
-  type ActivityId = String @@ ActivityIdMarker
-  object ActivityId extends Tagger[String, ActivityIdMarker]
+  type ActivityId = String @@ ActivityId.Marker
+  object ActivityId extends Tagger[String]
 
-  sealed trait TimerIdMarker
-  type TimerId = String @@ TimerIdMarker
-  object TimerId extends Tagger[String, TimerIdMarker]
+  type TimerId = String @@ TimerId.Marker
+  object TimerId extends Tagger[String]
 }

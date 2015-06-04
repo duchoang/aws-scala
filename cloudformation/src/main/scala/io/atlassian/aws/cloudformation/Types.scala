@@ -4,13 +4,11 @@ package cloudformation
 import scalaz.@@
 
 trait Types {
-  sealed trait StackNameMarker
-  type StackName = String @@ StackNameMarker
+  type StackName = String @@ StackName.Marker
 
-  object StackName extends Tagger[String, StackNameMarker]
+  object StackName extends Tagger[String]
 
-  sealed trait StackOperationIdMarker
-  type StackOperationId = String @@ StackOperationIdMarker
+  type StackOperationId = String @@ StackOperationId.Marker
 
-  object StackOperationId extends Tagger[String, StackOperationIdMarker]
+  object StackOperationId extends Tagger[String]
 }

@@ -6,21 +6,17 @@ import com.amazonaws.services.sqs.model.MessageAttributeValue
 import scalaz.{ Tag, @@ }
 
 trait Types {
-  sealed trait QueueURLMarker
-  type QueueURL = String @@ QueueURLMarker
-  object QueueURL extends Tagger[String, QueueURLMarker]
+  type QueueURL = String @@ QueueURL.Marker
+  object QueueURL extends Tagger[String]
 
-  sealed trait ReceiptHandleMarker
-  type ReceiptHandle = String @@ ReceiptHandleMarker
-  object ReceiptHandle extends Tagger[String, ReceiptHandleMarker]
+  type ReceiptHandle = String @@ ReceiptHandle.Marker
+  object ReceiptHandle extends Tagger[String]
 
-  sealed trait HeaderSubTypeMarker
-  type HeaderSubType = String @@ HeaderSubTypeMarker
-  object HeaderSubType extends Tagger[String, HeaderSubTypeMarker]
+  type HeaderSubType = String @@ HeaderSubType.Marker
+  object HeaderSubType extends Tagger[String]
 
-  sealed trait MessageIdMarker
-  type MessageId = String @@ MessageIdMarker
-  object MessageId extends Tagger[String, MessageIdMarker]
+  type MessageId = String @@ MessageId.Marker
+  object MessageId extends Tagger[String]
 
   type HeaderValue = Option[MessageAttributeValue]
   type ToHeader[A] = A => Map[String, HeaderValue]
