@@ -30,12 +30,12 @@ object JsonData {
     def wrapInt(n: Int): Gen[JsonNumber] = Gen.oneOf(
       JsonDouble(n.toDouble),
       JsonLong(n.toLong),
-      JsonBigDecimal(n)
+      JsonBigDecimal(n.toDouble)
     )
 
     def wrapLong(n: Long): Gen[JsonNumber] = Gen.oneOf(
       JsonLong(n),
-      JsonBigDecimal(n)
+      JsonBigDecimal(n.toDouble)
     )
 
     def wrapDouble(n: Double): Gen[JsonNumber] = Gen.oneOf(
@@ -55,7 +55,7 @@ object JsonData {
 
     case class Decimal(sign: String, unscaledValue: String, scale: BigInt) {
       def placeDecimal(n: Int): String = {
-        val adjustedScale = scale + n
+        val adjustedScale = scale + BigInt(n)
         if (n <= 0) {
           s"""${sign}${unscaledValue}${("0" * -n)}.0e$adjustedScale"""
         } else if (n >= unscaledValue.length) {

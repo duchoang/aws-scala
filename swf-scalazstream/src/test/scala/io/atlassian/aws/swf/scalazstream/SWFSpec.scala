@@ -86,7 +86,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     decisionInstance =>
 
       val pf: PartialFunction[WorkflowEvent, List[Decision]] = {
-        case WorkflowExecutionStarted(_, _, details) if details.input.contains(DeciderCrash) =>
+        case WorkflowExecutionStarted(_, _, details) if details.input.exists { _ == DeciderCrash } =>
           activityExecutionLatches(decisionInstance.workflowInstance.workflowId).countDown()
           throw new RuntimeException("Decider crash!")
 
