@@ -30,17 +30,22 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     round-trip binary converted type                             ${Prop.forAll { roundTrip(_: TwoLongs) }}
     round-trip JSON                                              ${Prop.forAll { roundTrip(_: Json) }}
     round-trip deep JSON to test stack overflows                 ${Prop.forAll { roundTrip(_: DeepJson) }}
+    JSON string can be decoded                                   $testDecodeJsonString
   """
 
   def roundTrip[A: Encoder: Decoder: Equal](a: A) =
     (Encoder[A].encode(a) |> Decoder[A].decode) must equal(Attempt.ok(a))
+
+  def testDecodeJsonString = Prop.forAll { f: Foo =>
+    (Encoder[String].encode(f.jencode.nospaces) |> Decoder[Foo].decode) must equal(Attempt.ok(f))
+  }
 
   type DeepJson = Json @@ DeepJson.Marker
   object DeepJson extends Tagger[Json]
 
   // The max limit without trampolining is about 320
   implicit val deepJsonArbitrary: Arbitrary[DeepJson] =
-    Arbitrary(deepJsonValueGenerator(320).map { DeepJson.apply })
+    Arbitrary(deepJsonValueGenerator(300).map { DeepJson.apply })
 
   private def deepJsonValueGenerator(depth: Int): Gen[Json] = {
     if (depth > 1) {

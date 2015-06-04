@@ -32,6 +32,11 @@ case class Decoder[A] private[Decoder] (run: Value => Attempt[A])(private[dynamo
 
   def mapAttempt[B](f: A => Attempt[B]): Decoder[B] =
     Decoder { run(_) flatMap f }(dynamoType)
+
+  def or[AA >: A](f: => Decoder[AA]): Decoder[AA] =
+    Decoder { v =>
+      run(v).fold({ _ => f.decode(v) }, { a => Attempt.ok(a) })
+    }(dynamoType)
 }
 
 /**
@@ -127,6 +132,12 @@ object Decoder {
         }
     }
 
-  implicit def decodeJsonDecoder[A: DecodeJson]: Decoder[A] =
+  private def decodeJsonDirectEncoding[A: DecodeJson]: Decoder[A] =
     decodeJson.mapAttempt { _.as[A].fold({ case (msg, h) => Attempt.fail(msg) }, { a => Attempt.ok(a) }) }
+
+  private def decodeJsonStringEncoding[A: DecodeJson]: Decoder[A] =
+    StringDecode.mapAttempt { _.decodeEither[A].fold(Attempt.fail, Attempt.safe(_)) }
+
+  implicit def decodeJsonDecoder[A: DecodeJson]: Decoder[A] =
+    decodeJsonDirectEncoding[A] or decodeJsonStringEncoding[A]
 }
