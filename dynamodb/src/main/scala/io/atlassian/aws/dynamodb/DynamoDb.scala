@@ -239,8 +239,10 @@ object DynamoDB {
         }
 
       def queryImpl: kv.Query => DynamoDBAction[Page[kv.R, kv.V]] = {
-        case Hashed(h, Config(dir, _, consistency))         => query(QueryImpl.forHash(h, scanDirection = dir, consistency = consistency)(t.name, t.hash))(t.range, t.value)
-        case Ranged(h, r, cmp, Config(dir, _, consistency)) => query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir, consistency = consistency)(t.name, t.hash, t.range))(t.range, t.value)
+        case Hashed(h, idx, Config(dir, _, consistency))         =>
+          query(QueryImpl.forHash(h, scanDirection = dir, indexName = idx, consistency = consistency)(t.name, t.hash))(t.range, t.value)
+        case Ranged(h, r, cmp, idx, Config(dir, _, consistency)) =>
+          query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir, indexName = idx, consistency = consistency)(t.name, t.hash, t.range))(t.range, t.value)
       }
     }
 }

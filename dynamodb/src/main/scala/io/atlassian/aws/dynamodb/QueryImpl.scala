@@ -11,10 +11,12 @@ private[dynamodb] object QueryImpl {
     hashKey: K,
     exclusiveStartKey: Option[DynamoMap] = None,
     scanDirection: ScanDirection = ScanDirection.Ascending,
+    indexName: Option[String] = None,
     consistency: ReadConsistency = ReadConsistency.Eventual,
     limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn[K]): QueryImpl =
     QueryImpl(
       tableName,
+      indexName,
       Map(keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol)),
       exclusiveStartKey,
       scanDirection,
@@ -28,10 +30,12 @@ private[dynamodb] object QueryImpl {
     rangeComparison: Comparison,
     exclusiveStartKey: Option[DynamoMap] = None,
     scanDirection: ScanDirection = ScanDirection.Ascending,
+    indexName: Option[String] = None,
     consistency: ReadConsistency = ReadConsistency.Eventual,
     limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn[K], ordCol: NamedColumn[O]): QueryImpl =
     QueryImpl(
       tableName,
+      indexName,
       Map(
         keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol),
         ordCol.name -> condition(rangeKey, rangeComparison)(ordCol)
@@ -43,7 +47,7 @@ private[dynamodb] object QueryImpl {
     )
 
   def nextFromQuery[A](query: QueryImpl, exclusiveStartKey: DynamoMap): QueryImpl =
-    QueryImpl(query.table, query.keyConditions, Some(exclusiveStartKey), query.scanDirection, query.consistency, query.limit)
+    QueryImpl(query.table, query.indexName, query.keyConditions, Some(exclusiveStartKey), query.scanDirection, query.consistency, query.limit)
 
   private def condition[K](key: K, comparator: Comparison)(kc: Column[K]) =
     new Condition().withComparisonOperator(Comparison.asAWS(comparator)).withAttributeValueList(
@@ -51,6 +55,7 @@ private[dynamodb] object QueryImpl {
 }
 
 private[dynamodb] case class QueryImpl(table: String,
+                                       indexName: Option[String],
                                        keyConditions: Map[String, Condition],
                                        exclusiveStartKey: Option[DynamoMap],
                                        scanDirection: ScanDirection,
@@ -63,6 +68,7 @@ private[dynamodb] case class QueryImpl(table: String,
       .withScanIndexForward(ScanDirection.asBool(scanDirection))
       .withConsistentRead(ReadConsistency.asBool(consistency)) <|
       { req =>
+        indexName.foreach { req.setIndexName }
         limit.foreach { req.setLimit(_) }
         exclusiveStartKey.foreach { esk => req.setExclusiveStartKey(esk.asJava) }
       }

@@ -251,8 +251,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     import org.mockito.invocation.InvocationOnMock
     import org.mockito.stubbing.Answer
 
-    val query = TestTable.Query.hash(HashKey("A", "B", "C"), TestTable.Query.Config(consistency = ReadConsistency
-      .Strong))
+    val query = TestTable.Query.hash(HashKey("A", "B", "C"),
+      config = TestTable.Query.Config(consistency = ReadConsistency.Strong))
     val client: AmazonDynamoDB = mock(classOf[AmazonDynamoDB])
     when(client.query(any[QueryRequest])).thenAnswer(new Answer[QueryResult] {
       override def answer(invocation: InvocationOnMock): QueryResult = {

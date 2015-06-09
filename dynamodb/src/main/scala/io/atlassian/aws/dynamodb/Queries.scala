@@ -19,16 +19,16 @@ trait Queries {
   }
 
   object Query {
-    def hash(hash: H, config: Config = Config()): Query =
-      Hashed(hash, config)
+    def hash(hash: H, indexName: Option[String] = None, config: Config = Config()): Query =
+      Hashed(hash, indexName, config)
 
-    def range(hash: H, range: R, cmp: Comparison, config: Config = Config()): Query =
-      Ranged(hash, range, cmp, config)
+    def range(hash: H, range: R, cmp: Comparison, indexName: Option[String] = None, config: Config = Config()): Query =
+      Ranged(hash, range, cmp, indexName, config)
 
-    case class Hashed(hash: H, config: Config) extends Query {
+    case class Hashed(hash: H, indexName: Option[String], config: Config) extends Query {
       def config(c: Query.Config) = copy(config = c)
     }
-    case class Ranged(hash: H, range: R, cmp: Comparison, config: Config) extends Query {
+    case class Ranged(hash: H, range: R, cmp: Comparison, indexName: Option[String], config: Config) extends Query {
       def config(c: Query.Config) = copy(config = c)
     }
 
