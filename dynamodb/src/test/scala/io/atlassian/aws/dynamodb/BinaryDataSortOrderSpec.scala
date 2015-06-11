@@ -5,6 +5,7 @@ import org.scalacheck.Prop
 import spec.ScalaCheckSpec
 import org.specs2.main.Arguments
 
+import scalaz.Isomorphism.{ IsoSet, <=> }
 import scalaz.Order
 import scalaz.std.AllInstances._
 
@@ -33,18 +34,23 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
   object ComplexKey {
     lazy val twoLongsColumn =
       Column[TwoLongs]("range")
-    lazy val column =
-      Column.compose2[ComplexKey](HashKey.column, twoLongsColumn) { case ComplexKey(h, r) => (h, r) } { case (h, r) => ComplexKey(h, r) }
   }
 
-  object table extends Table {
+  object table extends ComplexKeyTable {
+
     type K = ComplexKey
     type V = TestData.Value
     type H = HashKey
     type R = TwoLongs
+
+    def isoKey: ComplexKey <=> (HashKey, TwoLongs) = new IsoSet[ComplexKey, (HashKey, TwoLongs)] {
+      def from: ((HashKey, TwoLongs)) => ComplexKey = (ComplexKey.apply _).tupled
+      def to: (ComplexKey) => (HashKey, TwoLongs) = c => (c.h, c.r)
+    }
     val schema =
-      TableDefinition.from[K, V, H, R](s"my_things3_${System.currentTimeMillis.toString}", ComplexKey.column, Value.column, HashKey.column, ComplexKey.twoLongsColumn)
-    tableNamed(s"my_things3_${System.currentTimeMillis.toString}")
+      HashRangeKeyTableDefinition.from[H, R, V](s"my_things3_${System.currentTimeMillis.toString}",
+        HashKey.column, ComplexKey.twoLongsColumn, Value.column)
+    complexKeyTableNamed(s"my_things3_${System.currentTimeMillis.toString}")
   }
 
   implicit val DYNAMO_CLIENT = dynamoClient
@@ -56,10 +62,10 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
     else 10
 
   def createTestTable() =
-    DynamoDBOps.createTable[ComplexKey, TestData.Value, HashKey, TwoLongs](table.schema)
+    DynamoDBOps.createComplexKeyTable[HashKey, TwoLongs, TestData.Value](table.schema)
 
   def deleteTestTable =
-    DynamoDBOps.deleteTable[ComplexKey, TestData.Value, HashKey, TwoLongs](table.schema)
+    DynamoDBOps.deleteComplexKeyTable[HashKey, TwoLongs, TestData.Value](table.schema)
 
   def querySortOrderWorks =
     Prop.forAll { (hashKey: HashKey, r1: TwoLongs, r2: TwoLongs, v1: TestData.Value, v2: TestData.Value) =>
@@ -67,7 +73,7 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
         val k1 = ComplexKey(hashKey, Order[TwoLongs].min(r1, r2))
         val k2 = ComplexKey(hashKey, Order[TwoLongs].max(r1, r2))
         val queryAsc = table.Query.hash(hashKey)
-        val queryDesc = queryAsc.config(table.Query.Config(direction = ScanDirection.Descending))
+        val queryDesc = queryAsc.withConfig(table.Query.Config(direction = ScanDirection.Descending))
 
         (for {
           _ <- table.putIfAbsent(k1, v1)

@@ -23,8 +23,8 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
 
   val tableName = s"my_things3_${System.currentTimeMillis.toString}"
   val table =
-    TableDefinition.from[Key, JsonValue, HashKey, RangeKey](tableName,
-      Key.column, JsonValue.column, HashKey.column, RangeKey.column)
+    HashRangeKeyTableDefinition.from[HashKey, RangeKey, JsonValue](tableName,
+      HashKey.column, RangeKey.column, JsonValue.column)
 
   def is =
     s2"""
@@ -93,9 +93,9 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
   }
 
   def createTestTable() =
-    DynamoDBOps.createTable[Key, JsonValue, HashKey, RangeKey](table)
+    DynamoDBOps.createComplexKeyTable[HashKey, RangeKey, JsonValue](table)
 
   def deleteTestTable =
-    DynamoDBOps.deleteTable[Key, JsonValue, HashKey, RangeKey](table)
+    DynamoDBOps.deleteComplexKeyTable[HashKey, RangeKey, JsonValue](table)
 
 }

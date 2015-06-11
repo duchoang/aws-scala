@@ -15,7 +15,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
     val sequence: Column[RangeKey] = RangeKey.column
     val hash: Column[String] = Column[String]("hash")
     val metaData: Column[String] = Column[String]("metaData")
-    val length: Column[Long] = Column[Long]("length")
+    val length: Column[IndexRange] = IndexRange.column
     val deletedTimestamp: Column[Option[DateTime]] = Column[Option[DateTime]]("deletedTimestamp")
   }
 
@@ -53,15 +53,31 @@ object TestData extends Arbitraries with MoreEqualsInstances {
       }
   }
 
-  case class Value(hash: String, metaData: String, length: Long, deletedTimestamp: Option[DateTime])
+  case class IndexRange(length: Long)
+  object IndexRange {
+    implicit val ThingRangeKeyEncoder: Encoder[IndexRange] =
+      Encoder[Long].contramap { _.length }
+    implicit val ThingRangeKeyDecoder: Decoder[IndexRange] =
+      Decoder[Long].map { IndexRange.apply }
+
+    val column = Column[IndexRange]("length")
+  }
+
+  case class Value(hash: String, metaData: String, length: IndexRange, deletedTimestamp: Option[DateTime])
   object Value {
     import Mapping._
     val column =
       Column.compose4[Value](hash, metaData, length, deletedTimestamp) { case Value(h, md, len, ts) => (h, md, len, ts) } { Value.apply }
   }
 
-  def tableNamed(tableName: String) =
-    TableDefinition.from[Key, Value, HashKey, RangeKey](tableName, Key.column, Value.column, HashKey.column, RangeKey.column)
+  def simpleKeyTableNamed(tableName: String) =
+    HashKeyTableDefinition.from[HashKey, Value](tableName, HashKey.column, Value.column)
+
+  def complexKeyTableNamed(tableName: String) =
+    HashRangeKeyTableDefinition.from[HashKey, RangeKey, Value](tableName, HashKey.column, RangeKey.column, Value.column)
+
+  def tableWithLSI(tableName: String, indexName: String) =
+    HashRangeKeyTableDefinition.withLocalSecondaryIndex(indexName, IndexRange.column, IndexProjection.allProjection[(HashKey, RangeKey), Value])
 
   implicit val HashKeyArbitrary: Arbitrary[HashKey] =
     Arbitrary {
@@ -89,7 +105,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
         metaData <- Gen.identifier
         length <- arbitrary[Long]
         deletedTimestamp <- arbitrary[Option[DateTime]]
-      } yield Value(hash, metaData, length, deletedTimestamp)
+      } yield Value(hash, metaData, IndexRange(length), deletedTimestamp)
     }
 
   implicit def ValueEqual: Equal[Value] = Equal.equal((a, b) =>

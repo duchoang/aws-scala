@@ -14,24 +14,27 @@ trait Queries {
   /** the Range type */
   type R
 
+  type K
+
   sealed trait Query {
-    def config(c: Query.Config): Query
+    val config: Query.Config
+    def withConfig(c: Query.Config): Query
   }
 
   object Query {
-    def hash(hash: H, indexName: Option[String] = None, config: Config = Config()): Query =
-      Hashed(hash, indexName, config)
+    def hash(hash: H, config: Config = Config()): Query =
+      Hashed(hash, config)
 
-    def range(hash: H, range: R, cmp: Comparison, indexName: Option[String] = None, config: Config = Config()): Query =
-      Ranged(hash, range, cmp, indexName, config)
+    def range(hash: H, range: R, cmp: Comparison, config: Config = Config()): Query =
+      Ranged(hash, range, cmp, config)
 
-    case class Hashed(hash: H, indexName: Option[String], config: Config) extends Query {
-      def config(c: Query.Config) = copy(config = c)
+    case class Hashed(hash: H, config: Config) extends Query {
+      def withConfig(c: Config) = copy(config = c)
     }
-    case class Ranged(hash: H, range: R, cmp: Comparison, indexName: Option[String], config: Config) extends Query {
-      def config(c: Query.Config) = copy(config = c)
+    case class Ranged(hash: H, range: R, cmp: Comparison, config: Config) extends Query {
+      def withConfig(c: Config) = copy(config = c)
     }
 
-    case class Config(direction: ScanDirection = ScanDirection.Ascending, limit: Option[Int] = None, consistency: ReadConsistency = ReadConsistency.Eventual)
+    case class Config(exclusiveStartKey: Option[K] = None, direction: ScanDirection = ScanDirection.Ascending, limit: Option[Int] = None, consistency: ReadConsistency = ReadConsistency.Eventual)
   }
 }

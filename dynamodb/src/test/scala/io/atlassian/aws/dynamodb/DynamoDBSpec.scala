@@ -15,6 +15,7 @@ import org.specs2.main.Arguments
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryResult, QueryRequest, ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
 
 import java.util.UUID.randomUUID
+import scalaz.Isomorphism.{ IsoSet, <=> }
 import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
@@ -31,7 +32,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  val table = tableNamed(s"my_things2_${System.currentTimeMillis.toString}")
+  val table = complexKeyTableNamed(s"my_things2_${System.currentTimeMillis.toString}")
 
   // TODO - These tests are sequential because of flakiness with integration tests.
   def is = stopOnFail ^ sequential ^ s2"""
@@ -191,7 +192,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
       (1 to 200).sliding(25, 25).foreach { window =>
         val valuesToSave = window.map { i =>
-          k.copy(seq = i.toLong) -> valueToSave.copy(length = i.toLong)
+          k.copy(seq = i.toLong) -> valueToSave.copy(length = IndexRange(i.toLong))
         }.toMap
         DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column).run(DYNAMO_CLIENT).run
       }
@@ -269,24 +270,32 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         new QueryResult() <| { _.setItems(items) }
       }
     })
-    val action: DynamoDBAction[Page[TestTable.R, TestTable.V]] =
-      DynamoDB.interpreter(TestTable)(table)(TestTable.DBOp.QueryOp(query))
-    action must returnResult[Page[TestTable.R, TestTable.V]] {
+    val action: DynamoDBAction[Page[TestTable.K, TestTable.V]] =
+      DynamoDB.interpreter(TestTable)(table)(TestTable.QueryOp(query))
+    action must returnResult[Page[TestTable.K, TestTable.V]] {
       _.result.length == 1
     }(client)
   }
 
-  object TestTable extends Table {
+  object TestTable extends ComplexKeyTable {
     type K = Key
     type V = Value
     type H = HashKey
     type R = RangeKey
 
+    def isoKey: Key <=> (HashKey, RangeKey) = new IsoSet[Key, (HashKey, RangeKey)] {
+      def from: ((HashKey, RangeKey)) => Key = {
+        case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d)
+      }
+      def to: (Key) => (HashKey, RangeKey) = {
+        case Key(a, b, c, d) => (HashKey(a, b, c), RangeKey(d))
+      }
+    }
   }
 
   def createTestTable() =
-    DynamoDBOps.createTable[Key, Value, HashKey, RangeKey](table)
+    DynamoDBOps.createComplexKeyTable[HashKey, RangeKey, Value](table)
 
   def deleteTestTable =
-    DynamoDBOps.deleteTable[Key, Value, HashKey, RangeKey](table)
+    DynamoDBOps.deleteComplexKeyTable[HashKey, RangeKey, Value](table)
 }

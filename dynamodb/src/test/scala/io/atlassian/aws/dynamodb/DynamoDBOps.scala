@@ -18,8 +18,8 @@ object DynamoDBOps extends Logging {
         action.run(client).run
     }
 
-  def createTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDB) = {
-    runAction.apply(DynamoDB.createTable[K, V, H, R](table)) match {
+  def createSimpleKeyTable[K, V](table: HashKeyTableDefinition[K, V])(implicit client: AmazonDynamoDB) = {
+    runAction.apply(DynamoDB.createHashKeyTable[K, V](table)) match {
       case -\/(e) =>
         error(s"Error creating table: $e")
         Failure(s"Error creating table: $e")
@@ -31,6 +31,22 @@ object DynamoDBOps extends Logging {
     }
   }
 
-  def deleteTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDB) =
+  def createComplexKeyTable[H, R, V](table: HashRangeKeyTableDefinition[H, R, V])(implicit client: AmazonDynamoDB) = {
+    runAction.apply(DynamoDB.createHashAndRangeKeyTable[H, R, V](table)) match {
+      case -\/(e) =>
+        error(s"Error creating table: $e")
+        Failure(s"Error creating table: $e")
+      case \/-(task) =>
+        debug(s"Creating table ${table.name}")
+        task.run
+        debug(s"Created table ${table.name}")
+        Success
+    }
+  }
+
+  def deleteSimpleKeyTable[K, V](table: HashKeyTableDefinition[K, V])(implicit client: AmazonDynamoDB) =
+    runAction.apply(DynamoDB.deleteTable(table))
+
+  def deleteComplexKeyTable[H, R, V](table: HashRangeKeyTableDefinition[H, R, V])(implicit client: AmazonDynamoDB) =
     runAction.apply(DynamoDB.deleteTable(table))
 }

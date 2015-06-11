@@ -14,6 +14,7 @@ import com.amazonaws.services.dynamodbv2.model.{ ConditionalCheckFailedException
 
 import java.util.UUID.randomUUID
 import kadai.Invalid
+import scalaz.Isomorphism.{ IsoSet, <=> }
 import scalaz.{ \/, ~> }
 import scalaz.syntax.id._, scalaz.std.AllInstances._
 
@@ -24,12 +25,20 @@ class TableSpec(val arguments: Arguments)
     with DBActionMatchers {
   import TestData._
 
-  object table extends Table {
+  object table extends ComplexKeyTable {
     type K = Key
     type V = Value
     type H = HashKey
     type R = RangeKey
-    val schema = tableNamed(s"my_things2_${System.currentTimeMillis.toString}")
+    def isoKey: Key <=> (HashKey, RangeKey) = new IsoSet[Key, (HashKey, RangeKey)] {
+      def from: ((HashKey, RangeKey)) => Key = {
+        case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d)
+      }
+      def to: (Key) => (HashKey, RangeKey) = {
+        case Key(a, b, c, d) => (HashKey(a, b, c), RangeKey(d))
+      }
+    }
+    val schema = complexKeyTableNamed(s"my_things2_${System.currentTimeMillis.toString}")
   }
 
   implicit val DYNAMO_CLIENT = dynamoClient
@@ -142,7 +151,7 @@ class TableSpec(val arguments: Arguments)
 
       (1 to 200).sliding(25, 25).foreach { window =>
         val valuesToSave = window.map { i =>
-          k.copy(seq = i.toLong) -> valueToSave.copy(length = i.toLong)
+          k.copy(seq = i.toLong) -> valueToSave.copy(length = IndexRange(i.toLong))
         }.toMap
         runFree(table.batchPut(valuesToSave))
       }
@@ -162,7 +171,7 @@ class TableSpec(val arguments: Arguments)
       val k2 = k.copy(seq = k.seq + 1)
       val hashKey = HashKey(k.a, k.b, k.c)
       val queryAsc = table.Query.hash(hashKey)
-      val queryDesc = queryAsc.config(table.Query.Config(direction = ScanDirection.Descending))
+      val queryDesc = queryAsc.withConfig(table.Query.Config(direction = ScanDirection.Descending))
       (for {
         _ <- table.putIfAbsent(k, v1)
         _ <- table.putIfAbsent(k2, v2)
@@ -195,8 +204,8 @@ class TableSpec(val arguments: Arguments)
     }.set(minTestsOk = NUM_TESTS)
 
   def createTestTable() =
-    DynamoDBOps.createTable[Key, Value, HashKey, RangeKey](table.schema)
+    DynamoDBOps.createComplexKeyTable[HashKey, RangeKey, Value](table.schema)
 
   def deleteTestTable =
-    DynamoDBOps.deleteTable[Key, Value, HashKey, RangeKey](table.schema)
+    DynamoDBOps.deleteComplexKeyTable[HashKey, RangeKey, Value](table.schema)
 }
