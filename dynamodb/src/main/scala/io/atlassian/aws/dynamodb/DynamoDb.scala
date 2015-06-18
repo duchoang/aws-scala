@@ -39,7 +39,6 @@ import com.amazonaws.services.dynamodbv2.model._
  *          you can extend the standard set if you need to.
  */
 object DynamoDB extends Logging {
-  import Logging._
 
   import scala.concurrent.duration._
   import DynamoDBAction.withClient
@@ -63,71 +62,51 @@ object DynamoDB extends Logging {
   def write[K, V](k: K, v: V, m: Write.Mode, old: Option[V] = None)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, m.Mode]] =
     DynamoDBAction.withClient { client =>
       val keyAttrs = kc.marshall.toFlattenedMap(k)
-      val updateItemRequest = new UpdateItemRequest()
-          .withTableName {
-          table
-        }
-          .withReturnValues {
-          ReturnValue.ALL_OLD
-        }
-          .withKey {
-          keyAttrs.asJava
-        }
-          .withAttributeUpdates {
-          toUpdates(vc.marshall(v).filterNot{case (keyAttrName, _) => keyAttrs.contains(keyAttrName)}).asJava
-        } |> { req =>
-          m match {
-            case Overwrite => req
-            case Insert => // all keys shouldn't be present, should this be all values aren't present?
-              req.withExpected {
-                kc.marshall.toFlattenedMap(k).map {
-                  case (c, _) => c -> new ExpectedAttributeValue().withExists(false)
-                }.asJava
-              }
-
-            case Replace => // old value should be exactly the same
-              old.fold(req) { v =>
+      client.updateItem {
+        new UpdateItemRequest()
+          .withTableName { table }
+          .withReturnValues { ReturnValue.ALL_OLD }
+          .withKey { keyAttrs.asJava }
+          .withAttributeUpdates { toUpdates(vc.marshall(v).filterNot { case (keyAttrName, _) => keyAttrs.contains(keyAttrName)}).asJava } |> { req =>
+            m match {
+              case Overwrite => req
+              case Insert => // all keys shouldn't be present, should this be all values aren't present?
                 req.withExpected {
-                  vc.marshall(v.asInstanceOf[V]).mapValues {
-                    case Some(v) => new ExpectedAttributeValue(v).withComparisonOperator(ComparisonOperator.EQ.toString)
-                    case None => new ExpectedAttributeValue().withExists(false)
+                  kc.marshall.toFlattenedMap(k).map {
+                    case (c, _) => c -> new ExpectedAttributeValue().withExists(false)
                   }.asJava
                 }
-              }
+
+              case Replace => // old value should be exactly the same
+                old.fold(req) { v =>
+                  req.withExpected {
+                    vc.marshall(v.asInstanceOf[V]).mapValues {
+                      case Some(v) => new ExpectedAttributeValue(v).withComparisonOperator(ComparisonOperator.EQ.toString)
+                      case None => new ExpectedAttributeValue().withExists(false)
+                    }.asJava
+                  }
+                }
+            }
           }
-        }
-      info(s"DynamoDB update item request to be executed: $updateItemRequest")
-      client.updateItem {
-        updateItemRequest
       }
     }.flatMap {
-      res => DynamoDBAction.attempt {
-        vc.unmarshall.option(res.getAttributes)
-      }.map {
-        m.result
-      }
+      res => DynamoDBAction.attempt { vc.unmarshall.option(res.getAttributes) }.map { m.result }
     }.handle {
-      case Invalid.Err(e: ConditionalCheckFailedException) => DynamoDBAction.ok {
-        m.fail
-      }
+      case Invalid.Err(e: ConditionalCheckFailedException) => DynamoDBAction.ok { m.fail }
     }
 
   def update[K, V](key: K, old: V, newValue: V)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, Write.Mode.Replace.type]] =
-  // TODO move this logic into the algebra
+    // TODO move this logic into the algebra
     write(key, newValue, Write.Mode.Replace, Some(old))(table, kc, vc) //.asInstanceOf[DynamoDBAction[Write.Result[V, Write.Mode.Replace[V]]]]
 
   def delete[K, V](key: K)(table: String, col: Column[K]): DynamoDBAction[DeleteItemResult] =
-    withClient { c =>
-      val param = col.marshall.toFlattenedMap(key).asJava
-      info(s"DynamoDB delete item request to be executed for table $table: $param")
-      c.deleteItem(table, param)
+    withClient {
+      _.deleteItem(table, col.marshall.toFlattenedMap(key).asJava)
     }
 
   def query[K, V](q: QueryImpl)(ck: Column[K], cv: Column[V]): DynamoDBAction[Page[K, V]] =
-    DynamoDBAction.withClient { c =>
-      val queryRequest: QueryRequest = q.asQueryRequest
-      info(s"DynamoDB query to be executed: $queryRequest")
-      c.query(queryRequest)
+    DynamoDBAction.withClient {
+      _.query(q.asQueryRequest)
     } flatMap { res =>
       DynamoDBAction.attempt {
         res.getItems.asScala.toList.traverse[Attempt, V] {
@@ -144,9 +123,7 @@ object DynamoDB extends Logging {
 
   def tableExists(tableName: String): DynamoDBAction[Boolean] =
     withClient { client =>
-      try {
-        client.describeTable(tableName).getTable.getTableName == tableName
-      } catch {
+      try { client.describeTable(tableName).getTable.getTableName == tableName } catch {
         case (_: ResourceNotFoundException) => false
       }
     }
@@ -171,10 +148,8 @@ object DynamoDB extends Logging {
           ).asJava
         }
       }.getUnprocessedItems.asScala.get(table).map {
-        _.asScala.map { req => Column.unmarshall(kc, vc)(req.getPutRequest.getItem.asScala.toMap).toOption}.flatten.toMap
-      }.getOrElse {
-        Map()
-      }
+        _.asScala.map { req => Column.unmarshall(kc, vc)(req.getPutRequest.getItem.asScala.toMap).toOption }.flatten.toMap
+      }.getOrElse { Map() }
     }
 
   private[this] def nullOrNotEmptyJavaCollection[A](c: util.Collection[A]) = if (c.isEmpty) null else c
@@ -290,12 +265,12 @@ object DynamoDB extends Logging {
       case Some(value) => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(value)
     }
 
-  def interpreter(kv: SimpleKeyTable)(t: HashKeyTableDefinition[kv.K, kv.V]): kv.DBOp ~> DynamoDBAction =
+  def simpleKeyTableInterpreter(kv: SimpleKeyTable)(t: HashKeyTableDefinition[kv.K, kv.V]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
       def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] = tableImpl(kv)(t)(fa)(Isomorphism.isoRefl)
     }
 
-  def interpreter(kv: ComplexKeyTable)(t: HashRangeKeyTableDefinition[kv.H, kv.R, kv.V]): kv.DBOp ~> DynamoDBAction =
+  def complexKeyTableInterpreter(kv: ComplexKeyTable)(t: HashRangeKeyTableDefinition[kv.H, kv.R, kv.V]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
       import kv.Query._
 
@@ -306,14 +281,14 @@ object DynamoDB extends Logging {
         }
     }
 
-  def interpreter[K](kv: TableQuery)(t: TableQueryDefinition[K, kv.V, kv.H, kv.R])(implicit iso: kv.K <=> K = Isomorphism.isoRefl): kv.DBOp ~> DynamoDBAction =
+  def indexQueryInterpreter[K](kv: IndexQuery)(t: TableQueryDefinition[kv.K, kv.V, kv.H, kv.R]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
 
       import kv.Query._
 
       def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
         fa match {
-          case kv.QueryOp(q) => queryImpl(kv)(t)(iso)(q)
+          case kv.QueryOp(q) => queryImpl(kv)(t)(Isomorphism.isoRefl)(q)
         }
     }
 

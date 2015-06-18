@@ -55,7 +55,7 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  def run = DynamoDBOps.runAction.compose(DynamoDB.interpreter(table)(table.schema))
+  def run = DynamoDBOps.runAction.compose(DynamoDB.complexKeyTableInterpreter(table)(table.schema))
 
   val NUM_TESTS =
     if (IS_LOCAL) 100

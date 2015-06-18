@@ -271,7 +271,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
     })
     val action: DynamoDBAction[Page[TestTable.K, TestTable.V]] =
-      DynamoDB.interpreter(TestTable)(table)(TestTable.QueryOp(query))
+      DynamoDB.complexKeyTableInterpreter(TestTable)(table)(TestTable.QueryOp(query))
     action must returnResult[Page[TestTable.K, TestTable.V]] {
       _.result.length == 1
     }(client)

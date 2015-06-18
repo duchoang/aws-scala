@@ -94,6 +94,8 @@ trait TableQuery extends FreeTable with Queries {
   case class QueryOp(query: Query) extends DBOp[Page[K, V]]
 }
 
+sealed trait IndexQuery extends TableQuery
+
 trait Table extends TableView with TableWrite { self =>
   
   sealed trait View {
@@ -110,7 +112,7 @@ trait Table extends TableView with TableWrite { self =>
   }
 
   def globalSecondaryIndex[IH, IR](view: View) =
-    new TableQuery {
+    new IndexQuery {
       type K = self.K
       type V = view.V
       type H = IH
@@ -125,7 +127,7 @@ trait ComplexKeyTable extends Table with TableQuery { self =>
   def isoKey: K <=> (H, R)
 
   def localSecondaryIndex[IR](view: View) =
-    new TableQuery {
+    new IndexQuery {
       type K = self.K
       type V = view.V
       type H = self.H
