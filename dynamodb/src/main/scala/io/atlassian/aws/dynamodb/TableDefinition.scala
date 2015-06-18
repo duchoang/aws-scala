@@ -100,14 +100,6 @@ case class HashRangeKeyTableDefinition[H, R, V] private[HashRangeKeyTableDefinit
 
   def withGlobalSecondaryIndex(globalIndexDef: GlobalSecondaryIndexDefinition): HashRangeKeyTableDefinition[H, R, V] =
     copy(globalSecondaryIndexes = globalIndexDef :: globalSecondaryIndexes)
-
-  def asTableQueryDefinition[K](implicit ev: K <=> (H, R)): TableQueryDefinition[K, V, H, R] = new TableQueryDefinition[K, V, H, R] {
-    override val name: String = self.name
-    override val hash: NamedColumn[H] = self.hash
-    override val range: NamedColumn[R] = self.range
-    override val key: Column[K] = self.key.xmap(ev.from, ev.to)
-    override val value: Column[V] = self.value
-  }
 }
 
 trait TableDefinitionFunctions {

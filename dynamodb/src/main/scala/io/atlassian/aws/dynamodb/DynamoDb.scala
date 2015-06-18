@@ -6,7 +6,8 @@ import java.util
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import kadai.log.Logging
 
-import scalaz.{Liskov, Kleisli, ~>}
+import scalaz.{Isomorphism, Liskov, Kleisli, ~>}
+import scalaz.Isomorphism.<=>
 import scalaz.concurrent.Task
 import scalaz.std.list._
 import scalaz.syntax.id._
@@ -291,63 +292,62 @@ object DynamoDB extends Logging {
 
   def interpreter(kv: SimpleKeyTable)(t: HashKeyTableDefinition[kv.K, kv.V]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
-
-      def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
-        fa match {
-          case kv.GetOp(k) => get(k)(t.name, t.key, t.value)
-          case kv.WriteOp(k, v, mode) => write(k, v, mode)(t.name, t.key, t.value).asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
-          case kv.ReplaceOp(k, old, v) => write(k, v, Write.Mode.Replace, Some(old))(t.name, t.key, t.value)
-          case kv.DeleteOp(k) => delete(k)(t.name, t.key).map { _ => ()}
-          case kv.TableExistsOp => tableExists(t.name)
-          case kv.BatchPutOp(kvs) => batchPut(kvs)(t.name, t.key, t.value)
-        }
+      def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] = tableImpl(kv)(t)(fa)(Isomorphism.isoRefl)
     }
 
   def interpreter(kv: ComplexKeyTable)(t: HashRangeKeyTableDefinition[kv.H, kv.R, kv.V]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
       import kv.Query._
 
-      def fromK: kv.K => (kv.H, kv.R) = kv.isoKey.to
-      def toK: ((kv.H, kv.R)) => kv.K = kv.isoKey.from
-      def fromKVMap: Map[kv.K, kv.V] => Map[(kv.H, kv.R), kv.V] = _.toSeq.map{
-        case (k, v) => (fromK(k), v)
-      }.toMap
-      def toKVMap: Map[(kv.H, kv.R), kv.V] => Map[kv.K, kv.V] = _.toSeq.map{
-        case (k, v) => (toK(k), v)
-      }.toMap
-
       def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
         fa match {
-          case kv.GetOp(k) => get(fromK(k))(t.name, t.key, t.value)
-          case kv.WriteOp(k, v, mode) => write(fromK(k), v, mode)(t.name, t.key, t.value).asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
-          case kv.ReplaceOp(k, old, v) => write(fromK(k), v, Write.Mode.Replace, Some(old))(t.name, t.key, t.value)
-          case kv.DeleteOp(k) => delete(fromK(k))(t.name, t.key).map { _ => ()}
-          case kv.QueryOp(q) => queryImpl(kv)(t.asTableQueryDefinition[kv.K](kv.isoKey))(q)
-          case kv.TableExistsOp => tableExists(t.name)
-          case kv.BatchPutOp(kvs) => batchPut(fromKVMap(kvs))(t.name, t.key, t.value).map(toKVMap)
+          case kv.QueryOp(q) => queryImpl(kv)(t)(kv.isoKey)(q)
+          case other => tableImpl(kv)(t)(other)(kv.isoKey)
         }
     }
 
-  def interpreter(kv: TableQuery)(t: TableQueryDefinition[kv.K, kv.V, kv.H, kv.R]): kv.DBOp ~> DynamoDBAction =
+  def interpreter[K](kv: TableQuery)(t: TableQueryDefinition[K, kv.V, kv.H, kv.R])(implicit iso: kv.K <=> K = Isomorphism.isoRefl): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
 
       import kv.Query._
 
       def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
         fa match {
-          case kv.QueryOp(q) => queryImpl(kv)(t)(q)
+          case kv.QueryOp(q) => queryImpl(kv)(t)(iso)(q)
         }
     }
+
+  private def tableImpl[K, A](kv: Table)(t: TableDefinition[K, kv.V])(op: kv.DBOp[A])(implicit iso: kv.K <=> K): DynamoDBAction[A] = {
+    def toMap: Map[kv.K, kv.V] => Map[K, kv.V] = _.toSeq.map{
+      case (k, v) => (iso.to(k), v)
+    }.toMap
+    def fromMap: Map[K, kv.V] => Map[kv.K, kv.V] = _.toSeq.map{
+      case (k, v) => (iso.from(k), v)
+    }.toMap
+
+    op match {
+      case kv.GetOp(k) => get(iso.to(k))(t.name, t.key, t.value)
+      case kv.WriteOp(k, v, mode) => write(iso.to(k), v, mode)(t.name, t.key, t.value).asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
+      case kv.ReplaceOp(k, old, v) => write(iso.to(k), v, Write.Mode.Replace, Some(old))(t.name, t.key, t.value)
+      case kv.DeleteOp(k) => delete(iso.to(k))(t.name, t.key).map { _ => ()}
+      case kv.TableExistsOp => tableExists(t.name)
+      case kv.BatchPutOp(kvs) => batchPut(toMap(kvs))(t.name, t.key, t.value).map(fromMap)
+    }
+  }
 
   private[this] def extractIndexName[K, V, H, R](t: TableQueryDefinition[K, V, H, R]): Option[String] = t match {
     case indexDef: SecondaryIndexDefinition[K, V, H, R] => Some(indexDef.indexName)
     case _ => None
   }
 
-  private def queryImpl(kv: TableQuery)(t: TableQueryDefinition[kv.K, kv.V, kv.H, kv.R]): kv.Query => DynamoDBAction[Page[kv.K, kv.V]] = {
+  private def queryImpl[K](kv: TableQuery)(t: TableQueryDefinition[K, kv.V, kv.H, kv.R])(implicit iso: kv.K <=> K): kv.Query => DynamoDBAction[Page[kv.K, kv.V]] = {
     case kv.Query.Hashed(h, kv.Query.Config(_, dir, _, consistency)) =>
-      query(QueryImpl.forHash(h, scanDirection = dir, indexName = extractIndexName(t), consistency = consistency)(t.name, t.hash))(t.key, t.value)
+      query(QueryImpl.forHash(h, scanDirection = dir, indexName = extractIndexName(t), consistency = consistency)(t.name, t.hash))(t.key, t.value) map {
+        case Page(result, next) => Page(result, next.map(iso.from))
+      }
     case kv.Query.Ranged(h, r, cmp, kv.Query.Config(_, dir, _, consistency)) =>
-      query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir, indexName = extractIndexName(t), consistency = consistency)(t.name, t.hash, t.range))(t.key, t.value)
+      query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir, indexName = extractIndexName(t), consistency = consistency)(t.name, t.hash, t.range))(t.key, t.value) map {
+        case Page(result, next) => Page(result, next.map(iso.from))
+      }
   }
 }
