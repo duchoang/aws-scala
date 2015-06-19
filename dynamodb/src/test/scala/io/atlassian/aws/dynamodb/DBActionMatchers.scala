@@ -1,10 +1,9 @@
 package io.atlassian.aws
 package dynamodb
 
-import scalaz.{ Coyoneda, Equal, Free, \/, \/-, -\/, ~> }
+import scalaz.{ Equal, \/, \/-, -\/, ~> }
 import kadai.Invalid
 import org.specs2.matcher.{ Expectable, Matcher }
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import kadai.log.Logging
 import org.specs2.execute.{ Success, Failure }
 import reflect.ClassTag
@@ -14,7 +13,7 @@ trait DBActionMatchers extends Logging {
   import Logging._
 
   type InvalidOr[A] = Invalid \/ A
-  val table: Table
+  val table: FreeTable
 
   def run: table.DBOp ~> InvalidOr
   def runFree: table.DBAction ~> InvalidOr =

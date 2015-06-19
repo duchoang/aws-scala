@@ -6,8 +6,11 @@ import org.joda.time.DateTime
 import org.scalacheck.{ Gen, Arbitrary }
 import org.scalacheck.Arbitrary._
 import scalaz.Equal, scalaz.std.AllInstances._
+import scalaz.Isomorphism.<=>
+import scalaz.syntax.equal._
 
 object TestData extends Arbitraries with MoreEqualsInstances {
+
   import Encoder._
 
   object Mapping {
@@ -20,10 +23,11 @@ object TestData extends Arbitraries with MoreEqualsInstances {
   }
 
   case class HashKey(a: String, b: String, c: String)
+
   object HashKey {
     val KeyRegex = "(.*)/(.*)/(.*)".r
     implicit val ThingHashKeyEncoder: Encoder[HashKey] =
-      Encoder[String].contramap { k => s"${k.a}/${k.b}/${k.c}" }
+      Encoder[String].contramap { k => s"${k.a}/${k.b}/${k.c}"}
     implicit val ThingHashKeyDecoder: Decoder[HashKey] =
       Decoder[String] collect decodeHashKey
 
@@ -33,17 +37,24 @@ object TestData extends Arbitraries with MoreEqualsInstances {
 
     val column = Column[HashKey]("key")
   }
+
   case class RangeKey(seq: Long)
+
   object RangeKey {
     implicit val ThingRangeKeyEncoder: Encoder[RangeKey] =
-      Encoder[Long].contramap { _.seq }
+      Encoder[Long].contramap {
+        _.seq
+      }
     implicit val ThingRangeKeyDecoder: Decoder[RangeKey] =
-      Decoder[Long].map { RangeKey.apply }
+      Decoder[Long].map {
+        RangeKey.apply
+      }
 
     val column = Column[RangeKey]("seq")
   }
 
   case class Key(a: String, b: String, c: String, seq: Long)
+
   object Key {
     lazy val column =
       Column.compose2[Key](HashKey.column, RangeKey.column) {
@@ -54,46 +65,84 @@ object TestData extends Arbitraries with MoreEqualsInstances {
   }
 
   case class IndexRange(length: Long)
+
   object IndexRange {
     implicit val ThingRangeKeyEncoder: Encoder[IndexRange] =
-      Encoder[Long].contramap { _.length }
+      Encoder[Long].contramap {
+        _.length
+      }
     implicit val ThingRangeKeyDecoder: Decoder[IndexRange] =
-      Decoder[Long].map { IndexRange.apply }
+      Decoder[Long].map {
+        IndexRange.apply
+      }
 
     val column = Column[IndexRange]("length")
   }
 
   case class Value(hash: String, metaData: String, length: IndexRange, deletedTimestamp: Option[DateTime])
+
   object Value {
+
     import Mapping._
+
     val column =
-      Column.compose4[Value](hash, metaData, length, deletedTimestamp) { case Value(h, md, len, ts) => (h, md, len, ts) } { Value.apply }
+      Column.compose4[Value](hash, metaData, length, deletedTimestamp) { case Value(h, md, len, ts) => (h, md, len, ts)} {
+        Value.apply
+      }
+  }
+
+  case class KeyValue(key: HashKey, value: Value)
+
+  object KeyValue {
+    lazy val column =
+      Column.compose2[KeyValue](HashKey.column, Value.column)((KeyValue.unapply _) andThen (_.get))(KeyValue.apply _)
+  }
+
+  implicit val IsoKey: Key <=> (HashKey, RangeKey) = new (Key <=> (HashKey, RangeKey)) {
+    def from: ((HashKey, RangeKey)) => Key = {
+      case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d)
+    }
+    def to: (Key) => (HashKey, RangeKey) = {
+      case Key(a, b, c, d) => (HashKey(a, b, c), RangeKey(d))
+    }
   }
 
   def simpleKeyTableNamed(tableName: String) =
-    HashKeyTableDefinition.from[HashKey, Value](tableName, HashKey.column, Value.column)
+    HashKeyTableDefinition.from[HashKey, KeyValue](tableName, HashKey.column, KeyValue.column)
 
   def complexKeyTableNamed(tableName: String) =
     HashRangeKeyTableDefinition.from[HashKey, RangeKey, Value](tableName, HashKey.column, RangeKey.column, Value.column)
 
   def tableWithLSI(tableName: String, indexName: String) =
-    HashRangeKeyTableDefinition.withLocalSecondaryIndex(indexName, IndexRange.column, IndexProjection.allProjection[(HashKey, RangeKey), Value])
+    HashRangeKeyTableDefinition.withLocalSecondaryIndex(indexName, IndexRange.column, IndexProjection.allProjection[(HashKey, RangeKey), Value]).run(complexKeyTableNamed(tableName))
 
   implicit val HashKeyArbitrary: Arbitrary[HashKey] =
     Arbitrary {
       for {
-        a <- Gen.uuid.map { _.toString }
-        b <- Gen.uuid.map { _.toString }
-        c <- Gen.uuid.map { _.toString }
+        a <- Gen.uuid.map {
+          _.toString
+        }
+        b <- Gen.uuid.map {
+          _.toString
+        }
+        c <- Gen.uuid.map {
+          _.toString
+        }
       } yield HashKey(a, b, c)
     }
 
   implicit def KeyArbitrary: Arbitrary[Key] =
     Arbitrary {
       for {
-        a <- Gen.uuid.map { _.toString }
-        b <- Gen.uuid.map { _.toString }
-        c <- Gen.uuid.map { _.toString }
+        a <- Gen.uuid.map {
+          _.toString
+        }
+        b <- Gen.uuid.map {
+          _.toString
+        }
+        c <- Gen.uuid.map {
+          _.toString
+        }
         seq <- Gen.chooseNum(0, Long.MaxValue - 1000000) // We do some incrementing so give us some buffer around the wraparounds
       } yield Key(a, b, c, seq)
     }
@@ -103,7 +152,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
       for {
         hash <- Gen.identifier
         metaData <- Gen.identifier
-        length <- arbitrary[Long]
+        length <- Gen.chooseNum(0, Long.MaxValue - 1000000) // We do some incrementing so give us some buffer around the wraparounds
         deletedTimestamp <- arbitrary[Option[DateTime]]
       } yield Value(hash, metaData, IndexRange(length), deletedTimestamp)
     }
@@ -113,4 +162,19 @@ object TestData extends Arbitraries with MoreEqualsInstances {
       implicitly[Equal[Option[DateTime]]].equal(a.deletedTimestamp, b.deletedTimestamp) &&
       a.metaData == b.metaData
   )
+
+  implicit def KeyValueArbitrary: Arbitrary[KeyValue] = Arbitrary {
+    for {
+      key <- arbitrary[HashKey]
+      value <- arbitrary[Value]
+    } yield KeyValue(key, value)
+  }
+
+  implicit def HashKeyEqual: Equal[HashKey] = Equal.equal{(s, t) =>
+    s.a === t.a && s.b === t.b && s.c === t.c
+  }
+
+  implicit def KeyValueEqual: Equal[KeyValue] = Equal.equal{(s, t) =>
+    s.key === t.key && s.value === t.value
+  }
 }

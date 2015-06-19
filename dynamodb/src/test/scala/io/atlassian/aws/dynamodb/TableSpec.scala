@@ -9,7 +9,7 @@ import org.scalacheck.Prop
 import org.specs2.main.Arguments
 
 import java.util.UUID.randomUUID
-import scalaz.Isomorphism.{ IsoSet, <=> }
+import scalaz.Isomorphism.<=>
 import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
@@ -24,14 +24,7 @@ class TableSpec(val arguments: Arguments)
     type V = Value
     type H = HashKey
     type R = RangeKey
-    def isoKey: Key <=> (HashKey, RangeKey) = new IsoSet[Key, (HashKey, RangeKey)] {
-      def from: ((HashKey, RangeKey)) => Key = {
-        case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d)
-      }
-      def to: (Key) => (HashKey, RangeKey) = {
-        case Key(a, b, c, d) => (HashKey(a, b, c), RangeKey(d))
-      }
-    }
+    def isoKey: Key <=> (HashKey, RangeKey) = IsoKey
     val schema = complexKeyTableNamed(s"my_things2_${System.currentTimeMillis.toString}")
   }
 
