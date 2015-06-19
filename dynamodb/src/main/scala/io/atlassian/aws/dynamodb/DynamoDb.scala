@@ -37,7 +37,7 @@ import com.amazonaws.services.dynamodbv2.model._
  *          Encoders/Decoders (they will be picked up automatically in your Column definition). However, you
  *          you can extend the standard set if you need to.
  */
-object DynamoDB extends Logging {
+object DynamoDB {
 
   import scala.concurrent.duration._
   import DynamoDBAction.withClient
