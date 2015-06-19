@@ -3,10 +3,9 @@ package dynamodb
 
 import java.util
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import kadai.log.Logging
 
-import scalaz.{Isomorphism, Liskov, Kleisli, ~>}
+import scalaz.{Isomorphism, ~>}
 import scalaz.Isomorphism.<=>
 import scalaz.concurrent.Task
 import scalaz.std.list._

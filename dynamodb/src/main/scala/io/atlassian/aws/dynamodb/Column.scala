@@ -2,7 +2,7 @@ package io.atlassian.aws.dynamodb
 
 import Unmarshaller._
 import kadai.Attempt
-import scalaz.{NonEmptyList, InvariantFunctor}
+import scalaz.InvariantFunctor
 import scalaz.syntax.id._
 
 sealed trait Column[A] {

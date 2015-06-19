@@ -1,13 +1,11 @@
 package io.atlassian.aws
 package dynamodb
 
-import scalaz.{ Equal, \/, \/-, -\/, ~> }
+import scalaz.{ \/, \/-, -\/, ~> }
 import kadai.Invalid
-import org.specs2.matcher.{ Expectable, Matcher }
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import kadai.log.Logging
 import org.specs2.execute.{ Success, Failure }
-import reflect.ClassTag
 
 object DynamoDBOps extends Logging {
   import Logging._

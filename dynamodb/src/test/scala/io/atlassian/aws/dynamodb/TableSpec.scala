@@ -3,19 +3,13 @@ package dynamodb
 
 import io.atlassian.aws.spec.ScalaCheckSpec
 
-import scala.collection.JavaConverters.{ mapAsJavaMapConverter, mapAsScalaMapConverter }
-
 import org.joda.time.DateTime
 import org.junit.runner.RunWith
 import org.scalacheck.Prop
 import org.specs2.main.Arguments
 
-import com.amazonaws.services.dynamodbv2.model.{ ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
-
 import java.util.UUID.randomUUID
-import kadai.Invalid
 import scalaz.Isomorphism.{ IsoSet, <=> }
-import scalaz.{ \/, ~> }
 import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
