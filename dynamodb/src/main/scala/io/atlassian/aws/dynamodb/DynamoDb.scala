@@ -3,9 +3,7 @@ package dynamodb
 
 import java.util
 
-import kadai.log.Logging
-
-import scalaz.{Isomorphism, ~>}
+import scalaz.{NonEmptyList, Isomorphism, ~>}
 import scalaz.Isomorphism.<=>
 import scalaz.concurrent.Task
 import scalaz.std.list._
@@ -151,7 +149,19 @@ object DynamoDB {
       }.getOrElse { Map() }
     }
 
-  private[this] def nullOrNotEmptyJavaCollection[A](c: util.Collection[A]) = if (c.isEmpty) null else c
+  implicit class ToOnelOps[A](val l: List[A]) extends AnyVal {
+    def toOnel: Option[NonEmptyList[A]] = l match {
+      case Nil    => None
+      case h :: t => Some(NonEmptyList.nel(h, t))
+    }
+  }
+
+  private val toAwsGSI: GlobalSecondaryIndexDefinition => GlobalSecondaryIndex = indexDef =>
+    new GlobalSecondaryIndex()
+      .withIndexName(indexDef.indexName)
+      .withKeySchema(indexDef.schemaElements.asJavaCollection)
+      .withProjection(indexDef.projection)
+      .withProvisionedThroughput(indexDef.provisionedThroughput)
 
   /**
    * Creates a table for the given entity. The table name comes from the entity and is transformed by the
@@ -163,15 +173,9 @@ object DynamoDB {
         new CreateTableRequest().withTableName(table.name)
           .withAttributeDefinitions(table.attributeDefinitions.asJavaCollection)
           .withKeySchema(table.schemaElements.asJavaCollection)
-          .withProvisionedThroughput(table.provisionedThroughput)
-          .withGlobalSecondaryIndexes(nullOrNotEmptyJavaCollection(
-          table.globalSecondaryIndexes.map { indexDef =>
-            new GlobalSecondaryIndex()
-              .withIndexName(indexDef.indexName)
-              .withKeySchema(indexDef.schemaElements.asJavaCollection)
-              .withProjection(indexDef.projection)
-              .withProvisionedThroughput(indexDef.provisionedThroughput)
-          }.asJavaCollection))
+          .withProvisionedThroughput(table.provisionedThroughput) <| { req =>
+            table.globalSecondaryIndexes.toOnel.foreach { is => req.withGlobalSecondaryIndexes { is.map(toAwsGSI).list.asJavaCollection } }
+          }
       }
     }.flatMap { createTableResult =>
       withClient { client =>
@@ -186,6 +190,12 @@ object DynamoDB {
       }
     }
 
+  private val toAwsLSI: LocalSecondaryIndexDefinition => LocalSecondaryIndex = indexDef =>
+    new LocalSecondaryIndex()
+      .withIndexName(indexDef.indexName)
+      .withKeySchema(indexDef.schemaElements.asJavaCollection)
+      .withProjection(indexDef.projection)
+
   /**
    * Creates a table for the given entity. The table name comes from the entity and is transformed by the
    * tableNameTransformer (e.g. to create tables for different environments)
@@ -196,22 +206,10 @@ object DynamoDB {
         new CreateTableRequest().withTableName(table.name)
           .withAttributeDefinitions(table.attributeDefinitions.asJavaCollection)
           .withKeySchema(table.schemaElements.asJavaCollection)
-          .withProvisionedThroughput(table.provisionedThroughput)
-          .withLocalSecondaryIndexes(nullOrNotEmptyJavaCollection(
-          table.localSecondaryIndexes.map { indexDef =>
-            new LocalSecondaryIndex()
-              .withIndexName(indexDef.indexName)
-              .withKeySchema(indexDef.schemaElements.asJavaCollection)
-              .withProjection(indexDef.projection)
-          }.asJavaCollection))
-          .withGlobalSecondaryIndexes(nullOrNotEmptyJavaCollection(
-          table.globalSecondaryIndexes.map { indexDef =>
-            new GlobalSecondaryIndex()
-              .withIndexName(indexDef.indexName)
-              .withKeySchema(indexDef.schemaElements.asJavaCollection)
-              .withProjection(indexDef.projection)
-              .withProvisionedThroughput(indexDef.provisionedThroughput)
-          }.asJavaCollection))
+          .withProvisionedThroughput(table.provisionedThroughput) <| { req =>
+            table.localSecondaryIndexes.toOnel.foreach { is => req.withLocalSecondaryIndexes { is.map(toAwsLSI).list.asJavaCollection } }
+            table.globalSecondaryIndexes.toOnel.foreach { is => req.withGlobalSecondaryIndexes { is.map(toAwsGSI).list.asJavaCollection } }
+          }
       }
     }.flatMap { createTableResult =>
       withClient { client =>
