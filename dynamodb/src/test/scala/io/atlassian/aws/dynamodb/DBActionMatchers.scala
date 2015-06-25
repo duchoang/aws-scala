@@ -13,7 +13,7 @@ trait DBActionMatchers extends Logging {
   import Logging._
 
   type InvalidOr[A] = Invalid \/ A
-  val table: FreeTable
+  val table: Table.Operations
 
   def run: table.DBOp ~> InvalidOr
   def runFree: table.DBAction ~> InvalidOr =

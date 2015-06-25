@@ -99,6 +99,9 @@ object Decoder {
       }
     }
 
+  implicit val NothingDecoder: Decoder[Nothing] =
+    decoder(Underlying.StringType) { _ => Attempt.fail("Cannot decode to Nothing") }
+  
   implicit object DecodeAttributeValueFunctor extends Functor[Decoder] {
     def map[A, B](m: Decoder[A])(f: A => B) = m map f
   }

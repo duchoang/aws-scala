@@ -25,7 +25,7 @@ import com.amazonaws.services.dynamodbv2.model._
  * Tables are represented as key-value mappings, so you need classes to represent the key and the value. In addition,
  * you need to create instances of:
  *   * TODO describe new Column based definition
- *   * Table - specify the key, value, hash key and range key types, and a TableDefinition (which includes a name, the
+ *   * Table - specify the key, value, hash key and range key types, and a Schema (which includes a name, the
  *       key types, and a couple of other DynamoDB parameters).
  *   * Columns - Columns map your Scala types into columns in DynamoDB i.e. start with a Column with a name for each
  *       column in DynamoDB, and then create composite columns using Column.composeX to be able to map your high-level
@@ -36,7 +36,7 @@ import com.amazonaws.services.dynamodbv2.model._
  *          you can extend the standard set if you need to.
  */
 object DynamoDB {
-
+  import Convert._
   import scala.concurrent.duration._
   import DynamoDBAction.withClient
 
@@ -156,27 +156,13 @@ object DynamoDB {
     }
   }
 
-  private val toAwsGSI: GlobalSecondaryIndexDefinition => GlobalSecondaryIndex = indexDef =>
-    new GlobalSecondaryIndex()
-      .withIndexName(indexDef.indexName)
-      .withKeySchema(indexDef.schemaElements.asJavaCollection)
-      .withProjection(indexDef.projection)
-      .withProvisionedThroughput(indexDef.provisionedThroughput)
-
   /**
    * Creates a table for the given entity. The table name comes from the entity and is transformed by the
    * tableNameTransformer (e.g. to create tables for different environments)
    */
-  private[dynamodb] def createHashKeyTable[K, V](table: HashKeyTableDefinition[K, V], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
+  private[dynamodb] def createHashKeyTable[K, V, H: Decoder, R: Decoder](desc: Schema.Create[K, V, H, R], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
     withClient {
-      _.createTable {
-        new CreateTableRequest().withTableName(table.name)
-          .withAttributeDefinitions(table.attributeDefinitions.asJavaCollection)
-          .withKeySchema(table.schemaElements.asJavaCollection)
-          .withProvisionedThroughput(table.provisionedThroughput) <| { req =>
-            table.globalSecondaryIndexes.toOnel.foreach { is => req.withGlobalSecondaryIndexes { is.map(toAwsGSI).list.asJavaCollection } }
-          }
-      }
+      _.createTable { desc.convertTo[CreateTableRequest] }
     }.flatMap { createTableResult =>
       withClient { client =>
         Task {
@@ -190,31 +176,17 @@ object DynamoDB {
       }
     }
 
-  private val toAwsLSI: LocalSecondaryIndexDefinition => LocalSecondaryIndex = indexDef =>
-    new LocalSecondaryIndex()
-      .withIndexName(indexDef.indexName)
-      .withKeySchema(indexDef.schemaElements.asJavaCollection)
-      .withProjection(indexDef.projection)
-
   /**
    * Creates a table for the given entity. The table name comes from the entity and is transformed by the
    * tableNameTransformer (e.g. to create tables for different environments)
    */
-  private[dynamodb] def createHashAndRangeKeyTable[H, R, V](table: HashRangeKeyTableDefinition[H, R, V], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
+  private[dynamodb] def createHashAndRangeKeyTable[K, H, R, V](t: Table.Index)(desc: Schema.Create[K, V, H, R], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
     withClient {
-      _.createTable {
-        new CreateTableRequest().withTableName(table.name)
-          .withAttributeDefinitions(table.attributeDefinitions.asJavaCollection)
-          .withKeySchema(table.schemaElements.asJavaCollection)
-          .withProvisionedThroughput(table.provisionedThroughput) <| { req =>
-            table.localSecondaryIndexes.toOnel.foreach { is => req.withLocalSecondaryIndexes { is.map(toAwsLSI).list.asJavaCollection } }
-            table.globalSecondaryIndexes.toOnel.foreach { is => req.withGlobalSecondaryIndexes { is.map(toAwsGSI).list.asJavaCollection } }
-          }
-      }
-    }.flatMap { createTableResult =>
+      _.createTable { desc.convertTo[CreateTableRequest] }
+    }.flatMap { result =>
       withClient { client =>
         Task {
-          client.describeTable(createTableResult.getTableDescription.getTableName).getTable
+          client.describeTable(result.getTableDescription.getTableName).getTable
         }.flatMap { description =>
           if (TableStatus.fromValue(description.getTableStatus) == TableStatus.ACTIVE)
             Task.now(description)
@@ -236,9 +208,9 @@ object DynamoDB {
    * Deletes the table for the given entity. The table name comes from the entity and is transformed by the
    * tableNameTransformer (e.g. to create tables for different environments)
    */
-  private[dynamodb] def deleteTable[K, V](Table: TableDefinition[K, V]): DynamoDBAction[DeleteTableResult] =
+  private[dynamodb] def deleteTable[K, V](table: Schema.KeyValue[K, V]): DynamoDBAction[DeleteTableResult] =
     withClient {
-      _.deleteTable(Table.name)
+      _.deleteTable(table.name)
     }
 
   sealed trait ReadConsistency
@@ -262,34 +234,24 @@ object DynamoDB {
       case Some(value) => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(value)
     }
 
-  def simpleKeyTableInterpreter(kv: SimpleKeyTable)(t: HashKeyTableDefinition[kv.K, kv.V]): kv.DBOp ~> DynamoDBAction =
-    new (kv.DBOp ~> DynamoDBAction) {
-      def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] = tableImpl(kv)(t)(fa)(Isomorphism.isoRefl)
+  /** simple table interpreter where the key is the hash key */
+  def tableInterpreter(t: Table.Simple)(defn: Schema.KeyValue[t.K, t.V]): t.DBOp ~> DynamoDBAction =
+    new (t.DBOp ~> DynamoDBAction) {
+      def apply[A](fa: t.DBOp[A]): DynamoDBAction[A] = tableImpl(t)(defn)(fa)(Isomorphism.isoRefl)
     }
 
-  def complexKeyTableInterpreter(kv: ComplexKeyTable)(t: HashRangeKeyTableDefinition[kv.H, kv.R, kv.V]): kv.DBOp ~> DynamoDBAction =
-    new (kv.DBOp ~> DynamoDBAction) {
-      import kv.Query._
+  def indexInterpreter[K](i: Table.Index)(defn: Schema.Index[i.K, i.V, i.H, i.R]): i.DBOp ~> DynamoDBAction =
+    new (i.DBOp ~> DynamoDBAction) {
 
-      def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
+      import i.Query._
+
+      def apply[A](fa: i.DBOp[A]): DynamoDBAction[A] =
         fa match {
-          case kv.QueryOp(q) => queryImpl(kv)(t)(kv.isoKey)(q)
-          case other => tableImpl(kv)(t)(other)(kv.isoKey)
+          case i.QueryOp(q) => queryImpl(i)(defn)(Isomorphism.isoRefl)(q)
         }
     }
 
-  def indexQueryInterpreter[K](kv: IndexQuery)(t: TableQueryDefinition[kv.K, kv.V, kv.H, kv.R]): kv.DBOp ~> DynamoDBAction =
-    new (kv.DBOp ~> DynamoDBAction) {
-
-      import kv.Query._
-
-      def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
-        fa match {
-          case kv.QueryOp(q) => queryImpl(kv)(t)(Isomorphism.isoRefl)(q)
-        }
-    }
-
-  private def tableImpl[K, A](kv: Table)(t: TableDefinition[K, kv.V])(op: kv.DBOp[A])(implicit iso: kv.K <=> K): DynamoDBAction[A] = {
+  private def tableImpl[K, A](kv: Table.Simple)(t: Schema.KeyValue[K, kv.V])(op: kv.DBOp[A])(implicit iso: kv.K <=> K): DynamoDBAction[A] = {
     def toMap: Map[kv.K, kv.V] => Map[K, kv.V] = _.toSeq.map{
       case (k, v) => (iso.to(k), v)
     }.toMap
@@ -307,18 +269,13 @@ object DynamoDB {
     }
   }
 
-  private[this] def extractIndexName[K, V, H, R](t: TableQueryDefinition[K, V, H, R]): Option[String] = t match {
-    case indexDef: SecondaryIndexDefinition[K, V, H, R] => Some(indexDef.indexName)
-    case _ => None
-  }
-
-  private def queryImpl[K](kv: TableQuery)(t: TableQueryDefinition[K, kv.V, kv.H, kv.R])(implicit iso: kv.K <=> K): kv.Query => DynamoDBAction[Page[kv.K, kv.V]] = {
-    case kv.Query.Hashed(h, kv.Query.Config(_, dir, _, consistency)) =>
-      query(QueryImpl.forHash(h, scanDirection = dir, indexName = extractIndexName(t), consistency = consistency)(t.name, t.hash))(t.key, t.value) map {
+  private def queryImpl[K](t: Table.Index)(idx: Schema.Index[K, t.V, t.H, t.R])(implicit iso: t.K <=> K): t.Query => DynamoDBAction[Page[t.K, t.V]] = {
+    case t.Query.Hashed(h, t.Query.Config(_, dir, _, consistency)) =>
+      query(QueryImpl.forHash(h, scanDirection = dir, indexName = idx.name, consistency = consistency)(idx.table.kv.name, idx.table.hashRange.a))(idx.table.kv.key, idx.table.kv.value) map {
         case Page(result, next) => Page(result, next.map(iso.from))
       }
-    case kv.Query.Ranged(h, r, cmp, kv.Query.Config(_, dir, _, consistency)) =>
-      query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir, indexName = extractIndexName(t), consistency = consistency)(t.name, t.hash, t.range))(t.key, t.value) map {
+    case t.Query.Ranged(h, r, cmp, t.Query.Config(_, dir, _, consistency)) =>
+      query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir, indexName = idx.name, consistency = consistency)(idx.table.kv.name, idx.table.hashRange.a, idx.table.hashRange.b))(idx.table.kv.key, idx.table.kv.value) map {
         case Page(result, next) => Page(result, next.map(iso.from))
       }
   }

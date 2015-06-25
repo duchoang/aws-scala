@@ -22,9 +22,6 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
   implicit val DYNAMO_CLIENT = dynamoClient
 
   val tableName = s"my_things3_${System.currentTimeMillis.toString}"
-  val table =
-    HashRangeKeyTableDefinition.from[HashKey, RangeKey, JsonValue](tableName,
-      HashKey.column, RangeKey.column, JsonValue.column)
 
   def is =
     s2"""
@@ -85,17 +82,21 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
       Equal.equalA[Nested]
   }
 
-  object TestTable extends Table {
+  object TestTable extends Table.ComplexKey {
     type K = Key
     type V = JsonValue
     type H = HashKey
     type R = RangeKey
+    
+    val keyIso = Key.Iso
   }
 
+  val table =
+    TestData.defineSchema(tableName, TestTable)(Key.column, JsonValue.column, HashKey.column, RangeKey.column)
+  
   def createTestTable() =
-    DynamoDBOps.createComplexKeyTable[HashKey, RangeKey, JsonValue](table)
+    DynamoDBOps.createTable(Schema.Create(table))
 
   def deleteTestTable =
-    DynamoDBOps.deleteComplexKeyTable[HashKey, RangeKey, JsonValue](table)
-
+    DynamoDBOps.deleteTable(table.kv)
 }

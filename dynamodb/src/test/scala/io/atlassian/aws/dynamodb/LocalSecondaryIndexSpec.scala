@@ -18,30 +18,25 @@ class LocalSecondaryIndexSpec(val arguments: Arguments)
     with DBActionMatchers {
   import TestData._
 
-  object realTable extends ComplexKeyTable {
+  object realTable extends Table.ComplexKey {
     type K = Key
     type V = Value
     type H = HashKey
     type R = RangeKey
-    def isoKey: Key <=> (HashKey, RangeKey) = new IsoSet[Key, (HashKey, RangeKey)] {
-      def from: ((HashKey, RangeKey)) => Key = {
-        case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d)
-      }
-      def to: (Key) => (HashKey, RangeKey) = {
-        case Key(a, b, c, d) => (HashKey(a, b, c), RangeKey(d))
-      }
-    }
+    val keyIso = Key.Iso
 
-    val (schema, indexSchema) = tableWithLSI(s"my_things4_${System.currentTimeMillis.toString}", s"my_index4_${System.currentTimeMillis.toString}")
+        
+    val schema = defineSchema(s"my_things4_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.column, RangeKey.column)
   }
 
-  val table = realTable.localSecondaryIndex[IndexRange](realTable.FullView)
+  val table = realTable.localSecondary[IndexRange](realTable.View.Full)
+  val indexSchema = Schema.Index(Some(s"my_index4_${System.currentTimeMillis.toString}"), defineSchema(s"my_things4_${System.currentTimeMillis.toString}", table)(Key.column, Value.column, HashKey.column, IndexRange.column)) 
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  def run = DynamoDBOps.runAction.compose(DynamoDB.indexQueryInterpreter(table)(realTable.indexSchema))
+  def run = DynamoDBOps.runAction.compose(DynamoDB.indexInterpreter(table)(indexSchema))
 
-  def runRealTable = DynamoDBOps.runAction.compose(DynamoDB.complexKeyTableInterpreter(realTable)(realTable.schema))
+  def runRealTable = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(realTable)(realTable.schema.kv))
   def runFreeRealTable: realTable.DBAction ~> InvalidOr = realTable.transform[InvalidOr](runRealTable)
 
   val NUM_TESTS =
@@ -153,8 +148,8 @@ class LocalSecondaryIndexSpec(val arguments: Arguments)
     }.set(minTestsOk = NUM_TESTS)
 
   def createTestTable() =
-    DynamoDBOps.createComplexKeyTable[HashKey, RangeKey, Value](realTable.schema)
+    DynamoDBOps.createTable(Schema.Create(realTable.schema).addIndex(indexSchema))
 
   def deleteTestTable =
-    DynamoDBOps.deleteComplexKeyTable[HashKey, RangeKey, Value](realTable.schema)
+    DynamoDBOps.deleteTable(realTable.schema.kv)
 }

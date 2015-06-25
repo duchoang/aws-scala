@@ -30,14 +30,14 @@ sealed trait Column[A] {
  * prepare the encoded representation to the Dynamo driver, and to return
  * the de-serialized value back from the database, respectively.
  */
-final class NamedColumn[A](val name: String)(implicit val encoder: Encoder[A], val decoder: Decoder[A]) extends Column[A] {
+case class NamedColumn[A](name: String)(implicit val encoder: Encoder[A], val decoder: Decoder[A]) extends Column[A] {
   override val marshall = Marshaller[A] { a => Map(name -> encoder.encode(a)) }
   override val unmarshall = Unmarshaller.get(name)
 }
 
 object Column extends ColumnComposites {
   def apply[A: Encoder: Decoder](s: String): NamedColumn[A] =
-    new NamedColumn[A](s)
+    NamedColumn[A](s)
 
   private[dynamodb] def unmarshall[A, B](ca: Column[A], cb: Column[B])(map: DynamoMap): Attempt[(A, B)] =
     for {
@@ -49,6 +49,9 @@ object Column extends ColumnComposites {
     def xmap[A, B](ca: Column[A], f: A => B, g: B => A): Column[B] =
       ca.xmap(f, g)
   }
+
+  val NoColumn: NamedColumn[Nothing] =
+    NamedColumn[Nothing]("")(Encoder.NothingEncode, Decoder.NothingDecoder)
 }
 
 trait ColumnComposites {
@@ -71,6 +74,8 @@ trait ColumnComposites {
             b <- cb.unmarshall
             c <- cc.unmarshall
           } yield to(b, c)
+
+        override def toString = s"Composite($cb, $cc)"
       }
   }
 
@@ -88,6 +93,8 @@ trait ColumnComposites {
             c <- cc.unmarshall
             d <- cd.unmarshall
           } yield to(b, c, d)
+
+        override def toString = s"Composite($cb, $cc, $cd)"
       }
   }
 
@@ -106,6 +113,8 @@ trait ColumnComposites {
             d <- cd.unmarshall
             e <- ce.unmarshall
           } yield to(b, c, d, e)
+
+        override def toString = s"Composite($cb, $cc, $cd, $ce)"
       }
   }
 
@@ -125,6 +134,8 @@ trait ColumnComposites {
             e <- ce.unmarshall
             f <- cf.unmarshall
           } yield to(b, c, d, e, f)
+
+        override def toString = s"Composite($cb, $cc, $cd, $ce, $cf)"
       }
   }
 
@@ -148,6 +159,8 @@ trait ColumnComposites {
             f <- cf.unmarshall
             g <- cg.unmarshall
           } yield to(b, c, d, e, f, g)
+
+        override def toString = s"Composite($cb, $cc, $cd, $ce, $cf, $cg)"
       }
   }
 

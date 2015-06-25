@@ -18,7 +18,7 @@ class SimpleKeyTableSpec (val arguments: Arguments)
     with DBActionMatchers {
   import TestData._
 
-  object table extends SimpleKeyTable {
+  object table extends Table.Simple {
     type K = HashKey
     type V = KeyValue
     val schema = simpleKeyTableNamed(s"my_things1_${System.currentTimeMillis.toString}")
@@ -26,7 +26,7 @@ class SimpleKeyTableSpec (val arguments: Arguments)
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  def run = DynamoDBOps.runAction.compose(DynamoDB.simpleKeyTableInterpreter(table)(table.schema))
+  def run = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(table)(table.schema))
 
   val NUM_TESTS =
     if (IS_LOCAL) 100
@@ -113,8 +113,8 @@ class SimpleKeyTableSpec (val arguments: Arguments)
     table.delete(arbitrary[HashKey].sample.get) must returnSuccess
 
   def createTestTable() =
-    DynamoDBOps.createSimpleKeyTable[HashKey, KeyValue](table.schema)
+    DynamoDBOps.createTable[HashKey, KeyValue, Nothing, Nothing](Schema.Create[HashKey, KeyValue, Nothing, Nothing](Schema.Standard(table.schema)))
 
   def deleteTestTable =
-    DynamoDBOps.deleteSimpleKeyTable[HashKey, KeyValue](table.schema)
+    DynamoDBOps.deleteTable(table.schema)
 }

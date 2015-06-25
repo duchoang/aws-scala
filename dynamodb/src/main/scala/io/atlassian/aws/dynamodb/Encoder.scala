@@ -55,6 +55,9 @@ object Encoder {
   implicit val NonEmptyBytesEncode: Encoder[NonEmptyBytes] =
     attribute { b => _.withB(b.bytes.toByteBuffer) }
 
+  implicit val NothingEncode: Encoder[Nothing] =
+    Encoder[Nothing] { { _: Any => new AttributeValue().some }.asInstanceOf[Nothing => Option[AttributeValue]] }
+
   implicit object EncoderContravariant extends Contravariant[Encoder] {
     def contramap[A, B](r: Encoder[A])(f: B => A) =
       r contramap f

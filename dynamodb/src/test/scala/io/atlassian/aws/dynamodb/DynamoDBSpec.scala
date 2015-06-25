@@ -32,8 +32,6 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  val table = complexKeyTableNamed(s"my_things2_${System.currentTimeMillis.toString}")
-
   // TODO - These tests are sequential because of flakiness with integration tests.
   def is = stopOnFail ^ sequential ^ s2"""
 
@@ -113,8 +111,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     Prop.forAll { (key: Key, value: Value) =>
       DynamoDB.write[Key, Value](key, value, Overwrite)(table.name, Key.column, Value.column) must returnValue(Overwrite.New) and (
         (DYNAMO_CLIENT.getItem(table.name, Key.column.marshall.toFlattenedMap(key).asJava).getItem.asScala.toMap |> Value.column.unmarshall)
-        must equal(Attempt.ok(value))
-      )
+        must equal(Attempt.ok(value)))
     }.set(minTestsOk = NUM_TESTS)
 
   def writeReplaceWorks =
@@ -271,31 +268,33 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
     })
     val action: DynamoDBAction[Page[TestTable.K, TestTable.V]] =
-      DynamoDB.complexKeyTableInterpreter(TestTable)(table)(TestTable.QueryOp(query))
+      DynamoDB.indexInterpreter(TestTable)(Schema.Index(None, table))(TestTable.QueryOp(query))
     action must returnResult[Page[TestTable.K, TestTable.V]] {
       _.result.length == 1
     }(client)
   }
 
-  object TestTable extends ComplexKeyTable {
+  object TestTable extends Table.ComplexKey {
     type K = Key
     type V = Value
     type H = HashKey
     type R = RangeKey
 
-    def isoKey: Key <=> (HashKey, RangeKey) = new IsoSet[Key, (HashKey, RangeKey)] {
-      def from: ((HashKey, RangeKey)) => Key = {
-        case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d)
+    def keyIso: Key <=> (HashKey, RangeKey) =
+      new IsoSet[Key, (HashKey, RangeKey)] {
+        def from = { case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d) }
+        def to = { case Key(a, b, c, d) => (HashKey(a, b, c), RangeKey(d)) }
       }
-      def to: (Key) => (HashKey, RangeKey) = {
-        case Key(a, b, c, d) => (HashKey(a, b, c), RangeKey(d))
-      }
-    }
+
+    val schema = 
+      defineSchema((s"my_things2_${System.currentTimeMillis.toString}"), this)(Key.column, Value.column, HashKey.column,  RangeKey.column)
   }
 
+  val table = TestTable.schema
+
   def createTestTable() =
-    DynamoDBOps.createComplexKeyTable[HashKey, RangeKey, Value](table)
+    DynamoDBOps.createTable(Schema.Create(table))
 
   def deleteTestTable =
-    DynamoDBOps.deleteComplexKeyTable[HashKey, RangeKey, Value](table)
+    DynamoDBOps.deleteTable(table.kv)
 }

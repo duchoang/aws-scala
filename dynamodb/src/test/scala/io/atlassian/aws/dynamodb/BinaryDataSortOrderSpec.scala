@@ -32,40 +32,41 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
 
   case class ComplexKey(h: HashKey, r: TwoLongs)
   object ComplexKey {
-    lazy val twoLongsColumn =
-      Column[TwoLongs]("range")
+    lazy val twoLongsColumn = Column[TwoLongs]("twolongs")
+    lazy val column = Column.compose2[ComplexKey](HashKey.column, twoLongsColumn) {
+      case ComplexKey(h, r) => (h, r)
+    }(ComplexKey.apply)
   }
 
-  object table extends ComplexKeyTable {
-
+  object table extends Table.ComplexKey {
     type K = ComplexKey
     type V = TestData.Value
     type H = HashKey
     type R = TwoLongs
+    
 
-    def isoKey: ComplexKey <=> (HashKey, TwoLongs) = new IsoSet[ComplexKey, (HashKey, TwoLongs)] {
-      def from: ((HashKey, TwoLongs)) => ComplexKey = (ComplexKey.apply _).tupled
-      def to: (ComplexKey) => (HashKey, TwoLongs) = c => (c.h, c.r)
+    def keyIso: ComplexKey <=> (HashKey, TwoLongs) = new IsoSet[ComplexKey, (HashKey, TwoLongs)] {
+      def from = (ComplexKey.apply _).tupled
+      def to = c => (c.h, c.r)
     }
+
     val schema =
-      HashRangeKeyTableDefinition.from[H, R, V](s"my_things3_${System.currentTimeMillis.toString}",
-        HashKey.column, ComplexKey.twoLongsColumn, Value.column)
-    complexKeyTableNamed(s"my_things3_${System.currentTimeMillis.toString}")
+      defineSchema(s"my_things3_${System.currentTimeMillis.toString}", this)(ComplexKey.column, Value.column, HashKey.column, ComplexKey.twoLongsColumn)
   }
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  def run = DynamoDBOps.runAction.compose(DynamoDB.complexKeyTableInterpreter(table)(table.schema))
+  def run = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(table)(table.schema.kv))
 
   val NUM_TESTS =
     if (IS_LOCAL) 100
     else 10
 
   def createTestTable() =
-    DynamoDBOps.createComplexKeyTable[HashKey, TwoLongs, TestData.Value](table.schema)
+    DynamoDBOps.createTable(Schema.Create(table.schema))
 
   def deleteTestTable =
-    DynamoDBOps.deleteComplexKeyTable[HashKey, TwoLongs, TestData.Value](table.schema)
+    DynamoDBOps.deleteTable(table.schema.kv)
 
   def querySortOrderWorks =
     Prop.forAll { (hashKey: HashKey, r1: TwoLongs, r2: TwoLongs, v1: TestData.Value, v2: TestData.Value) =>

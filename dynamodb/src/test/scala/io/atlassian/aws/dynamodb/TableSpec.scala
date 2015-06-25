@@ -12,6 +12,20 @@ import java.util.UUID.randomUUID
 import scalaz.Isomorphism.<=>
 import scalaz.syntax.id._, scalaz.std.AllInstances._
 
+  object TestTable extends Table.ComplexKey {
+    import TestData._
+
+    type K = Key
+    type V = Value
+    type H = HashKey
+    type R = RangeKey
+
+    def keyIso = Key.Iso
+
+    val schema = defineSchema(s"my_things2_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.column, RangeKey.column)
+  }
+
+
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class TableSpec(val arguments: Arguments)
     extends ScalaCheckSpec
@@ -19,18 +33,20 @@ class TableSpec(val arguments: Arguments)
     with DBActionMatchers {
   import TestData._
 
-  object table extends ComplexKeyTable {
+  object table extends Table.ComplexKey {
     type K = Key
     type V = Value
     type H = HashKey
     type R = RangeKey
-    def isoKey: Key <=> (HashKey, RangeKey) = IsoKey
-    val schema = complexKeyTableNamed(s"my_things2_${System.currentTimeMillis.toString}")
+
+    def keyIso = Key.Iso
+
+    val schema = defineSchema(s"my_things2_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.column, RangeKey.column)
   }
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  def run = DynamoDBOps.runAction.compose(DynamoDB.complexKeyTableInterpreter(table)(table.schema))
+  def run = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(table)(table.schema.kv))
 
   val NUM_TESTS =
     if (IS_LOCAL) 100
@@ -191,8 +207,8 @@ class TableSpec(val arguments: Arguments)
     }.set(minTestsOk = NUM_TESTS)
 
   def createTestTable() =
-    DynamoDBOps.createComplexKeyTable[HashKey, RangeKey, Value](table.schema)
+    DynamoDBOps.createTable(Schema.Create(table.schema))
 
   def deleteTestTable =
-    DynamoDBOps.deleteComplexKeyTable[HashKey, RangeKey, Value](table.schema)
+    DynamoDBOps.deleteTable(table.schema.kv)
 }

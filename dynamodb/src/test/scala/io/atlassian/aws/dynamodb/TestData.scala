@@ -27,7 +27,8 @@ object TestData extends Arbitraries with MoreEqualsInstances {
   object HashKey {
     val KeyRegex = "(.*)/(.*)/(.*)".r
     implicit val ThingHashKeyEncoder: Encoder[HashKey] =
-      Encoder[String].contramap { k => s"${k.a}/${k.b}/${k.c}"}
+      Encoder[String].contramap { k => s"${k.a}/${k.b}/${k.c}" }
+
     implicit val ThingHashKeyDecoder: Decoder[HashKey] =
       Decoder[String] collect decodeHashKey
 
@@ -57,24 +58,22 @@ object TestData extends Arbitraries with MoreEqualsInstances {
 
   object Key {
     lazy val column =
-      Column.compose2[Key](HashKey.column, RangeKey.column) {
-        case Key(a, b, c, seq) => (HashKey(a, b, c), RangeKey(seq))
-      } {
-        case (HashKey(a, b, c), RangeKey(seq)) => Key(a, b, c, seq)
-      }
+      Column.compose2[Key](HashKey.column, RangeKey.column)(Iso.to)(Function.untupled(Iso.from))
+
+    implicit val Iso: Key <=> (HashKey, RangeKey) = new (Key <=> (HashKey, RangeKey)) {
+      def from = { case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d) }
+      def to = { case Key(a, b, c, d) => (HashKey(a, b, c), RangeKey(d)) }
+    }
   }
 
   case class IndexRange(length: Long)
 
   object IndexRange {
     implicit val ThingRangeKeyEncoder: Encoder[IndexRange] =
-      Encoder[Long].contramap {
-        _.length
-      }
+      Encoder[Long].contramap { _.length }
+
     implicit val ThingRangeKeyDecoder: Decoder[IndexRange] =
-      Decoder[Long].map {
-        IndexRange.apply
-      }
+      Decoder[Long].map { IndexRange.apply }
 
     val column = Column[IndexRange]("length")
   }
@@ -86,7 +85,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
     import Mapping._
 
     val column =
-      Column.compose4[Value](hash, metaData, length, deletedTimestamp) { case Value(h, md, len, ts) => (h, md, len, ts)} {
+      Column.compose4[Value](hash, metaData, length, deletedTimestamp) { case Value(h, md, len, ts) => (h, md, len, ts) } {
         Value.apply
       }
   }
@@ -98,53 +97,29 @@ object TestData extends Arbitraries with MoreEqualsInstances {
       Column.compose2[KeyValue](HashKey.column, Value.column)((KeyValue.unapply _) andThen (_.get))(KeyValue.apply _)
   }
 
-  implicit val IsoKey: Key <=> (HashKey, RangeKey) = new (Key <=> (HashKey, RangeKey)) {
-    def from: ((HashKey, RangeKey)) => Key = {
-      case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d)
-    }
-    def to: (Key) => (HashKey, RangeKey) = {
-      case Key(a, b, c, d) => (HashKey(a, b, c), RangeKey(d))
-    }
-  }
+  def simpleKeyTableNamed(tableName: String): Schema.KeyValue[HashKey, KeyValue] =
+    Schema.KeyValue(tableName, HashKey.column, KeyValue.column)
 
-  def simpleKeyTableNamed(tableName: String) =
-    HashKeyTableDefinition.from[HashKey, KeyValue](tableName, HashKey.column, KeyValue.column)
-
-  def complexKeyTableNamed(tableName: String) =
-    HashRangeKeyTableDefinition.from[HashKey, RangeKey, Value](tableName, HashKey.column, RangeKey.column, Value.column)
-
-  def tableWithLSI(tableName: String, indexName: String) =
-    HashRangeKeyTableDefinition.withLocalSecondaryIndex(indexName, IndexRange.column, IndexProjection.allProjection[(HashKey, RangeKey), Value]).run(complexKeyTableNamed(tableName))
+  def defineSchema(name: String, t: Table.Index)(kc: Column[t.K], vc: Column[t.V], hc: NamedColumn[t.H], rc: NamedColumn[t.R]): Schema.Standard[t.K, t.V, t.H, t.R] =
+    Schema.Standard(Schema.KeyValue(name, kc, vc), Schema.Named(hc, rc))
 
   implicit val HashKeyArbitrary: Arbitrary[HashKey] =
     Arbitrary {
       for {
-        a <- Gen.uuid.map {
-          _.toString
-        }
-        b <- Gen.uuid.map {
-          _.toString
-        }
-        c <- Gen.uuid.map {
-          _.toString
-        }
-      } yield HashKey(a, b, c)
+        a <- Gen.uuid
+        b <- Gen.uuid
+        c <- Gen.uuid
+      } yield HashKey(a.toString, b.toString, c.toString)
     }
 
   implicit def KeyArbitrary: Arbitrary[Key] =
     Arbitrary {
       for {
-        a <- Gen.uuid.map {
-          _.toString
-        }
-        b <- Gen.uuid.map {
-          _.toString
-        }
-        c <- Gen.uuid.map {
-          _.toString
-        }
+        a <- Gen.uuid
+        b <- Gen.uuid
+        c <- Gen.uuid
         seq <- Gen.chooseNum(0, Long.MaxValue - 1000000) // We do some incrementing so give us some buffer around the wraparounds
-      } yield Key(a, b, c, seq)
+      } yield Key(a.toString, b.toString, c.toString, seq)
     }
 
   implicit def ValueArbitrary: Arbitrary[Value] =
@@ -160,8 +135,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
   implicit def ValueEqual: Equal[Value] = Equal.equal((a, b) =>
     a.hash == b.hash && a.length == b.length &&
       implicitly[Equal[Option[DateTime]]].equal(a.deletedTimestamp, b.deletedTimestamp) &&
-      a.metaData == b.metaData
-  )
+      a.metaData == b.metaData)
 
   implicit def KeyValueArbitrary: Arbitrary[KeyValue] = Arbitrary {
     for {
@@ -170,11 +144,11 @@ object TestData extends Arbitraries with MoreEqualsInstances {
     } yield KeyValue(key, value)
   }
 
-  implicit def HashKeyEqual: Equal[HashKey] = Equal.equal{(s, t) =>
+  implicit def HashKeyEqual: Equal[HashKey] = Equal.equal { (s, t) =>
     s.a === t.a && s.b === t.b && s.c === t.c
   }
 
-  implicit def KeyValueEqual: Equal[KeyValue] = Equal.equal{(s, t) =>
+  implicit def KeyValueEqual: Equal[KeyValue] = Equal.equal { (s, t) =>
     s.key === t.key && s.value === t.value
   }
 }
