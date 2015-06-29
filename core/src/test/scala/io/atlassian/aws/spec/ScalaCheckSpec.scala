@@ -31,6 +31,6 @@ trait ScalazEqualMatcher {
 }
 
 trait MoreEqualsInstances {
-	implicit def JodaInstantEqual: Equal[Instant] = Equal.equalA
+  implicit def JodaInstantEqual: Equal[Instant] = Equal.equalA
   implicit def JodaDateTimeEqual: Equal[DateTime] = Equal[Instant].contramap { _.toInstant }
 }

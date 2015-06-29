@@ -133,7 +133,6 @@ object ColumnSpec extends ScalaCheckSpec {
 
   val c1 = Column[String]("one")
   val c2 = Column[Instant]("two")
-  val cb = Column[NonEmptyBytes]("two")
   val c3 = Column[Long]("three")
   val c4 = Column[Int]("four")
   val c5 = Column[Long]("five")
