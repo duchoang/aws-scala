@@ -60,99 +60,141 @@ trait ColumnComposites {
 
   def compose2[A] = new Compose[A] {
     def apply[B, C](cb: Column[B], cc: Column[C])(from: A => (B, C))(to: (B, C) => A): Column[A] =
-      new Column[A] {
-        val marshall =
-          Marshaller[A] {
-            from(_) |> { case (b, c) => append(cb.marshall(b), cc.marshall(c)) }
-          }
+      new Column2(cb, cc)(to, from andThen Some.apply)
+  }
 
-        val unmarshall =
-          for {
-            b <- cb.unmarshall
-            c <- cc.unmarshall
-          } yield to(b, c)
-      }
+  def case2[A] = new Compose[A] {
+    def apply[B, C](cb: Column[B], cc: Column[C])(to: (B, C) => A, from: A => Option[(B, C)]): Column[A] =
+      new Column2(cb, cc)(to, from)
   }
 
   def compose3[A] = new Compose[A] {
     def apply[B, C, D](cb: Column[B], cc: Column[C], cd: Column[D])(from: A => (B, C, D))(to: (B, C, D) => A): Column[A] =
-      new Column[A] {
-        val marshall =
-          Marshaller[A] {
-            from(_) |> { case (b, c, d) => append(cb.marshall(b), cc.marshall(c), cd.marshall(d)) }
-          }
+      new Column3(cb, cc, cd)(to, from andThen Some.apply)
+  }
 
-        val unmarshall =
-          for {
-            b <- cb.unmarshall
-            c <- cc.unmarshall
-            d <- cd.unmarshall
-          } yield to(b, c, d)
-      }
+  def case3[A] = new Compose[A] {
+    def apply[B, C, D](cb: Column[B], cc: Column[C], cd: Column[D])(to: (B, C, D) => A, from: A => Option[(B, C, D)]): Column[A] =
+      new Column3(cb, cc, cd)(to, from)
   }
 
   def compose4[A] = new Compose[A] {
     def apply[B, C, D, E](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E])(from: A => (B, C, D, E))(to: (B, C, D, E) => A): Column[A] =
-      new Column[A] {
-        val marshall =
-          Marshaller[A] {
-            from(_) |> { case (b, c, d, e) => append(cb.marshall(b), cc.marshall(c), cd.marshall(d), ce.marshall(e)) }
-          }
+      new Column4(cb, cc, cd, ce)(to, from andThen Some.apply)
+  }
 
-        val unmarshall =
-          for {
-            b <- cb.unmarshall
-            c <- cc.unmarshall
-            d <- cd.unmarshall
-            e <- ce.unmarshall
-          } yield to(b, c, d, e)
-      }
+  def case4[A] = new Compose[A] {
+    def apply[B, C, D, E](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E])(to: (B, C, D, E) => A, from: A => Option[(B, C, D, E)]): Column[A] =
+      new Column4(cb, cc, cd, ce)(to, from)
   }
 
   def compose5[A] = new Compose[A] {
     def apply[B, C, D, E, F](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F])(from: A => (B, C, D, E, F))(to: (B, C, D, E, F) => A): Column[A] =
-      new Column[A] {
-        val marshall =
-          Marshaller[A] {
-            from(_) |> { case (b, c, d, e, f) => append(cb.marshall(b), cc.marshall(c), cd.marshall(d), ce.marshall(e), cf.marshall(f)) }
-          }
+      new Column5(cb, cc, cd, ce, cf)(to, from andThen Some.apply)
+  }
 
-        val unmarshall =
-          for {
-            b <- cb.unmarshall
-            c <- cc.unmarshall
-            d <- cd.unmarshall
-            e <- ce.unmarshall
-            f <- cf.unmarshall
-          } yield to(b, c, d, e, f)
-      }
+  def case5[A] = new Compose[A] {
+    def apply[B, C, D, E, F](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F])(to: (B, C, D, E, F) => A, from: A => Option[(B, C, D, E, F)]): Column[A] =
+      new Column5(cb, cc, cd, ce, cf)(to, from)
   }
 
   def compose6[A] = new Compose[A] {
     def apply[B, C, D, E, F, G](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F], cg: Column[G])(from: A => (B, C, D, E, F, G))(to: (B, C, D, E, F, G) => A): Column[A] =
-      new Column[A] {
-        val marshall =
-          Marshaller[A] {
-            from(_) |> {
-              case (b, c, d, e, f, g) =>
-                append(cb.marshall(b), cc.marshall(c), cd.marshall(d), ce.marshall(e), cf.marshall(f), cg.marshall(g))
-            }
-          }
-
-        val unmarshall =
-          for {
-            b <- cb.unmarshall
-            c <- cc.unmarshall
-            d <- cd.unmarshall
-            e <- ce.unmarshall
-            f <- cf.unmarshall
-            g <- cg.unmarshall
-          } yield to(b, c, d, e, f, g)
-      }
+      new Column6(cb, cc, cd, ce, cf, cg)(to, from andThen Some.apply)
   }
 
-  //  private def toMap[A](a: A, col: Column[A]): KeyValue =
-  //    col.marshall(a)
+  def case6[A] = new Compose[A] {
+    def apply[B, C, D, E, F, G](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F], cg: Column[G])(to: (B, C, D, E, F, G) => A, from: A => Option[(B, C, D, E, F, G)]): Column[A] =
+      new Column6(cb, cc, cd, ce, cf, cg)(to, from)
+  }
+
+  private final class Column2[A, B, C](cb: Column[B], cc: Column[C])(to: (B, C) => A, from: A => Option[(B, C)]) extends Column[A] {
+    val marshall =
+      Marshaller[A] {
+        from(_).fold(Map.empty[String, Value]) { case (b, c) => append(cb.marshall(b), cc.marshall(c)) }
+      }
+
+    val unmarshall =
+      for {
+        b <- cb.unmarshall
+        c <- cc.unmarshall
+      } yield to(b, c)
+
+    override def toString = s"Composite($cb, $cc)"
+  }
+
+  private final class Column3[A, B, C, D](cb: Column[B], cc: Column[C], cd: Column[D])(to: (B, C, D) => A, from: A => Option[(B, C, D)]) extends Column[A] {
+    val marshall =
+      Marshaller[A] {
+        from(_).fold(Map.empty[String, Value]) { case (b, c, d) => append(cb.marshall(b), cc.marshall(c), cd.marshall(d)) }
+      }
+
+    val unmarshall =
+      for {
+        b <- cb.unmarshall
+        c <- cc.unmarshall
+        d <- cd.unmarshall
+      } yield to(b, c, d)
+
+    override def toString = s"Composite($cb, $cc, $cd)"
+  }
+
+  private final class Column4[A, B, C, D, E](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E])(to: (B, C, D, E) => A, from: A => Option[(B, C, D, E)]) extends Column[A] {
+    val marshall =
+      Marshaller[A] {
+        from(_).fold(Map.empty[String, Value]) { case (b, c, d, e) => append(cb.marshall(b), cc.marshall(c), cd.marshall(d), ce.marshall(e)) }
+      }
+
+    val unmarshall =
+      for {
+        b <- cb.unmarshall
+        c <- cc.unmarshall
+        d <- cd.unmarshall
+        e <- ce.unmarshall
+      } yield to(b, c, d, e)
+
+    override def toString = s"Composite($cb, $cc, $cd, $ce)"
+  }
+
+  private final class Column5[A, B, C, D, E, F](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F])(to: (B, C, D, E, F) => A, from: A => Option[(B, C, D, E, F)]) extends Column[A] {
+    val marshall =
+      Marshaller[A] {
+        from(_).fold(Map.empty[String, Value]) { case (b, c, d, e, f) => append(cb.marshall(b), cc.marshall(c), cd.marshall(d), ce.marshall(e), cf.marshall(f)) }
+      }
+
+    val unmarshall =
+      for {
+        b <- cb.unmarshall
+        c <- cc.unmarshall
+        d <- cd.unmarshall
+        e <- ce.unmarshall
+        f <- cf.unmarshall
+      } yield to(b, c, d, e, f)
+
+    override def toString = s"Composite($cb, $cc, $cd, $ce, $cf)"
+  }
+
+  private final class Column6[A, B, C, D, E, F, G](cb: Column[B], cc: Column[C], cd: Column[D], ce: Column[E], cf: Column[F], cg: Column[G])(to: (B, C, D, E, F, G) => A, from: A => Option[(B, C, D, E, F, G)]) extends Column[A] {
+    val marshall =
+      Marshaller[A] {
+        from(_).fold(Map.empty[String, Value]) {
+          case (b, c, d, e, f, g) =>
+            append(cb.marshall(b), cc.marshall(c), cd.marshall(d), ce.marshall(e), cf.marshall(f), cg.marshall(g))
+        }
+      }
+
+    val unmarshall =
+      for {
+        b <- cb.unmarshall
+        c <- cc.unmarshall
+        d <- cd.unmarshall
+        e <- ce.unmarshall
+        f <- cf.unmarshall
+        g <- cg.unmarshall
+      } yield to(b, c, d, e, f, g)
+
+    override def toString = s"Composite($cb, $cc, $cd, $ce, $cf, $cg)"
+  }
 
   private def append(maps: KeyValue*): KeyValue = {
     val builder = Map.newBuilder[String, Value]
