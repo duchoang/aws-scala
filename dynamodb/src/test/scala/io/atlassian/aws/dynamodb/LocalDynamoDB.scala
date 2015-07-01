@@ -81,14 +81,13 @@ trait LocalDynamoDB {
     * Override this to specify custom location for start/stop scripts for a local Dynamo instance
     */
   def runScript(script: String, args: List[String], name: String) = {
-    targetDirectory.mkdirs()
     val target = new File(targetDirectory, script)
 
-    val sourceParent = new File(getClass.getClassLoader.getResource("scripts").toURI)
-    val source = new File(sourceParent, script)
-
     if (!target.exists()) {
-      Files.copy(source.toPath, target.toPath)
+      targetDirectory.mkdirs()
+
+      val stream = classOf[LocalDynamoDB].getClassLoader.getResourceAsStream("scripts/" + script)
+      Files.copy(stream, target.toPath)
       target.setExecutable(true)
     }
 
