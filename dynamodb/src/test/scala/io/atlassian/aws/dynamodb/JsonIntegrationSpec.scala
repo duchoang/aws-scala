@@ -58,7 +58,8 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
           s <- arbitrary[String]
           d <- arbitrary[Double]
           b <- arbitrary[Boolean]
-          od <- arbitrary[Option[Double]]
+          of <- arbitrary[Option[Float]] // AWS only supports 38 bit numbers
+          od = of.map(_.toDouble)
           l <- arbitrary[List[String]]
           nested <- arbitrary[Option[Nested]]
           nestedList <- arbitrary[List[Nested]]
