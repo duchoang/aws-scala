@@ -1,7 +1,9 @@
 package io.atlassian.aws
 package dynamodb
 
+import java.io.File
 import java.net.ServerSocket
+import java.nio.file.Files
 
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
@@ -60,37 +62,53 @@ trait LocalDynamoDB {
 
   def arguments: Arguments
 
-  /**
-   * Override this to specify custom location for start/stop scripts for a local Dynamo instance
-   */
-  def scriptDirectory = "scripts"
-
   def IS_LOCAL = !arguments.commandLine.contains("aws-integration")
   def REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
   def LOCAL_DB_PORT = arguments.commandLine.int("db-port").getOrElse(defaultDbPort)
 
-  def startLocalDynamoDB =
-    withLocalDb {
-      runAttemptStep(for {
-        _ <- runCmd(s"$scriptDirectory/install_dynamodb_local.sh $runDynamoTypeOption", "Install Local DynamoDB")
-        _ <- runCmd(s"$scriptDirectory/run_dynamodb_local.sh $runDynamoTypeOption -p ${LOCAL_DB_PORT.toString}", "Start Local DynamoDB")
-      } yield ())
-    }
+  private[this] def targetDirectory =
+    new File("target")
 
-  def stopLocalDynamoDB() =
-    withLocalDb {
-      runAttemptStep {
-        runCmd(s"$scriptDirectory/stop_dynamodb_local.sh ${LOCAL_DB_PORT.toString}", "Stop local Dynamo DB")
-      }
-    }
-
-  def runCmd(command: String, fail: String, success: String = ""): Attempt[String] = {
+  private[this] def runCmd(command: String, fail: String, success: String = ""): Attempt[String] = {
     val commandList = List("sh", "-x", "-c", s"$command > /dev/null 2> /dev/null")
     if (commandList ! ProcessLogger(System.out.println, System.err.println) != 0)
       Attempt.fail(fail)
     else
       Attempt.ok(success)
   }
+
+  /**
+    * Override this to specify custom location for start/stop scripts for a local Dynamo instance
+    */
+  def runScript(script: String, args: List[String], name: String) = {
+    targetDirectory.mkdirs()
+    val target = new File(targetDirectory, script)
+
+    val sourceParent = new File(getClass.getClassLoader.getResource("scripts").toURI)
+    val source = new File(sourceParent, script)
+
+    if (!target.exists()) {
+      Files.copy(source.toPath, target.toPath)
+      target.setExecutable(true)
+    }
+
+    runCmd(target.getCanonicalPath + " " + args.mkString(" "), name)
+  }
+
+  def startLocalDynamoDB() =
+    withLocalDb {
+      runAttemptStep(for {
+        _ <- runScript("install_dynamodb_local.sh", List(runDynamoTypeOption), "Install Local DynamoDB")
+        _ <- runScript("run_dynamodb_local.sh", List(runDynamoTypeOption, "-p", LOCAL_DB_PORT.toString), "Start Local DynamoDB")
+      } yield ())
+    }
+
+  def stopLocalDynamoDB() =
+    withLocalDb {
+      runAttemptStep {
+        runScript("stop_dynamodb_local.sh", List(LOCAL_DB_PORT.toString), "Stop local Dynamo DB")
+      }
+    }
 
   def runAttemptStep[A](attempt: Attempt[A]) =
     attempt.run.fold(i => Failure(i.toString), _ => StandardResults.success)
