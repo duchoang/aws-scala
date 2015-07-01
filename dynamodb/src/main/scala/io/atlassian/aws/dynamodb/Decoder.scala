@@ -2,7 +2,7 @@ package io.atlassian.aws
 package dynamodb
 
 import argonaut._, Argonaut._
-import org.joda.time.{ DateTimeZone, DateTime }
+import org.joda.time.{ DateTimeZone, DateTime, Instant }
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import scodec.bits.ByteVector
@@ -68,6 +68,9 @@ object Decoder {
 
   implicit val DateTimeDecode: Decoder[DateTime] =
     mandatoryField(Underlying.StringType)("DateTime") { _.getN.toLong |> { i => new DateTime(i, DateTimeZone.UTC) } }
+
+  implicit val InstantDecode: Decoder[Instant] =
+    Decoder[DateTime].map { _.toInstant }
 
   implicit val DynamoStringDecode: Decoder[DynamoString] =
     decoder(Underlying.StringType) {
