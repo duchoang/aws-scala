@@ -24,6 +24,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
                      executorService: ExecutorService,
                      scheduledExecutorService: ScheduledExecutorService,
                      activityExecutionTimeout: FiniteDuration) extends JsonLogging {
+  import AwsAction._
   import JsonLogging._
 
   implicit val es = executorService
@@ -41,10 +42,10 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
     }.run
 
   private def runSWFAction[A](a: SWFAction[A]): Unit =
-    a.run(swf).run.fold({ i => error(i) }, { _ => () })
+    a.runAction(swf).run.fold({ i => error(i) }, { _ => () })
 
-  private def pollActivity =
-    SWF.poll(ActivityQuery(taskList = taskList, identity = identity, domain = domain)).run(swf)
+  private def pollActivity: Attempt[Option[ActivityInstance]] =
+    SWF.poll(ActivityQuery(taskList = taskList, identity = identity, domain = domain)).runAction(swf)
 
   private def fail(instance: ActivityInstance)(reason: String, detail: String): Unit =
     withDebug(s"Failing activity ${instance.activity} id ${instance.id} with reason $reason:$detail") {

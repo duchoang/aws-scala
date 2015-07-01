@@ -1,23 +1,26 @@
 package io.atlassian.aws
 
-import scalaz.{ Kleisli, Monad, ReaderT, \/-, -\/ }
+import scalaz.{Catchable, Monad, Kleisli, ReaderT, WriterT}
 import scalaz.syntax.either._
-import scalaz.syntax.monad._
+import scalaz.syntax.catchable._
+import scalaz.Kleisli._
 import kadai.Invalid
+import Attempt._
 
 trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
   object AwsAction {
+
     def apply[R, A](f: R => Attempt[A]): AwsAction[R, A] =
-      Kleisli { f }
+      WriterT.put[ReaderT[Attempt, R, ?], MetaData, A](Kleisli { f })(MetaData.none)
 
     def value[R, A](v: => A): AwsAction[R, A] =
       AwsAction { _ => Attempt.ok(v) }
 
     def ask[R]: AwsAction[R, R] =
-      Kleisli.ask
+      WriterT.put[ReaderT[Attempt, R, ?], MetaData, R](Kleisli.ask)(MetaData.none)
 
-    def local[A, R](f: R => R)(fa: AwsAction[R, A]): AwsAction[R, A] =
-      Kleisli.local(f)(fa)
+    def local[R, A](f: R => R)(fa: AwsAction[R, A]): AwsAction[R, A] =
+      WriterT.writerT[ReaderT[Attempt, R, ?], MetaData, A](fa.run.local(f))
 
     def ok[R, A](strict: A): AwsAction[R, A] =
       value(strict)
@@ -37,12 +40,19 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
       AwsAction { _ => Attempt(i.left) }
 
     implicit class AwsActionOps[R, A](action: AwsAction[R, A]) {
+      import MetaData._
       def recover(f: Invalid => AwsAction[R, A]): AwsAction[R, A] =
-        AwsAction[R, A] { r => action.run(r).run.fold(f, ok[R, A](_)).run(r) }
+        WriterT[ReaderT[Attempt, R, ?], MetaData, A](Kleisli {
+          r => action.run.run(r).run.fold(f, {case (md, a) => ok[R, A](a) :++> md}).run(r)
+        })
+
+      def runAction(r: R): Attempt[A] = action.value.run(r)
 
       def handle(f: PartialFunction[Invalid, AwsAction[R, A]]): AwsAction[R, A] =
         recover { f orElse { case i => invalid(i) } }
     }
+
+    implicit def AwsActionMonad[R]: Monad[AwsAction[R, ?]] = WriterT.writerTMonad[ReaderT[Attempt, R, ?], MetaData]
 
     trait Functions[C] {
       type Action[A] = AwsAction[C, A]

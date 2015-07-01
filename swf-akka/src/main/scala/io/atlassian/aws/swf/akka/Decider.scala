@@ -1,10 +1,11 @@
-package io.atlassian.aws.swf
+package io.atlassian.aws
+package swf
 package akka
 
 import _root_.akka.actor.{ Props, Actor, PoisonPill }
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
-import kadai.Attempt
 import kadai.log.json.JsonLogging
+import AwsAction._
 
 import scala.concurrent.duration._
 
@@ -46,11 +47,11 @@ class Decider(config: DeciderConfig, swf: AmazonSimpleWorkflow) extends Actor wi
       ()
   }
 
-  private def poll =
-    SWF.poll(DecisionQuery(config.workflow.domain, config.workflow.workflowConfig.defaultTaskList, config.identity)).run(swf)
+  private def poll: Attempt[Option[DecisionInstance]] =
+    SWF.poll(DecisionQuery(config.workflow.domain, config.workflow.workflowConfig.defaultTaskList, config.identity)).runAction(swf)
 
-  private def complete(taskToken: TaskToken, context: String, decisions: List[Decision]) =
-    SWF.completeDecision(taskToken, context, decisions).run(swf)
+  private def complete(taskToken: TaskToken, context: String, decisions: List[Decision]): Attempt[Unit] =
+    SWF.completeDecision(taskToken, context, decisions).runAction(swf)
 
   private def triggerPoll =
     context.system.scheduler.scheduleOnce(config.pollDelay, self, Poll)

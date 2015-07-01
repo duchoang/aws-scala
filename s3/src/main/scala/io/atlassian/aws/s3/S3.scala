@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package s3
 
-import java.io.{ ByteArrayInputStream, InputStream }
+import java.io.{File, ByteArrayInputStream, InputStream}
 import java.util.ArrayList
 
 import com.amazonaws.regions.Region
@@ -43,6 +43,12 @@ object S3 {
       _ <- createFolders.whenM(S3.createFoldersFor(location))
       _ = length.foreach(metaData.setContentLength)
       putResult <- S3Action.withClient { _.putObject(location.bucket.unwrap, location.key.unwrap, stream, metaData) }
+    } yield putResult
+
+  def putFile(location: ContentLocation, file: File, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[PutObjectResult] =
+    for {
+      _ <- createFolders.whenM(S3.createFoldersFor(location))
+      putResult <- S3Action.withClient { _.putObject(new PutObjectRequest(location.bucket.unwrap, location.key.unwrap, file).withMetadata(metaData)) }
     } yield putResult
 
   /**

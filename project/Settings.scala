@@ -55,7 +55,7 @@ object Settings {
       , ScalariformKeys.preferences := ScalariformKeys.preferences.value
           .setPreference(AlignSingleLineCaseStatements, true)
           .setPreference(AlignParameters, true)
-      , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.5.2")
+      , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.6.0")
       )
 
   lazy val standardSettingsAndDependencies =
