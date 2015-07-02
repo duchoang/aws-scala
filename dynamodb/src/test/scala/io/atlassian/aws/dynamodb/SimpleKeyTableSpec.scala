@@ -9,7 +9,7 @@ import org.scalacheck.Prop
 import org.scalacheck.Arbitrary._
 import org.specs2.main.Arguments
 
-import scalaz.syntax.id._, scalaz.std.AllInstances._
+import scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class SimpleKeyTableSpec (val arguments: Arguments)
@@ -113,7 +113,7 @@ class SimpleKeyTableSpec (val arguments: Arguments)
     table.delete(arbitrary[HashKey].sample.get) must returnSuccess
 
   def createTestTable() =
-    DynamoDBOps.createTable[HashKey, KeyValue, Nothing, Nothing](Schema.Create[HashKey, KeyValue, Nothing, Nothing](Schema.Standard(table.schema)))
+    DynamoDBOps.createTable(Schema.Create.simple(table.schema, defaultThroughput))
 
   def deleteTestTable =
     DynamoDBOps.deleteTable(table.schema)

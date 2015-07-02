@@ -121,8 +121,6 @@ object Table {
 
   /** key has hash and range parts, allows more query operations as well as local indexes */
   trait ComplexKey extends Simple with Index { self =>
-    type H
-    type R
 
     def keyIso: K <=> (H, R)
 

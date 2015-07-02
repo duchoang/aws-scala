@@ -1,9 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
-import java.util
-
-import scalaz.{NonEmptyList, Isomorphism, ~>}
+import scalaz.{ Isomorphism, ~> }
 import scalaz.Isomorphism.<=>
 import scalaz.concurrent.Task
 import scalaz.std.list._
@@ -35,6 +33,7 @@ import com.amazonaws.services.dynamodbv2.model._
  *          Encoders/Decoders (they will be picked up automatically in your Column definition). However, you
  *          you can extend the standard set if you need to.
  */
+// TODO: Rename the file to match the object name
 object DynamoDB {
   import Convert._
   import scala.concurrent.duration._
@@ -149,44 +148,21 @@ object DynamoDB {
       }.getOrElse { Map() }
     }
 
-  implicit class ToOnelOps[A](val l: List[A]) extends AnyVal {
-    def toOnel: Option[NonEmptyList[A]] = l match {
-      case Nil    => None
-      case h :: t => Some(NonEmptyList.nel(h, t))
-    }
-  }
-
   /**
    * Creates a table for the given entity. The table name comes from the entity and is transformed by the
    * tableNameTransformer (e.g. to create tables for different environments)
    */
-  private[dynamodb] def createHashKeyTable[K, V, H: Decoder, R: Decoder](desc: Schema.Create[K, V, H, R], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
+  private[dynamodb] def createTable[K, V, H, R](desc: Schema.Create.CreateTable[K, V, H, R], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
     withClient {
-      _.createTable { desc.convertTo[CreateTableRequest] }
+      _.createTable {
+        val x = desc.convertTo[CreateTableRequest]
+        println(s"Creating table: $x")
+        x
+      }
     }.flatMap { createTableResult =>
       withClient { client =>
         Task {
           client.describeTable(createTableResult.getTableDescription.getTableName).getTable
-        }.flatMap { description =>
-          if (TableStatus.fromValue(description.getTableStatus) == TableStatus.ACTIVE)
-            Task.now(description)
-          else
-            Task.fail(new RuntimeException("Table not ready"))
-        }.retry(checkTableActiveIntervals)
-      }
-    }
-
-  /**
-   * Creates a table for the given entity. The table name comes from the entity and is transformed by the
-   * tableNameTransformer (e.g. to create tables for different environments)
-   */
-  private[dynamodb] def createHashAndRangeKeyTable[K, H, R, V](t: Table.Index)(desc: Schema.Create[K, V, H, R], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
-    withClient {
-      _.createTable { desc.convertTo[CreateTableRequest] }
-    }.flatMap { result =>
-      withClient { client =>
-        Task {
-          client.describeTable(result.getTableDescription.getTableName).getTable
         }.flatMap { description =>
           if (TableStatus.fromValue(description.getTableStatus) == TableStatus.ACTIVE)
             Task.now(description)
@@ -208,9 +184,9 @@ object DynamoDB {
    * Deletes the table for the given entity. The table name comes from the entity and is transformed by the
    * tableNameTransformer (e.g. to create tables for different environments)
    */
-  private[dynamodb] def deleteTable[K, V](table: Schema.KeyValue[K, V]): DynamoDBAction[DeleteTableResult] =
+  private[dynamodb] def deleteTable[K, V, H, R](table: Schema.Standard[K, V, H, R]): DynamoDBAction[DeleteTableResult] =
     withClient {
-      _.deleteTable(table.name)
+      _.deleteTable(table.tableName)
     }
 
   sealed trait ReadConsistency
@@ -235,9 +211,18 @@ object DynamoDB {
     }
 
   /** simple table interpreter where the key is the hash key */
-  def tableInterpreter(t: Table.Simple)(defn: Schema.KeyValue[t.K, t.V]): t.DBOp ~> DynamoDBAction =
+  def tableInterpreter(t: Table.Simple)(defn: Schema.SimpleKeyTable[t.K, t.V]): t.DBOp ~> DynamoDBAction =
     new (t.DBOp ~> DynamoDBAction) {
-      def apply[A](fa: t.DBOp[A]): DynamoDBAction[A] = tableImpl(t)(defn)(fa)(Isomorphism.isoRefl)
+      def apply[A](fa: t.DBOp[A]): DynamoDBAction[A] = tableImpl(t)(defn.kv)(fa)(Isomorphism.isoRefl)
+    }
+
+  def tableInterpreter(t: Table.ComplexKey)(defn: Schema.ComplexKeyTable[t.K, t.V, t.H, t.R]): t.DBOp ~> DynamoDBAction =
+    new (t.DBOp ~> DynamoDBAction) {
+      def apply[A](fa: t.DBOp[A]): DynamoDBAction[A] =
+        fa match {
+          case t.QueryOp(q) => queryImpl(t)(defn)(Isomorphism.isoRefl)(q)
+          case _ => tableImpl(t)(defn.kv)(fa)(Isomorphism.isoRefl)
+        }
     }
 
   def indexInterpreter[K](i: Table.Index)(defn: Schema.Index[i.K, i.V, i.H, i.R]): i.DBOp ~> DynamoDBAction =
@@ -271,11 +256,15 @@ object DynamoDB {
 
   private def queryImpl[K](t: Table.Index)(idx: Schema.Index[K, t.V, t.H, t.R])(implicit iso: t.K <=> K): t.Query => DynamoDBAction[Page[t.K, t.V]] = {
     case t.Query.Hashed(h, t.Query.Config(_, dir, _, consistency)) =>
-      query(QueryImpl.forHash(h, scanDirection = dir, indexName = idx.name, consistency = consistency)(idx.table.kv.name, idx.table.hashRange.a))(idx.table.kv.key, idx.table.kv.value) map {
+      query(QueryImpl.forHash(
+        h, scanDirection = dir, indexName = idx.indexName, consistency = consistency
+      )(idx.kv.name, idx.hashRange.a))(idx.kv.key, idx.kv.value) map {
         case Page(result, next) => Page(result, next.map(iso.from))
       }
     case t.Query.Ranged(h, r, cmp, t.Query.Config(_, dir, _, consistency)) =>
-      query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir, indexName = idx.name, consistency = consistency)(idx.table.kv.name, idx.table.hashRange.a, idx.table.hashRange.b))(idx.table.kv.key, idx.table.kv.value) map {
+      query(QueryImpl.forHashAndRange(
+        h, r, rangeComparison = cmp, scanDirection = dir, indexName = idx.indexName, consistency = consistency
+      )(idx.kv.name, idx.hashRange.a, idx.hashRange.b))(idx.kv.key, idx.kv.value) map {
         case Page(result, next) => Page(result, next.map(iso.from))
       }
   }

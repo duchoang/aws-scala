@@ -56,17 +56,17 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  def run = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(table)(table.schema.kv))
+  def run = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(table)(table.schema))
 
   val NUM_TESTS =
     if (IS_LOCAL) 100
     else 10
 
   def createTestTable() =
-    DynamoDBOps.createTable(Schema.Create(table.schema))
+    DynamoDBOps.createTable(Schema.Create.complexKey(table.schema, defaultThroughput))
 
   def deleteTestTable =
-    DynamoDBOps.deleteTable(table.schema.kv)
+    DynamoDBOps.deleteTable(table.schema)
 
   def querySortOrderWorks =
     Prop.forAll { (hashKey: HashKey, r1: TwoLongs, r2: TwoLongs, v1: TestData.Value, v2: TestData.Value) =>

@@ -1,14 +1,14 @@
 package io.atlassian.aws
 package dynamodb
 
+import io.atlassian.aws.dynamodb.Schema.Create.IndexProjection
 import io.atlassian.aws.spec.ScalaCheckSpec
 
 import org.junit.runner.RunWith
 import org.scalacheck.Prop
 import org.specs2.main.Arguments
 
-import scalaz.Isomorphism.{ IsoSet, <=> }
-import scalaz.syntax.id._, scalaz.std.AllInstances._
+import scalaz.std.AllInstances._
 import scalaz.~>
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
@@ -30,13 +30,13 @@ class LocalSecondaryIndexSpec(val arguments: Arguments)
   }
 
   val table = realTable.localSecondary[IndexRange](realTable.View.Full)
-  val indexSchema = Schema.Index(Some(s"my_index4_${System.currentTimeMillis.toString}"), defineSchema(s"my_things4_${System.currentTimeMillis.toString}", table)(Key.column, Value.column, HashKey.column, IndexRange.column)) 
+  val indexSchema = realTable.schema.deriveLocalIndex(s"my_index4_${System.currentTimeMillis.toString}", IndexRange.column, Value.column)
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
   def run = DynamoDBOps.runAction.compose(DynamoDB.indexInterpreter(table)(indexSchema))
 
-  def runRealTable = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(realTable)(realTable.schema.kv))
+  def runRealTable = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(realTable)(realTable.schema))
   def runFreeRealTable: realTable.DBAction ~> InvalidOr = realTable.transform[InvalidOr](runRealTable)
 
   val NUM_TESTS =
@@ -148,8 +148,8 @@ class LocalSecondaryIndexSpec(val arguments: Arguments)
     }.set(minTestsOk = NUM_TESTS)
 
   def createTestTable() =
-    DynamoDBOps.createTable(Schema.Create(realTable.schema).addIndex(indexSchema))
+    DynamoDBOps.createTable(Schema.Create.complexKey(realTable.schema, defaultThroughput).addLocalIndex(indexSchema, IndexProjection.All))
 
   def deleteTestTable =
-    DynamoDBOps.deleteTable(realTable.schema.kv)
+    DynamoDBOps.deleteTable(realTable.schema)
 }

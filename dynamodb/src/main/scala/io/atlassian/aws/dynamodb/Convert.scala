@@ -2,11 +2,10 @@ package io.atlassian.aws.dynamodb
 
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
-import scalaz.{ Functor, Show, State }
-import scalaz.Isomorphism.<=>
+import scalaz.{ NonEmptyList, Functor }
+import scalaz.std.option._
+import scalaz.syntax.foldable._
 import scalaz.syntax.id._
-import scalaz.syntax.show._
-import scalaz.std.list._
 
 //private[dynamodb] 
 sealed trait Convert[A, B] {
@@ -16,6 +15,7 @@ sealed trait Convert[A, B] {
 //private[dynamodb]
 object Convert {
   import Schema._
+  import Create._
   def apply[A, B](a: A)(implicit ev: Convert[A, B]): B =
     implicitly[Convert[A, B]].convert(a)
 
@@ -40,6 +40,7 @@ object Convert {
   implicit def NamedToAttributeDefinition[H, R] =
     new Convert[Named[H, R], List[AttributeDefinition]] {
       def convert = {
+        case Named(hash, Column.NoColumn) => List(hash.decoder.dynamoType(hash.name))
         case Named(hash, range) => List(hash.decoder.dynamoType(hash.name), range.decoder.dynamoType(range.name))
       }
     }
@@ -47,72 +48,71 @@ object Convert {
   implicit def NamedToSchema[H, R] =
     new Convert[Named[H, R], List[KeySchemaElement]] {
       def convert = {
+        case Named(hash, Column.NoColumn) => List(new KeySchemaElement(hash.name, KeyType.HASH))
         case Named(hash, range) => List(new KeySchemaElement(hash.name, KeyType.HASH), new KeySchemaElement(range.name, KeyType.RANGE))
       }
     }
 
-  implicit def IndexToProjection[V] =
-    new Convert[IndexProjection[V], Projection] {
-      def convert = p =>
-        new Projection().withProjectionType(p.projectionType)
-          .withNonKeyAttributes(if (p.nonKeyAttributes.isEmpty) null else p.nonKeyAttributes.asJavaCollection)
-    }
-
-  implicit def TableCreateToCreateTableRequest[K, V, H, R] =
-    new Convert[Create[K, V, H, R], CreateTableRequest] {
-      def convert = {
-        case Create(Standard(table, hashRange), indexes) =>
-          new CreateTableRequest().withTableName(table.name) <| { req =>
-            req.withAttributeDefinitions(hashRange.convertTo[List[AttributeDefinition]].asJavaCollection)
-            req.withKeySchema(hashRange.convertTo[List[KeySchemaElement]].asJavaCollection)
-          }
-        //.withProvisionedThroughput(throughput.convertTo[ProvisionedThroughput]) 
-        //TODO add global secondary index details
-        //<| { req =>
-        //table.globalSecondaryIndexes.toOnel.foreach { is => req.withGlobalSecondaryIndexes { is.map(toAwsGSI).list.asJavaCollection } }
-        //}
-
+  implicit def IndexToProjection: Convert[IndexProjection, Projection] =
+    new Convert[IndexProjection, Projection] {
+      def convert = p => (p match {
+        case IndexProjection.KeyOnly => (ProjectionType.KEYS_ONLY, List())
+        case IndexProjection.All => (ProjectionType.ALL, List())
+        case IndexProjection.Partial(nonKeyAttributes) => (ProjectionType.INCLUDE, nonKeyAttributes)
+      }) |> {
+        case (projectionType, nonKeyAttributes) =>
+          new Projection().withProjectionType(projectionType)
+            .withNonKeyAttributes(if (nonKeyAttributes.isEmpty) null else nonKeyAttributes.asJavaCollection)
       }
     }
 
-  //  implicit def HashRangeKeyToCreateTable[H, R, V] =
-  //    new Convert[HashRangeKey[H, R, V], CreateTableRequest] {
-  //      def convert = {
-  //        case HashRangeKey(table, hashRange, throughput) =>
-  //          new CreateTableRequest().withTableName(table.name)
-  //            .withAttributeDefinitions(hashRange.convertTo[List[AttributeDefinition]].asJavaCollection)
-  //            .withKeySchema(hashRange.convertTo[List[KeySchemaElement]].asJavaCollection)
-  //            .withProvisionedThroughput(throughput.convertTo[ProvisionedThroughput])
-  //        //TODO add global secondary index details
-  //        //<| { req =>
-  //        //table.globalSecondaryIndexes.toOnel.foreach { is => req.withGlobalSecondaryIndexes { is.map(toAwsGSI).list.asJavaCollection } }
-  //        //}
-  //        //          req =>
-  //        //            table.localSecondaryIndexes.toOnel.foreach { is => req.withLocalSecondaryIndexes { is.map(toAwsLSI).list.asJavaCollection } }
-  //        //            table.globalSecondaryIndexes.toOnel.foreach { is => req.withGlobalSecondaryIndexes { is.map(toAwsGSI).list.asJavaCollection } }
-  //        //          }
-  //
-  //      }
-  //    }
+  implicit class ToOnelOps[A](val l: Seq[A]) extends AnyVal {
+    def toOnel: Option[NonEmptyList[A]] = l.toList match {
+      case Nil    => None
+      case h :: t => Some(NonEmptyList.nel(h, t))
+    }
+  }
 
-  //  def ConvertGlobalSecondary[V] =
-  //    new Convert[GlobalSecondary[V], GlobalSecondaryIndex] {
-  //      def convert(idx: GlobalSecondary[V]) =
-  //        new GlobalSecondaryIndex()
-  //          .withIndexName(idx.name)
-  //          .withKeySchema(idx.schemaElements.convertTo[List[KeySchemaElement]].asJavaCollection)
-  //          .withProjection(idx.projection.convertTo[Projection])
-  //          .withProvisionedThroughput(Convert[Throughput, ProvisionedThroughput](idx.throughput))
-  //    }
-  //  def ConvertLocalSecondary[V] =
-  //    new Convert[LocalSecondary[V], LocalSecondaryIndex] {
-  //      def convert = {
-  //        case LocalSecondary(name, schema, prj) =>
-  //          new LocalSecondaryIndex()
-  //            .withIndexName(name)
-  //            .withKeySchema(schema.convertTo[List[KeySchemaElement]].asJavaCollection)
-  //            .withProjection(prj.convertTo[Projection])
-  //      }
-  //    }
+  implicit def IndexToLocalSecondaryIndex: Convert[LocalIndexDef, LocalSecondaryIndex] =
+    new Convert[LocalIndexDef, LocalSecondaryIndex] {
+      def convert = indexDef =>
+        new LocalSecondaryIndex()
+          .withIndexName(indexDef.index.name)
+          .withKeySchema(indexDef.index.hashRange.convertTo[List[KeySchemaElement]].asJavaCollection)
+          .withProjection(indexDef.projection.convertTo[Projection])
+    }
 
+  implicit def IndexToGlobalSecondaryIndex: Convert[GlobalIndexDef, GlobalSecondaryIndex] =
+      new Convert[GlobalIndexDef, GlobalSecondaryIndex] {
+        def convert = indexDef =>
+          new GlobalSecondaryIndex()
+            .withIndexName(indexDef.index.name)
+            .withKeySchema(indexDef.index.hashRange.convertTo[List[KeySchemaElement]].asJavaCollection)
+            .withProjection(indexDef.projection.convertTo[Projection])
+            .withProvisionedThroughput(Convert[Throughput, ProvisionedThroughput](indexDef.throughput))
+      }
+
+  implicit def TableCreateToCreateTableRequest[K, V, H, R]: Convert[CreateTable[K, V, H, R], CreateTableRequest] =
+    new Convert[CreateTable[K, V, H, R], CreateTableRequest] {
+      def convert = {
+        case CreateTable(Standard(table, hashRange), throughput, localIndexes, globalIndexes) =>
+          new CreateTableRequest().withTableName(table.name) <| { req =>
+
+            val attributeDefinitions = (hashRange :: localIndexes.toList.map(_.index.hashRange) ::: globalIndexes.toList.map(_.index.hashRange))
+              .flatMap(_.convertTo[List[AttributeDefinition]])
+
+            req.withAttributeDefinitions(attributeDefinitions.distinct.asJavaCollection)
+            .withKeySchema(hashRange.convertTo[List[KeySchemaElement]].asJavaCollection)
+            .withProvisionedThroughput(throughput.convertTo[ProvisionedThroughput])
+          } |> { req =>
+            globalIndexes.toOnel.foldl(req) { req => globalIndexNel =>
+              req.withGlobalSecondaryIndexes(globalIndexNel.list.map(_.convertTo[GlobalSecondaryIndex]).asJavaCollection)
+            }
+          } |> { req =>
+            localIndexes.toOnel.foldl(req){ req => localIndexNel =>
+              req.withLocalSecondaryIndexes(localIndexNel.list.map(_.convertTo[LocalSecondaryIndex]).asJavaCollection)
+            }
+          }
+      }
+    }
 }

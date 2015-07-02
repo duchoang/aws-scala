@@ -16,19 +16,19 @@ object DynamoDBOps extends Logging {
         action.run(client).run
     }
 
-  def createTable[K, V, H: Decoder, R: Decoder](create: Schema.Create[K, V, H, R])(implicit client: AmazonDynamoDB) = {
-    runAction.apply(DynamoDB.createHashKeyTable(create)) match {
+  def createTable[K, V, H, R](create: Schema.Create.CreateTable[K, V, H, R])(implicit client: AmazonDynamoDB) = {
+    runAction.apply(DynamoDB.createTable(create)) match {
       case -\/(e) =>
         error(s"Error creating table: $e")
         Failure(s"Error creating table: $e")
       case \/-(task) =>
-        debug(s"Creating table ${create.std.kv.name}")
+        debug(s"Creating table ${create.tableSchema.kv.name}")
         task.run
-        debug(s"Created table ${create.std.kv.name}")
+        debug(s"Created table ${create.tableSchema.kv.name}")
         Success
     }
   }
 
-  def deleteTable[K, V](table: Schema.KeyValue[K, V])(implicit client: AmazonDynamoDB) =
+  def deleteTable[K, V, H, R](table: Schema.Standard[K, V, H, R])(implicit client: AmazonDynamoDB) =
     runAction.apply(DynamoDB.deleteTable(table))
 }

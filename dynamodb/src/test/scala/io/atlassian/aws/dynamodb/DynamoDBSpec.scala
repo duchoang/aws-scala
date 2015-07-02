@@ -72,16 +72,16 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
       DYNAMO_CLIENT.updateItem {
         new UpdateItemRequest()
-          .withTableName(table.name)
+          .withTableName(table.tableName)
           .withKey(keyAttr.asJava)
           .withAttributeUpdates(valueAttr.asJava)
       }
 
-      DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column) must returnValue(Some(value))
+      DynamoDB.get[Key, Value](key)(table.tableName, Key.column, Value.column) must returnValue(Some(value))
     }.set(minTestsOk = NUM_TESTS)
 
   def getWorksIfNoValue =
-    DynamoDB.get[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.name, Key.column, Value.column) must returnValue(None)
+    DynamoDB.get[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.tableName, Key.column, Value.column) must returnValue(None)
 
   def getWorksIfCantDeserialize =
     Prop.forAll { (key: Key, value: Value, str: String) =>
@@ -97,30 +97,30 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
       DYNAMO_CLIENT.updateItem {
         new UpdateItemRequest()
-          .withTableName(table.name)
+          .withTableName(table.tableName)
           .withKey(keyAttr.asJava)
           .withAttributeUpdates(valueAttr.asJava)
       }
 
-      DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column) must returnFailure
+      DynamoDB.get[Key, Value](key)(table.tableName, Key.column, Value.column) must returnFailure
     }.set(minTestsOk = NUM_TESTS)
 
   import Write.Mode._
 
   def newPutWorks =
     Prop.forAll { (key: Key, value: Value) =>
-      DynamoDB.write[Key, Value](key, value, Overwrite)(table.name, Key.column, Value.column) must returnValue(Overwrite.New) and (
-        (DYNAMO_CLIENT.getItem(table.name, Key.column.marshall.toFlattenedMap(key).asJava).getItem.asScala.toMap |> Value.column.unmarshall)
+      DynamoDB.write[Key, Value](key, value, Overwrite)(table.tableName, Key.column, Value.column) must returnValue(Overwrite.New) and (
+        (DYNAMO_CLIENT.getItem(table.tableName, Key.column.marshall.toFlattenedMap(key).asJava).getItem.asScala.toMap |> Value.column.unmarshall)
         must equal(Attempt.ok(value)))
     }.set(minTestsOk = NUM_TESTS)
 
   def writeReplaceWorks =
     Prop.forAll { (key: Key, value: Value, value2: Value) =>
       (for {
-        firstPut <- DynamoDB.write[Key, Value](key, value, Overwrite)(table.name, Key.column, Value.column)
-        firstGet <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
-        secondPut <- DynamoDB.write[Key, Value](key, value2, Overwrite)(table.name, Key.column, Value.column)
-        secondGet <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
+        firstPut <- DynamoDB.write[Key, Value](key, value, Overwrite)(table.tableName, Key.column, Value.column)
+        firstGet <- DynamoDB.get[Key, Value](key)(table.tableName, Key.column, Value.column)
+        secondPut <- DynamoDB.write[Key, Value](key, value2, Overwrite)(table.tableName, Key.column, Value.column)
+        secondGet <- DynamoDB.get[Key, Value](key)(table.tableName, Key.column, Value.column)
       } yield (firstPut, firstGet, secondPut, secondGet)) must returnValue((Overwrite.New, Some(value), Overwrite.Replaced(value), Some(value2)))
     }.set(minTestsOk = NUM_TESTS)
 
@@ -129,9 +129,9 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val value1 = value.copy(deletedTimestamp = Some(date))
       val value2 = value.copy(deletedTimestamp = None)
       (for {
-        firstPut <- DynamoDB.write[Key, Value](key, value1, Overwrite)(table.name, Key.column, Value.column)
-        update <- DynamoDB.update[Key, Value](key, value1, value2)(table.name, Key.column, Value.column)
-        secondGet <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
+        firstPut <- DynamoDB.write[Key, Value](key, value1, Overwrite)(table.tableName, Key.column, Value.column)
+        update <- DynamoDB.update[Key, Value](key, value1, value2)(table.tableName, Key.column, Value.column)
+        secondGet <- DynamoDB.get[Key, Value](key)(table.tableName, Key.column, Value.column)
       } yield (firstPut, update, secondGet)) must returnValue((Overwrite.New, Replace.Wrote, Some(value2)))
     }.set(minTestsOk = NUM_TESTS)
 
@@ -140,35 +140,35 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val value1 = value.copy(deletedTimestamp = Some(date))
       val value2 = value.copy(deletedTimestamp = None)
       (for {
-        _ <- DynamoDB.write[Key, Value](key, value1, Overwrite)(table.name, Key.column, Value.column)
-        update <- DynamoDB.update[Key, Value](key, value2, value1)(table.name, Key.column, Value.column)
-        get <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.write[Key, Value](key, value1, Overwrite)(table.tableName, Key.column, Value.column)
+        update <- DynamoDB.update[Key, Value](key, value2, value1)(table.tableName, Key.column, Value.column)
+        get <- DynamoDB.get[Key, Value](key)(table.tableName, Key.column, Value.column)
       } yield (update, get)) must returnValue((Replace.Failed, Some(value1)))
     }.set(minTestsOk = NUM_TESTS)
 
   def deleteWorks =
     Prop.forAll { (key: Key, value: Value) =>
       (for {
-        _ <- DynamoDB.write[Key, Value](key, value, Overwrite)(table.name, Key.column, Value.column)
-        _ <- DynamoDB.delete[Key, Value](key)(table.name, Key.column)
-        result <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.write[Key, Value](key, value, Overwrite)(table.tableName, Key.column, Value.column)
+        _ <- DynamoDB.delete[Key, Value](key)(table.tableName, Key.column)
+        result <- DynamoDB.get[Key, Value](key)(table.tableName, Key.column, Value.column)
       } yield result) must returnValue(None)
     }.set(minTestsOk = NUM_TESTS)
 
   def deleteWorksForNonExistentKey =
-    DynamoDB.delete[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.name, Key.column) must returnSuccess
+    DynamoDB.delete[Key, Value](Key(randomUUID.toString, randomUUID.toString, randomUUID.toString, 0L))(table.tableName, Key.column) must returnSuccess
 
   def noOverwriteWorks =
     Prop.forAll { (key: Key, value: Value, value2: Value) =>
       (for {
-        firstPut <- DynamoDB.write[Key, Value](key, value, Overwrite)(table.name, Key.column, Value.column)
-        firstGet <- DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column)
-        secondPut <- DynamoDB.write[Key, Value](key, value2, Insert)(table.name, Key.column, Value.column)
+        firstPut <- DynamoDB.write[Key, Value](key, value, Overwrite)(table.tableName, Key.column, Value.column)
+        firstGet <- DynamoDB.get[Key, Value](key)(table.tableName, Key.column, Value.column)
+        secondPut <- DynamoDB.write[Key, Value](key, value2, Insert)(table.tableName, Key.column, Value.column)
       } yield secondPut) must returnValue(Insert.Failed)
     }.set(minTestsOk = NUM_TESTS)
 
   def describeTableWorks =
-    DynamoDB.describeTable(table.name).map(_.getTableName) must returnValue(table.name)
+    DynamoDB.describeTable(table.tableName).map(_.getTableName) must returnValue(table.tableName)
 
   def describeTableHandlesUnknownTable =
     DynamoDB.describeTable("some_dodgy_table") must returnFailure
@@ -176,7 +176,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   def queryWorksWhenHashKeyDoesntExist =
     Prop.forAll { (k: Key) =>
       val hashKey = HashKey(k.a, k.b, k.c)
-      DynamoDB.query(QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column))(RangeKey.column, Value.column) must returnResult { page =>
+      DynamoDB.query(QueryImpl.forHash[HashKey](hashKey)(table.tableName, HashKey.column))(RangeKey.column, Value.column) must returnResult { page =>
         page.result.isEmpty && page.next.isEmpty
       }
     }.set(minTestsOk = NUM_TESTS)
@@ -191,11 +191,11 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         val valuesToSave = window.map { i =>
           k.copy(seq = i.toLong) -> valueToSave.copy(length = IndexRange(i.toLong))
         }.toMap
-        DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column).run(DYNAMO_CLIENT).run
+        DynamoDB.batchPut(valuesToSave)(table.tableName, Key.column, Value.column).run(DYNAMO_CLIENT).run
       }
 
       val hashKey = HashKey(k.a, k.b, k.c)
-      val query = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column)
+      val query = QueryImpl.forHash[HashKey](hashKey)(table.tableName, HashKey.column)
 
       (for {
         result <- DynamoDB.query(query)(RangeKey.column, Value.column)
@@ -208,11 +208,11 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     Prop.forAll { (k: Key, v1: Value, v2: Value) =>
       val k2 = k.copy(seq = k.seq + 1)
       val hashKey = HashKey(k.a, k.b, k.c)
-      val queryAsc = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column)
-      val queryDesc = QueryImpl.forHash[HashKey](hashKey = hashKey, scanDirection = ScanDirection.Descending)(table.name, HashKey.column)
+      val queryAsc = QueryImpl.forHash[HashKey](hashKey)(table.tableName, HashKey.column)
+      val queryDesc = QueryImpl.forHash[HashKey](hashKey = hashKey, scanDirection = ScanDirection.Descending)(table.tableName, HashKey.column)
       (for {
-        _ <- DynamoDB.write(k, v1, Overwrite)(table.name, Key.column, Value.column)
-        _ <- DynamoDB.write(k2, v2, Overwrite)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.write(k, v1, Overwrite)(table.tableName, Key.column, Value.column)
+        _ <- DynamoDB.write(k2, v2, Overwrite)(table.tableName, Key.column, Value.column)
         ascResult <- DynamoDB.query(queryAsc)(RangeKey.column, Value.column)
         descResult <- DynamoDB.query(queryDesc)(RangeKey.column, Value.column)
       } yield (ascResult, descResult)) must returnResult {
@@ -229,11 +229,11 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val k2 = k.copy(seq = k.seq + 1)
       val k3 = k2.copy(seq = k2.seq + 1)
       val hashKey = HashKey(k.a, k.b, k.c)
-      val query = QueryImpl.forHashAndRange[HashKey, RangeKey](hashKey, RangeKey(k2.seq), Comparison.Lte)(table.name, HashKey.column, RangeKey.column)
+      val query = QueryImpl.forHashAndRange[HashKey, RangeKey](hashKey, RangeKey(k2.seq), Comparison.Lte)(table.tableName, HashKey.column, RangeKey.column)
       (for {
-        _ <- DynamoDB.write(k, v1, Overwrite)(table.name, Key.column, Value.column)
-        _ <- DynamoDB.write(k2, v2, Overwrite)(table.name, Key.column, Value.column)
-        _ <- DynamoDB.write(k3, v3, Overwrite)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.write(k, v1, Overwrite)(table.tableName, Key.column, Value.column)
+        _ <- DynamoDB.write(k2, v2, Overwrite)(table.tableName, Key.column, Value.column)
+        _ <- DynamoDB.write(k3, v3, Overwrite)(table.tableName, Key.column, Value.column)
         result <- DynamoDB.query(query)(RangeKey.column, Value.column)
       } yield result) must returnResult { page =>
         page.result must equal(List(v1, v2)) and
@@ -268,7 +268,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
     })
     val action: DynamoDBAction[Page[TestTable.K, TestTable.V]] =
-      DynamoDB.indexInterpreter(TestTable)(Schema.Index(None, table))(TestTable.QueryOp(query))
+      DynamoDB.indexInterpreter(TestTable)(table)(TestTable.QueryOp(query))
     action must returnResult[Page[TestTable.K, TestTable.V]] {
       _.result.length == 1
     }(client)
@@ -293,8 +293,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   val table = TestTable.schema
 
   def createTestTable() =
-    DynamoDBOps.createTable(Schema.Create(table))
+    DynamoDBOps.createTable(Schema.Create.complexKey(table, defaultThroughput))
 
   def deleteTestTable =
-    DynamoDBOps.deleteTable(table.kv)
+    DynamoDBOps.deleteTable(table)
 }

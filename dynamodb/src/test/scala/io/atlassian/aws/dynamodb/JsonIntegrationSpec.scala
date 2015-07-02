@@ -36,8 +36,8 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
   def getWhatWasPut =
     Prop.forAll { (key: Key, value: JsonValue) =>
       (for {
-        firstPut <- DynamoDB.write[Key, JsonValue](key, value, Overwrite)(table.name, Key.column, JsonValue.column)
-        firstGet <- DynamoDB.get[Key, JsonValue](key)(table.name, Key.column, JsonValue.column)
+        firstPut <- DynamoDB.write[Key, JsonValue](key, value, Overwrite)(table.tableName, Key.column, JsonValue.column)
+        firstGet <- DynamoDB.get[Key, JsonValue](key)(table.tableName, Key.column, JsonValue.column)
       } yield firstGet) must returnValue(value.some)
     }.set(minTestsOk = NUM_TESTS)
 
@@ -95,8 +95,8 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
     TestData.defineSchema(tableName, TestTable)(Key.column, JsonValue.column, HashKey.column, RangeKey.column)
   
   def createTestTable() =
-    DynamoDBOps.createTable(Schema.Create(table))
+    DynamoDBOps.createTable(Schema.Create.complexKey(table, defaultThroughput))
 
   def deleteTestTable =
-    DynamoDBOps.deleteTable(table.kv)
+    DynamoDBOps.deleteTable(table)
 }

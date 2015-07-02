@@ -1,6 +1,8 @@
 package io.atlassian.aws
 package dynamodb
 
+import io.atlassian.aws.dynamodb.Schema.Create.Throughput
+import io.atlassian.aws.dynamodb.Schema.SimpleKeyTable
 import io.atlassian.aws.spec.{ MoreEqualsInstances, Arbitraries }
 import org.joda.time.DateTime
 import org.scalacheck.{ Gen, Arbitrary }
@@ -12,6 +14,8 @@ import scalaz.syntax.equal._
 object TestData extends Arbitraries with MoreEqualsInstances {
 
   import Encoder._
+
+  val defaultThroughput = Throughput(5, 5)
 
   object Mapping {
     val key: Column[HashKey] = HashKey.column
@@ -97,11 +101,11 @@ object TestData extends Arbitraries with MoreEqualsInstances {
       Column.compose2[KeyValue](HashKey.column, Value.column)((KeyValue.unapply _) andThen (_.get))(KeyValue.apply _)
   }
 
-  def simpleKeyTableNamed(tableName: String): Schema.KeyValue[HashKey, KeyValue] =
-    Schema.KeyValue(tableName, HashKey.column, KeyValue.column)
+  def simpleKeyTableNamed(tableName: String): SimpleKeyTable[HashKey, KeyValue] =
+    Schema.SimpleKeyTable(tableName, HashKey.column, KeyValue.column)
 
-  def defineSchema(name: String, t: Table.Index)(kc: Column[t.K], vc: Column[t.V], hc: NamedColumn[t.H], rc: NamedColumn[t.R]): Schema.Standard[t.K, t.V, t.H, t.R] =
-    Schema.Standard(Schema.KeyValue(name, kc, vc), Schema.Named(hc, rc))
+  def defineSchema(name: String, t: Table.ComplexKey)(kc: Column[t.K], vc: Column[t.V], hc: NamedColumn[t.H], rc: NamedColumn[t.R]): Schema.Standard[t.K, t.V, t.H, t.R] =
+    Schema.ComplexKeyTable(name, Schema.Named(hc, rc), vc)(t.keyIso)
 
   implicit val HashKeyArbitrary: Arbitrary[HashKey] =
     Arbitrary {

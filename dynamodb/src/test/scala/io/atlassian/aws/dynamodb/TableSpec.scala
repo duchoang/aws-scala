@@ -9,8 +9,7 @@ import org.scalacheck.Prop
 import org.specs2.main.Arguments
 
 import java.util.UUID.randomUUID
-import scalaz.Isomorphism.<=>
-import scalaz.syntax.id._, scalaz.std.AllInstances._
+import scalaz.std.AllInstances._
 
   object TestTable extends Table.ComplexKey {
     import TestData._
@@ -46,7 +45,7 @@ class TableSpec(val arguments: Arguments)
 
   implicit val DYNAMO_CLIENT = dynamoClient
 
-  def run = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(table)(table.schema.kv))
+  def run = DynamoDBOps.runAction.compose(DynamoDB.tableInterpreter(table)(table.schema))
 
   val NUM_TESTS =
     if (IS_LOCAL) 100
@@ -207,8 +206,8 @@ class TableSpec(val arguments: Arguments)
     }.set(minTestsOk = NUM_TESTS)
 
   def createTestTable() =
-    DynamoDBOps.createTable(Schema.Create(table.schema))
+    DynamoDBOps.createTable(Schema.Create.complexKey(table.schema, defaultThroughput))
 
   def deleteTestTable =
-    DynamoDBOps.deleteTable(table.schema.kv)
+    DynamoDBOps.deleteTable(table.schema)
 }
