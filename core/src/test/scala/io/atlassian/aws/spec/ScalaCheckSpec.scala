@@ -1,6 +1,6 @@
 package io.atlassian.aws.spec
 
-import org.joda.time.{ DateTime, DateTimeZone }
+import org.joda.time.{ DateTime, DateTimeZone, Instant }
 import org.scalacheck.{ Arbitrary, Gen }
 import org.specs2.matcher.{ Expectable, MatchResult, Matcher }
 import org.specs2.{ ScalaCheck, SpecificationWithJUnit }
@@ -12,11 +12,10 @@ trait ScalaCheckSpec extends SpecificationWithJUnit with ScalaCheck with Arbitra
 
 trait Arbitraries {
   implicit def DateTimeArbitrary: Arbitrary[DateTime] =
-    Arbitrary {
-      for {
-        diff <- Gen.chooseNum(-1000000, 1000000)
-      } yield DateTime.now().plus(diff.toLong)
-    }
+    Arbitrary { Arbitrary.arbitrary[Int].map { i => new DateTime(i.toLong) } }
+
+  implicit def InstantArbitrary: Arbitrary[Instant] =
+    Arbitrary { Arbitrary.arbitrary[Int].map { i => new Instant(i.toLong) } }
 }
 
 trait ScalazEqualMatcher {
@@ -32,5 +31,6 @@ trait ScalazEqualMatcher {
 }
 
 trait MoreEqualsInstances {
-  implicit def JodaDateTimeEqual: Equal[DateTime] = Equal.equalBy { _.withZone(DateTimeZone.UTC).toInstant.getMillis }
+  implicit def JodaInstantEqual: Equal[Instant] = Equal.equalA
+  implicit def JodaDateTimeEqual: Equal[DateTime] = Equal[Instant].contramap { _.toInstant }
 }

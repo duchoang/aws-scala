@@ -3,7 +3,7 @@ package dynamodb
 
 import argonaut._
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
-import org.joda.time.{ DateTimeZone, DateTime }
+import org.joda.time.{ DateTimeZone, DateTime, Instant }
 import scalaz.Contravariant
 import scalaz.Free.Trampoline
 import scalaz.syntax.id._
@@ -45,6 +45,9 @@ object Encoder {
 
   implicit val DateTimeEncode: Encoder[DateTime] =
     attribute { d => _.withN(d.withZone(DateTimeZone.UTC).toInstant.getMillis.toString) }
+
+  implicit val InstantEncode: Encoder[Instant] =
+    Encoder[DateTime].contramap { _.toDateTime }
 
   implicit def OptionEncode[A: Encoder]: Encoder[Option[A]] =
     Encoder { _.flatMap { Encoder[A].run } }

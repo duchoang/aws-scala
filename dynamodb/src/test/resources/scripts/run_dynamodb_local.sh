@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 while getopts ':dp:t:' option
 do
@@ -31,7 +31,7 @@ fi
 
 echo "Starting Local DynamoDB..."
 
-if [[ ! -z "$dynalite" ]]; then
+if [ ! -z "$dynalite" ]; then
     eval "($DYNAMO_DB_LIB_HOME/node_modules/.bin/dynalite --port $PORT) &"
 else
     eval "(java -Djava.library.path=$DYNAMO_DB_LIB_HOME/DynamoDBLocal_lib -jar $DYNAMO_DB_LIB_HOME/DynamoDBLocal.jar --dbPath $DYNAMO_DB_HOME --port $PORT) &"
@@ -43,7 +43,7 @@ if [ "$SUCCESS" -eq 0 ]; then
     echo $! > $DYNAMO_DB_HOME/dynamodb_local.pid
 fi
 
-${TIMEOUT_CMD} --foreground ${TIMEOUT_SECONDS} bash -c "until netstat -na | grep *.${PORT} > /dev/null; do echo -n .; sleep 2; done; exit 0"
+${TIMEOUT_CMD} --foreground ${TIMEOUT_SECONDS} bash -c "until netstat -nlta | grep -E \"(\\*\\.|:)${PORT}\\b\" > /dev/null; do echo -n .; sleep 2; done; exit 0"
 
 # For some reason we need this echo for Scala Process to return correctly when spinning up a DynamoDB within DynamoDB Specs"
 echo "Started Local DynamoDB..."
