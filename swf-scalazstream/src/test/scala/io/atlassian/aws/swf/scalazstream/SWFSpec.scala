@@ -1,4 +1,5 @@
-package io.atlassian.aws.swf
+package io.atlassian.aws
+package swf
 package scalazstream
 
 import java.util.UUID
@@ -118,8 +119,9 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   }
 
   def createTestWorkflow = {
+    import AwsAction._
     val action = SWF.registerWorkflow(workflowDef)
-    action.run(CLIENT).run match {
+    action.runAction(CLIENT).run match {
       case -\/(e) =>
         error(s"Error registering test workflow: $e")
         Failure(s"Error registering test workflow: $e")

@@ -35,7 +35,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
 
   private def heartbeat(interval: FiniteDuration, taskToken: TaskToken): Task[Unit] =
     time.awakeEvery(interval)(strategy, scheduledExecutorService).flatMap[Task, Unit] { d =>
-      SWF.heartbeat(taskToken).run(swf).fold(
+      SWF.heartbeat(taskToken).runAction(swf).fold(
         { i => Process.fail(WrappedInvalidException.orUnderlying(i)) },
         { _ => Process.empty }
       )

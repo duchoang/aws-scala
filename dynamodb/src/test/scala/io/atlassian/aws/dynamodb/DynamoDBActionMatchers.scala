@@ -48,10 +48,26 @@ trait DynamoDBActionMatchers extends Logging {
       case \/-(v) => (check(v), s"Expected value, but match failed with value $v")
     })
 
+  def returnMetaData[A](implicit client: AmazonDynamoDB) =
+    new Matcher[DynamoDBAction[A]] {
+      def apply[S <: DynamoDBAction[A]](s: Expectable[S]) = {
+        import AwsAction._
+        val (metaData, _) = s.value.runActionWithMetaData(client)
+        result(requestIdRecorded(metaData), "AWS Request Id successfully recorded", "Expected AWS Request Id but none found", s)
+      }
+    }
+
+  def requestIdRecorded(md: MetaData): Boolean =
+    (for {
+      key <- AWSRequestIdRetriever.DynamoDb.metaDataKey
+      list <- md.get(key)
+      id <- list.headOption
+    } yield id).isDefined
+
   class ServiceMatcher[A](check: \/[Invalid, A] => (Boolean, String))(implicit client: AmazonDynamoDB) extends Matcher[DynamoDBAction[A]] {
     def apply[S <: DynamoDBAction[A]](s: Expectable[S]) = {
-      val execResult = DynamoDBOps.runAction.apply(s.value)
-      val (comparisonResult, message) = check(execResult)
+      import AwsAction._
+      val (comparisonResult, message) = check(s.value.runAction(client).run)
       result(comparisonResult, message, message, s)
     }
   }

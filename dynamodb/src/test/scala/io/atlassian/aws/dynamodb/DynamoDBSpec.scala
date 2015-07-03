@@ -29,7 +29,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     if (IS_LOCAL) 20
     else 1
 
-  implicit val DYNAMO_CLIENT = dynamoClient
+  implicit val DYNAMO_CLIENT = dynamoClient <| {_.addRequestHandler(AWSRequestIdRetriever.requestHandler)}
 
   val table = tableNamed(s"my_things2_${System.currentTimeMillis.toString}")
 
@@ -52,6 +52,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     have a working describeTable                  $describeTableWorks
     have a describeTable that handles unknown tables $describeTableHandlesUnknownTable
     return error when trying to replace an entry while NoOverwrite is set $noOverwriteWorks
+    record aws request id metadata                $recordRequestIdMetadata
 
   DynamoDB query capability should
     support querying for non-existent hash keys   $queryWorksWhenHashKeyDoesntExist
@@ -274,6 +275,24 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     action must returnResult[Page[TestTable.R, TestTable.V]] {
       _.result.length == 1
     }(client)
+  }
+
+  def recordRequestIdMetadata = {
+    Prop.forAll { (key: Key, value: Value) =>
+      val keyAttr = Key.column.marshall.toFlattenedMap(key)
+      val valueAttr = Value.column.marshall.toFlattenedMap(value).mapValues {
+        av => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(av)
+      }
+
+      DYNAMO_CLIENT.updateItem {
+        new UpdateItemRequest()
+          .withTableName(table.name)
+          .withKey(keyAttr.asJava)
+          .withAttributeUpdates(valueAttr.asJava)
+      }
+
+      DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column) must returnMetaData
+    }.set(minTestsOk = NUM_TESTS)
   }
 
   object TestTable extends Table {

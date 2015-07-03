@@ -1,6 +1,8 @@
 package io.atlassian
 
-import scalaz.{ Monoid, ReaderT, WriterT, Tag, @@ }
+import kadai.Invalid
+import kadai.result.ResultT
+import scalaz._
 import scalaz.std.list.listMonoid
 
 package object aws extends AwsActionTypes with Types {
@@ -21,5 +23,8 @@ package object aws extends AwsActionTypes with Types {
   }
   implicit def MetaDataMonoid: Monoid[MetaData] = scalaz.std.map.mapMonoid[String, List[String]]
 
-  type AwsAction[R, A] = WriterT[ReaderT[Attempt, R, ?], MetaData, A]
+  type WriterAttempt[A] = ResultT[Writer[MetaData, ?], A]
+  implicit val WriterAttemptMonad: Monad[WriterAttempt] = EitherT.eitherTMonad[Writer[MetaData, ?], Invalid]
+
+  type AwsAction[R, A] = ReaderT[WriterAttempt, R, A]
 }

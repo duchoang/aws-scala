@@ -55,7 +55,7 @@ object SWF {
     for {
       _ <- SWF.register(workflow.domain, workflow.domainConfig)
       _ <- SWF.register(workflow.domain, workflow.workflow, workflow.workflowConfig)
-      _ <- workflow.activities.traverseU { a => SWF.register(workflow.domain, a.activity, a.definition) }
+      _ <- workflow.activities[SWFAction].traverseU { a => SWF.register(workflow.domain, a.activity, a.definition) }
     } yield workflow
 
   def register(domain: Domain, workflow: Workflow, config: WorkflowConfig): SWFAction[Workflow] =

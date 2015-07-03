@@ -7,6 +7,7 @@ import java.util.ArrayList
 import com.amazonaws.regions.Region
 import com.amazonaws.services.s3.model._
 import io.atlassian.aws.AmazonExceptions.ServiceException
+import io.atlassian.aws.s3.InputStreams.ReadBytes
 import kadai.Invalid
 
 import scala.collection.immutable.List
@@ -80,29 +81,32 @@ object S3 {
     }
 
   /* Package visible for testing */
-  private[s3] def putChunks(location: ContentLocation, stream: InputStream, uploadId: String, buffer: Array[Byte]): S3Action[(List[PartETag], Long)] =
-    S3Action.withClient { client =>
-
-      import InputStreams._
-
-      def upload(byteCount: Int, partNumber: Int): UploadPartResult =
+  private[s3] def putChunks(location: ContentLocation, stream: InputStream, uploadId: String, buffer: Array[Byte]): S3Action[(List[PartETag], Long)] = {
+    def upload(byteCount: Int, partNumber: Int): S3Action[UploadPartResult] =
+      S3Action.withClient { client =>
         client.uploadPart(new UploadPartRequest()
           .withBucketName(location.bucket.unwrap).withKey(location.key.unwrap)
           .withUploadId(uploadId).withPartNumber(partNumber)
           .withInputStream(new ByteArrayInputStream(buffer, 0, byteCount))
           .withPartSize(byteCount.toLong))
+      }
 
-      def go(curTags: List[PartETag], curLength: Long): Task[(List[PartETag], Long)] =
-        readFully(stream, buffer) flatMap {
-          case ReadBytes.End =>
-            Task.now((curTags, curLength))
-          case ReadBytes.Chunk(rn) =>
-            val partResult = upload(rn, curTags.length + 1)
-            go(curTags :+ partResult.getPartETag, curLength + rn.toLong)
-        }
-
-      go(List(), 0).run
+    def readChunk: S3Action[ReadBytes] = S3Action.safe {
+      InputStreams.readFully(stream, buffer).run
     }
+
+    def read(tuple: (List[PartETag], Long)): S3Action[(List[PartETag], Long)] = {
+      val (curTags, curLength) = tuple
+      readChunk flatMap {
+        case ReadBytes.End =>
+          S3Action.ok((curTags, curLength))
+        case ReadBytes.Chunk(rn) =>
+          upload(rn, curTags.length + 1) map { res => (curTags :+ res.getPartETag, curLength + rn.toLong) } flatMap read
+      }
+    }
+
+    read((Nil, 0))
+  }
 
   def createFoldersFor(location: ContentLocation): S3Action[List[PutObjectResult]] =
     location.key.foldersWithLeadingPaths.traverse[S3Action, PutObjectResult] {

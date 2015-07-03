@@ -193,7 +193,9 @@ object DynamoDB {
    */
   private[dynamodb] def describeTable(name: String): DynamoDBAction[TableDescription] =
     withClient {
-      _.describeTable(name).getTable
+      _.describeTable(name)
+    } map {
+      _.getTable
     }
 
   /**
