@@ -154,11 +154,7 @@ object DynamoDB {
    */
   private[dynamodb] def createTable[K, V, H, R](desc: Schema.Create.CreateTable[K, V, H, R], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
     withClient {
-      _.createTable {
-        val x = desc.convertTo[CreateTableRequest]
-        println(s"Creating table: $x")
-        x
-      }
+      _.createTable { desc.convertTo[CreateTableRequest] }
     }.flatMap { createTableResult =>
       withClient { client =>
         Task {
