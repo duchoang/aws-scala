@@ -11,12 +11,12 @@ object TestData extends Arbitraries with MoreEqualsInstances {
   import Encoder._
 
   object Mapping {
-    val key: NamedColumn = HashKey.named
-    val sequence: NamedColumn = RangeKey.named
-    val hash: Column[String] = Column[String]("hash")
-    val metaData: Column[String] = Column[String]("metaData")
-    val length: Column[Long] = Column[Long]("length")
-    val deletedTimestamp: Column[Option[DateTime]] = Column[Option[DateTime]]("deletedTimestamp")
+    val key: NamedColumn[HashKey] = HashKey.named
+    val sequence: NamedColumn[RangeKey] = RangeKey.named
+    val hash: Column[String] = Column[String]("hash").column
+    val metaData: Column[String] = Column[String]("metaData").column
+    val length: Column[Long] = Column[Long]("length").column
+    val deletedTimestamp: Column[Option[DateTime]] = Column[Option[DateTime]]("deletedTimestamp").column
   }
 
   case class HashKey(a: String, b: String, c: String)
@@ -31,7 +31,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
       case KeyRegex(a, b, c) => HashKey(a, b, c)
     }
 
-    val named = NamedColumn("key")
+    val named = Column[HashKey]("key")
   }
   case class RangeKey(seq: Long)
   object RangeKey {
@@ -40,13 +40,13 @@ object TestData extends Arbitraries with MoreEqualsInstances {
     implicit val ThingRangeKeyDecoder: Decoder[RangeKey] =
       Decoder[Long].map { RangeKey.apply }
 
-    val named = NamedColumn("seq")
+    val named = Column[RangeKey]("seq")
   }
 
   case class Key(a: String, b: String, c: String, seq: Long)
   object Key {
     lazy val column =
-      Column.compose2[Key](HashKey.named.column[HashKey], RangeKey.named.column[RangeKey]) {
+      Column.compose2[Key](HashKey.named.column, RangeKey.named.column) {
         case Key(a, b, c, seq) => (HashKey(a, b, c), RangeKey(seq))
       } {
         case (HashKey(a, b, c), RangeKey(seq)) => Key(a, b, c, seq)

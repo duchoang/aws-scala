@@ -7,12 +7,12 @@ import collection.JavaConverters._
 import scalaz.syntax.id._
 
 private[dynamodb] object QueryImpl {
-  def forHash[K: Encoder: Decoder](
+  def forHash[K](
     hashKey: K,
     exclusiveStartKey: Option[DynamoMap] = None,
     scanDirection: ScanDirection = ScanDirection.Ascending,
     consistency: ReadConsistency = ReadConsistency.Eventual,
-    limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn): QueryImpl =
+    limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn[K]): QueryImpl =
     QueryImpl(
       tableName,
       Map(keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol.column)),
@@ -22,14 +22,14 @@ private[dynamodb] object QueryImpl {
       limit
     )
 
-  def forHashAndRange[K: Encoder: Decoder, O: Encoder: Decoder](
+  def forHashAndRange[K, O](
     hashKey: K,
     rangeKey: O,
     rangeComparison: Comparison,
     exclusiveStartKey: Option[DynamoMap] = None,
     scanDirection: ScanDirection = ScanDirection.Ascending,
     consistency: ReadConsistency = ReadConsistency.Eventual,
-    limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn, ordCol: NamedColumn): QueryImpl =
+    limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn[K], ordCol: NamedColumn[O]): QueryImpl =
     QueryImpl(
       tableName,
       Map(
