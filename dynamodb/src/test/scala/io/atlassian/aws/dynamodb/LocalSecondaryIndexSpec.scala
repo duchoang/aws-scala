@@ -26,11 +26,11 @@ class LocalSecondaryIndexSpec(val arguments: Arguments)
     val keyIso = Key.Iso
 
         
-    val schema = defineSchema(s"my_things4_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.column, RangeKey.column)
+    val schema = defineSchema(s"my_things4_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.named, RangeKey.named)
   }
 
   val table = realTable.localSecondary[IndexRange](realTable.View.Full)
-  val indexSchema = realTable.schema.deriveLocalIndex(s"my_index4_${System.currentTimeMillis.toString}", IndexRange.column, Value.column)
+  val indexSchema = realTable.schema.deriveLocalIndex(s"my_index4_${System.currentTimeMillis.toString}", IndexRange.named, Value.column)
 
   implicit val DYNAMO_CLIENT = dynamoClient
 

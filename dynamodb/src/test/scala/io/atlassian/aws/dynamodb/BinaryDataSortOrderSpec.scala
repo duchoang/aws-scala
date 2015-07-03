@@ -32,10 +32,10 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
 
   case class ComplexKey(h: HashKey, r: TwoLongs)
   object ComplexKey {
-    lazy val twoLongsColumn = Column[TwoLongs]("twolongs")
-    lazy val column = Column.compose2[ComplexKey](HashKey.column, twoLongsColumn) {
-      case ComplexKey(h, r) => (h, r)
-    }(ComplexKey.apply)
+    lazy val twoLongsNamed =
+      Column[TwoLongs]("range")
+    lazy val column =
+      Column.compose2[ComplexKey](HashKey.named.column, twoLongsNamed.column) { case ComplexKey(h, r) => (h, r) } { case (h, r) => ComplexKey(h, r) }
   }
 
   object table extends Table.ComplexKey {
@@ -51,7 +51,7 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
     }
 
     val schema =
-      defineSchema(s"my_things3_${System.currentTimeMillis.toString}", this)(ComplexKey.column, Value.column, HashKey.column, ComplexKey.twoLongsColumn)
+      defineSchema(s"my_things3_${System.currentTimeMillis.toString}", this)(ComplexKey.column, Value.column, HashKey.named, ComplexKey.twoLongsNamed)
   }
 
   implicit val DYNAMO_CLIENT = dynamoClient

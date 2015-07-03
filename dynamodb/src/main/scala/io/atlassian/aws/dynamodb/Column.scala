@@ -26,18 +26,22 @@ sealed trait Column[A] {
 }
 
 /**
- * A specific field/column in a table. Has a name and an Encoder/Decoder to
- * prepare the encoded representation to the Dynamo driver, and to return
- * the de-serialized value back from the database, respectively.
+ * A specific field/column in a table. Has a Column to prepare 
+ * the encoded representation to the Dynamo driver, and to return
+ * the de-serialized value back from the database.
  */
-case class NamedColumn[A](name: String)(implicit val encoder: Encoder[A], val decoder: Decoder[A]) extends Column[A] {
-  override val marshall = Marshaller[A] { a => Map(name -> encoder.encode(a)) }
-  override val unmarshall = Unmarshaller.get(name)
+case class NamedColumn[A](name: String, column: Column[A], typ: Underlying.Type) {
+  private[dynamodb] def dynamoType = typ(name)
 }
 
 object Column extends ColumnComposites {
   def apply[A: Encoder: Decoder](s: String): NamedColumn[A] =
-    NamedColumn[A](s)
+    NamedColumn(s,
+      new Column[A] {
+        override val marshall = Marshaller[A] { a => Map(s -> Encoder[A].encode(a)) }
+        override val unmarshall = Unmarshaller.get(s)
+      },
+      Decoder[A].dynamoType)
 
   private[dynamodb] def unmarshall[A, B](ca: Column[A], cb: Column[B])(map: DynamoMap): Attempt[(A, B)] =
     for {
@@ -51,7 +55,7 @@ object Column extends ColumnComposites {
   }
 
   val NoColumn: NamedColumn[Nothing] =
-    NamedColumn[Nothing]("")(Encoder.NothingEncode, Decoder.NothingDecoder)
+    Column[Nothing]("")(Encoder.NothingEncode, Decoder.NothingDecoder)
 }
 
 trait ColumnComposites {

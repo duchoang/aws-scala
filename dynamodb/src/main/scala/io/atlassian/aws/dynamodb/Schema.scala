@@ -8,7 +8,7 @@ object Schema {
   case class KeyValue[K, V](name: String, key: Column[K], value: Column[V])
 
   case class Named[A, B](a: NamedColumn[A], b: NamedColumn[B]) {
-    val tupled: Column[(A, B)] = Column.compose2[(A, B)](a, b)(identity)(Tuple2.apply)
+    val tupled: Column[(A, B)] = Column.compose2[(A, B)](a.column, b.column)(identity)(Tuple2.apply)
   }
 
   /**
@@ -103,7 +103,7 @@ object Schema {
    */
   object SimpleKeyTable {
     def apply[K, V](name: String, key: NamedColumn[K], value: Column[V]) =
-      Standard[K, V, K, Nothing](KeyValue[K, V](name, key, value), Named[K, Nothing](key, Column.NoColumn))
+      Standard[K, V, K, Nothing](KeyValue[K, V](name, key.column, value), Named[K, Nothing](key, Column.NoColumn))
   }
 
   /**

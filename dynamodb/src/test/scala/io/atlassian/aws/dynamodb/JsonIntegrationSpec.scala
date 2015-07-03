@@ -44,7 +44,7 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
   case class JsonValue(s: String, d: Double, b: Boolean, od: Option[Double], l: List[String], nested: Option[Nested], nestedList: List[Nested])
   object JsonValue {
     lazy val column =
-      Column[JsonValue]("jsonValue")
+      Column[JsonValue]("jsonValue").column
 
     implicit val JsonValueCodecJson: CodecJson[JsonValue] =
       casecodec7(JsonValue.apply, JsonValue.unapply)("s", "d", "b", "od", "l", "nested", "nested-list")
@@ -93,7 +93,7 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
   }
 
   val table =
-    TestData.defineSchema(tableName, TestTable)(Key.column, JsonValue.column, HashKey.column, RangeKey.column)
+    TestData.defineSchema(tableName, TestTable)(Key.column, JsonValue.column, HashKey.named, RangeKey.named)
   
   def createTestTable() =
     DynamoDBOps.createTable(Schema.Create.complexKey(table, defaultThroughput))

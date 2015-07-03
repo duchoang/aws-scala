@@ -40,8 +40,8 @@ object Convert {
   implicit def NamedToAttributeDefinition[H, R] =
     new Convert[Named[H, R], List[AttributeDefinition]] {
       def convert = {
-        case Named(hash, Column.NoColumn) => List(hash.decoder.dynamoType(hash.name))
-        case Named(hash, range) => List(hash.decoder.dynamoType(hash.name), range.decoder.dynamoType(range.name))
+        case Named(hash, Column.NoColumn) => List(hash.dynamoType)
+        case Named(hash, range) => List(hash.dynamoType, range.dynamoType)
       }
     }
 

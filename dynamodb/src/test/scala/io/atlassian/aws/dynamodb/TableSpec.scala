@@ -11,20 +11,6 @@ import org.specs2.main.Arguments
 import java.util.UUID.randomUUID
 import scalaz.std.AllInstances._
 
-  object TestTable extends Table.ComplexKey {
-    import TestData._
-
-    type K = Key
-    type V = Value
-    type H = HashKey
-    type R = RangeKey
-
-    def keyIso = Key.Iso
-
-    val schema = defineSchema(s"my_things2_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.column, RangeKey.column)
-  }
-
-
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class TableSpec(val arguments: Arguments)
     extends ScalaCheckSpec
@@ -40,7 +26,7 @@ class TableSpec(val arguments: Arguments)
 
     def keyIso = Key.Iso
 
-    val schema = defineSchema(s"my_things2_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.column, RangeKey.column)
+    val schema = defineSchema(s"my_things2_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.named, RangeKey.named)
   }
 
   implicit val DYNAMO_CLIENT = dynamoClient

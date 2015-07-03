@@ -18,12 +18,12 @@ object TestData extends Arbitraries with MoreEqualsInstances {
   val defaultThroughput = Throughput(5, 5)
 
   object Mapping {
-    val key: Column[HashKey] = HashKey.column
-    val sequence: Column[RangeKey] = RangeKey.column
-    val hash: Column[String] = Column[String]("hash")
-    val metaData: Column[String] = Column[String]("metaData")
-    val length: Column[IndexRange] = IndexRange.column
-    val deletedTimestamp: Column[Option[DateTime]] = Column[Option[DateTime]]("deletedTimestamp")
+    val key: NamedColumn[HashKey] = HashKey.named
+    val sequence: NamedColumn[RangeKey] = RangeKey.named
+    val hash: Column[String] = Column[String]("hash").column
+    val metaData: Column[String] = Column[String]("metaData").column
+    val length: Column[IndexRange] = IndexRange.named.column
+    val deletedTimestamp: Column[Option[DateTime]] = Column[Option[DateTime]]("deletedTimestamp").column
   }
 
   case class HashKey(a: String, b: String, c: String)
@@ -40,7 +40,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
       case KeyRegex(a, b, c) => HashKey(a, b, c)
     }
 
-    val column = Column[HashKey]("key")
+    val named = Column[HashKey]("key")
   }
 
   case class RangeKey(seq: Long)
@@ -55,14 +55,14 @@ object TestData extends Arbitraries with MoreEqualsInstances {
         RangeKey.apply
       }
 
-    val column = Column[RangeKey]("seq")
+    val named = Column[RangeKey]("seq")
   }
 
   case class Key(a: String, b: String, c: String, seq: Long)
 
   object Key {
     lazy val column =
-      Column.compose2[Key](HashKey.column, RangeKey.column)(Iso.to)(Function.untupled(Iso.from))
+      Column.compose2[Key](HashKey.named.column, RangeKey.named.column)(Iso.to)(Function.untupled(Iso.from))
 
     implicit val Iso: Key <=> (HashKey, RangeKey) = new (Key <=> (HashKey, RangeKey)) {
       def from = { case (HashKey(a, b, c), RangeKey(d)) => Key(a, b, c, d) }
@@ -79,7 +79,7 @@ object TestData extends Arbitraries with MoreEqualsInstances {
     implicit val ThingRangeKeyDecoder: Decoder[IndexRange] =
       Decoder[Long].map { IndexRange.apply }
 
-    val column = Column[IndexRange]("length")
+    val named: NamedColumn[IndexRange] = Column[IndexRange]("length")
   }
 
   case class Value(hash: String, metaData: String, length: IndexRange, deletedTimestamp: Option[DateTime])
@@ -98,11 +98,11 @@ object TestData extends Arbitraries with MoreEqualsInstances {
 
   object KeyValue {
     lazy val column =
-      Column.compose2[KeyValue](HashKey.column, Value.column)((KeyValue.unapply _) andThen (_.get))(KeyValue.apply _)
+      Column.compose2[KeyValue](HashKey.named.column, Value.column)((KeyValue.unapply _) andThen (_.get))(KeyValue.apply _)
   }
 
   def simpleKeyTableNamed(tableName: String): SimpleKeyTable[HashKey, KeyValue] =
-    Schema.SimpleKeyTable(tableName, HashKey.column, KeyValue.column)
+    Schema.SimpleKeyTable(tableName, HashKey.named, KeyValue.column)
 
   def defineSchema(name: String, t: Table.ComplexKey)(kc: Column[t.K], vc: Column[t.V], hc: NamedColumn[t.H], rc: NamedColumn[t.R]): Schema.Standard[t.K, t.V, t.H, t.R] =
     Schema.ComplexKeyTable(name, Schema.Named(hc, rc), vc)(t.keyIso)

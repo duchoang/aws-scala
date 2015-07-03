@@ -44,9 +44,9 @@ object ColumnSpec extends ScalaCheckSpec {
 
   def round[A: Arbitrary: Encoder: Decoder: Equal] =
     Prop.forAll { (name: String, a: A) =>
-      check(Column[A](name))(a) &&
-        check(Column[A](name).liftOption)(Some(a)) &&
-        check(Column[A](name).liftOption)(Option.empty[A])
+      check(Column[A](name).column)(a) &&
+        check(Column[A](name).column.liftOption)(Some(a)) &&
+        check(Column[A](name).column.liftOption)(Option.empty[A])
     }
 
   def compose2 =
@@ -131,10 +131,10 @@ object ColumnSpec extends ScalaCheckSpec {
       }(Check(s1, d, l1, i, l2, s2))
     }
 
-  val c1 = Column[String]("one")
-  val c2 = Column[Instant]("two")
-  val c3 = Column[Long]("three")
-  val c4 = Column[Int]("four")
-  val c5 = Column[Long]("five")
-  val c6 = Column[String]("six")
+  val c1 = Column[String]("one").column
+  val c2 = Column[Instant]("two").column
+  val c3 = Column[Long]("three").column
+  val c4 = Column[Int]("four").column
+  val c5 = Column[Long]("five").column
+  val c6 = Column[String]("six").column
 }

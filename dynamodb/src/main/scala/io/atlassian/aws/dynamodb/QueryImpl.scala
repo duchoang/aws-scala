@@ -17,7 +17,7 @@ private[dynamodb] object QueryImpl {
     QueryImpl(
       tableName,
       indexName,
-      Map(keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol)),
+      Map(keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol.column)),
       exclusiveStartKey,
       scanDirection,
       consistency,
@@ -37,8 +37,8 @@ private[dynamodb] object QueryImpl {
       tableName,
       indexName,
       Map(
-        keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol),
-        ordCol.name -> condition(rangeKey, rangeComparison)(ordCol)
+        keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol.column),
+        ordCol.name -> condition(rangeKey, rangeComparison)(ordCol.column)
       ),
       exclusiveStartKey,
       scanDirection,
