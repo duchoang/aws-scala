@@ -1,6 +1,8 @@
 package io.atlassian.aws
 package dynamodb
 
+import io.atlassian.aws.dynamodb.DynamoDB.ReadConsistency
+
 import scalaz.{ Coyoneda, Free, Isomorphism, Monad, ~> }
 import Isomorphism.<=>
 
@@ -44,8 +46,8 @@ object Table {
   /** simple tables don't have a range key part defined and don't allow queries using ranges */
   trait Simple extends Operations { self =>
     
-    final def get(k: K): DBAction[Option[V]] =
-      GetOp(k)
+    final def get(k: K, consistency: ReadConsistency = ReadConsistency.Eventual): DBAction[Option[V]] =
+      GetOp(k, consistency)
 
     final def tableExists: DBAction[Boolean] =
       TableExistsOp
@@ -91,7 +93,7 @@ object Table {
       }
     }
 
-    case class GetOp(key: K) extends DBOp[Option[V]]
+    case class GetOp(key: K, consistency: ReadConsistency) extends DBOp[Option[V]]
     case object TableExistsOp extends DBOp[Boolean]
     case class WriteOp[X] private[Table] (key: K, value: V, m: Write.Mode) extends DBOp[Write.Result[V, Write.Mode]]
     case class ReplaceOp(key: K, old: V, value: V) extends DBOp[Write.Result[V, Write.Mode.Replace.type]]

@@ -245,7 +245,7 @@ object DynamoDB {
     }.toMap
 
     op match {
-      case kv.GetOp(k) => get(iso.to(k))(t.name, t.key, t.value)
+      case kv.GetOp(k, consistency) => get(iso.to(k), consistency)(t.name, t.key, t.value)
       case kv.WriteOp(k, v, mode) => write(iso.to(k), v, mode)(t.name, t.key, t.value).asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
       case kv.ReplaceOp(k, old, v) => write(iso.to(k), v, Write.Mode.Replace, Some(old))(t.name, t.key, t.value)
       case kv.DeleteOp(k) => delete(iso.to(k))(t.name, t.key).map { _ => ()}
