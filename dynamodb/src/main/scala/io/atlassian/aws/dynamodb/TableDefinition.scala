@@ -6,8 +6,8 @@ import com.amazonaws.services.dynamodbv2.model._
 case class TableDefinition[K, V, H, R] private[TableDefinition] (
   name: String,
   key: Column[K],
-  hash: NamedColumn[H],
-  range: NamedColumn[R],
+  hash: NamedColumn,
+  range: NamedColumn,
   value: Column[V],
   attributeDefinitions: List[AttributeDefinition],
   // Schema definition representing this key
@@ -23,8 +23,8 @@ object TableDefinition {
     tableName: String,
     key: Column[K],
     value: Column[V],
-    hash: NamedColumn[H],
-    range: NamedColumn[R],
+    hash: NamedColumn,
+    range: NamedColumn,
     provisionedReadCapacity: Long = 5,
     provisionedWriteCapacity: Long = 5) =
     TableDefinition[K, V, H, R](

@@ -24,7 +24,7 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
   val tableName = s"my_things3_${System.currentTimeMillis.toString}"
   val table =
     TableDefinition.from[Key, JsonValue, HashKey, RangeKey](tableName,
-      Key.column, JsonValue.column, HashKey.column, RangeKey.column)
+      Key.column, JsonValue.column, HashKey.named, RangeKey.named)
 
   def is =
     s2"""

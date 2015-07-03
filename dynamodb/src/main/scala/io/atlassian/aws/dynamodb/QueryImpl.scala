@@ -7,34 +7,34 @@ import collection.JavaConverters._
 import scalaz.syntax.id._
 
 private[dynamodb] object QueryImpl {
-  def forHash[K](
+  def forHash[K: Encoder: Decoder](
     hashKey: K,
     exclusiveStartKey: Option[DynamoMap] = None,
     scanDirection: ScanDirection = ScanDirection.Ascending,
     consistency: ReadConsistency = ReadConsistency.Eventual,
-    limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn[K]): QueryImpl =
+    limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn): QueryImpl =
     QueryImpl(
       tableName,
-      Map(keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol)),
+      Map(keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol.column)),
       exclusiveStartKey,
       scanDirection,
       consistency,
       limit
     )
 
-  def forHashAndRange[K, O](
+  def forHashAndRange[K: Encoder: Decoder, O: Encoder: Decoder](
     hashKey: K,
     rangeKey: O,
     rangeComparison: Comparison,
     exclusiveStartKey: Option[DynamoMap] = None,
     scanDirection: ScanDirection = ScanDirection.Ascending,
     consistency: ReadConsistency = ReadConsistency.Eventual,
-    limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn[K], ordCol: NamedColumn[O]): QueryImpl =
+    limit: Option[Int] = None)(tableName: String, keyCol: NamedColumn, ordCol: NamedColumn): QueryImpl =
     QueryImpl(
       tableName,
       Map(
-        keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol),
-        ordCol.name -> condition(rangeKey, rangeComparison)(ordCol)
+        keyCol.name -> condition(hashKey, Comparison.Eq)(keyCol.column),
+        ordCol.name -> condition(rangeKey, rangeComparison)(ordCol.column)
       ),
       exclusiveStartKey,
       scanDirection,
