@@ -56,12 +56,11 @@ object ColumnSpec extends ScalaCheckSpec {
       }((s, d))
     }
 
-
   def case2 =
     Prop.forAll { (s: String, d: Instant) =>
       case class Check(s: String, d: Instant)
       implicit val CheckEq = Equal.equalA[Check]
- 
+
       check {
         Column.case2[Check](c1, c2)(Check.apply, Check.unapply)
       }(Check(s, d))

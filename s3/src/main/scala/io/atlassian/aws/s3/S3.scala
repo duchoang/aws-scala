@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package s3
 
-import java.io.{File, ByteArrayInputStream, InputStream}
+import java.io.{ File, ByteArrayInputStream, InputStream }
 import java.util.ArrayList
 
 import com.amazonaws.regions.Region

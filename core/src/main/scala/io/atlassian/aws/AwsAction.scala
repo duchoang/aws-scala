@@ -14,7 +14,7 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
     def withMetaData[R, A](f: R => (MetaData, Attempt[A])): AwsAction[R, A] =
       Kleisli[WriterAttempt, R, A] { r: R => ResultT[Writer[MetaData, ?], A](f(r) match { case (w, a) => Writer(w, a.run) }) }
 
-  def value[R, A](v: => A): AwsAction[R, A] =
+    def value[R, A](v: => A): AwsAction[R, A] =
       AwsAction { _ => Attempt.ok(v) }
 
     def ask[R]: AwsAction[R, R] =

@@ -29,7 +29,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     if (IS_LOCAL) 20
     else 1
 
-  implicit val DYNAMO_CLIENT = dynamoClient <| {_.addRequestHandler(AWSRequestIdRetriever.requestHandler)}
+  implicit val DYNAMO_CLIENT = dynamoClient <| { _.addRequestHandler(AWSRequestIdRetriever.requestHandler) }
 
   val table = tableNamed(s"my_things2_${System.currentTimeMillis.toString}")
 

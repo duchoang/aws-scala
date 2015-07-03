@@ -22,7 +22,7 @@ object AWSRequestIdRetriever {
         key <- metaDataKey(request.getServiceName)
         id <- e match {
           case ase: AmazonServiceException => ase.getRequestId.some
-          case _ => retriever(header, response)
+          case _                           => retriever(header, response)
         }
       } yield Value(key, id)) foreach { v =>
         contexts.put(e.hashCode, v)
@@ -40,31 +40,30 @@ object AWSRequestIdRetriever {
     override def beforeRequest(request: Request[_]) = ()
   }
 
-
   // A must be whatever the aws client returns
   def withClient[C, A](f: C => A): AwsAction[C, A] =
     AwsAction.withMetaData { client: C =>
       try {
         val a = f(client)
-        contexts.remove(a.hashCode).cata( v => (metaData(v), Attempt.ok(a)), (MetaData.none, Attempt.ok(a)) )
+        contexts.remove(a.hashCode).cata(v => (metaData(v), Attempt.ok(a)), (MetaData.none, Attempt.ok(a)))
       } catch {
         case util.control.NonFatal(t) =>
-          contexts.remove(t.hashCode).cata( v => (metaData(v), Attempt.exception(t)), (MetaData.none, Attempt.exception(t)) )
+          contexts.remove(t.hashCode).cata(v => (metaData(v), Attempt.exception(t)), (MetaData.none, Attempt.exception(t)))
       }
     } recover {
       AmazonExceptions.transformException andThen invalid[C, A]
     }
 
   private val headerKey: String => Option[String] = {
-    case S3.serviceName => S3.headerKey
+    case S3.serviceName       => S3.headerKey
     case DynamoDb.serviceName => DynamoDb.headerKey
-    case _ => None
+    case _                    => None
   }
 
   private val metaDataKey: String => Option[String] = {
-    case S3.serviceName => S3.metaDataKey
+    case S3.serviceName       => S3.metaDataKey
     case DynamoDb.serviceName => DynamoDb.metaDataKey
-    case _ => None
+    case _                    => None
   }
 
   private def retriever(headerKey: String, res: Response[_]) =
@@ -75,12 +74,12 @@ object AWSRequestIdRetriever {
 
   object S3 {
     val serviceName = "AmazonS3"
-    val headerKey   = "x-amz-request-id".some
+    val headerKey = "x-amz-request-id".some
     val metaDataKey = "S3-AWS-REQUEST-ID".some
   }
   object DynamoDb {
     val serviceName = "AmazonDynamoDBv2"
-    val headerKey   = "x-amzn-RequestId".some
+    val headerKey = "x-amzn-RequestId".some
     val metaDataKey = "DYNAMO-AWS-REQUEST-ID".some
   }
 
