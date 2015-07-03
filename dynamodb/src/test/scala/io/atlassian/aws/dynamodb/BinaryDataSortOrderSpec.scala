@@ -31,10 +31,10 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
 
   case class ComplexKey(h: HashKey, r: TwoLongs)
   object ComplexKey {
-    lazy val twoLongsColumn =
+    lazy val twoLongsNamed =
       Column[TwoLongs]("range")
     lazy val column =
-      Column.compose2[ComplexKey](HashKey.column, twoLongsColumn) { case ComplexKey(h, r) => (h, r) } { case (h, r) => ComplexKey(h, r) }
+      Column.compose2[ComplexKey](HashKey.named.column, twoLongsNamed.column) { case ComplexKey(h, r) => (h, r) } { case (h, r) => ComplexKey(h, r) }
   }
 
   object table extends Table {
@@ -43,7 +43,7 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
     type H = HashKey
     type R = TwoLongs
     val schema =
-      TableDefinition.from[K, V, H, R](s"my_things3_${System.currentTimeMillis.toString}", ComplexKey.column, Value.column, HashKey.column, ComplexKey.twoLongsColumn)
+      TableDefinition.from[K, V, H, R](s"my_things3_${System.currentTimeMillis.toString}", ComplexKey.column, Value.column, HashKey.named, ComplexKey.twoLongsNamed)
     tableNamed(s"my_things3_${System.currentTimeMillis.toString}")
   }
 

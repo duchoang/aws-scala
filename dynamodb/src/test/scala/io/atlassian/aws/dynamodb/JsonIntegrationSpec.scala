@@ -24,7 +24,7 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
   val tableName = s"my_things3_${System.currentTimeMillis.toString}"
   val table =
     TableDefinition.from[Key, JsonValue, HashKey, RangeKey](tableName,
-      Key.column, JsonValue.column, HashKey.column, RangeKey.column)
+      Key.column, JsonValue.column, HashKey.named, RangeKey.named)
 
   def is =
     s2"""
@@ -47,7 +47,7 @@ class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with 
   case class JsonValue(s: String, d: Double, b: Boolean, od: Option[Double], l: List[String], nested: Option[Nested], nestedList: List[Nested])
   object JsonValue {
     lazy val column =
-      Column[JsonValue]("jsonValue")
+      Column[JsonValue]("jsonValue").column
 
     implicit val JsonValueCodecJson: CodecJson[JsonValue] =
       casecodec7(JsonValue.apply, JsonValue.unapply)("s", "d", "b", "od", "l", "nested", "nested-list")

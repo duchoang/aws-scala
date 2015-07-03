@@ -89,7 +89,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       case class Value2(foo: String)
       implicit val Value2Encoder = Encoder[String].contramap[Value2] { _.foo }
       implicit val Value2Dcoder = Decoder[String].map[Value2] { Value2.apply }
-      val column = Column[Value2]("foo")
+      val column = Column[Value2]("foo").column
 
       val keyAttr = Key.column.marshall.toFlattenedMap(key)
       val valueAttr = column.marshall.toFlattenedMap(new Value2(str)).mapValues {
@@ -178,7 +178,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
   def queryWorksWhenHashKeyDoesntExist =
     Prop.forAll { (k: Key) =>
       val hashKey = HashKey(k.a, k.b, k.c)
-      DynamoDB.query(QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column))(RangeKey.column, Value.column) must returnResult { page =>
+      DynamoDB.query(QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.named))(RangeKey.named.column, Value.column) must returnResult { page =>
         page.result.isEmpty && page.next.isEmpty
       }
     }.set(minTestsOk = NUM_TESTS)
@@ -197,10 +197,10 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
 
       val hashKey = HashKey(k.a, k.b, k.c)
-      val query = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column)
+      val query = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.named)
 
       (for {
-        result <- DynamoDB.query(query)(RangeKey.column, Value.column)
+        result <- DynamoDB.query(query)(RangeKey.named.column, Value.column)
       } yield result) must returnResult { page =>
         page.next must not beNone
       }
@@ -210,13 +210,13 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     Prop.forAll { (k: Key, v1: Value, v2: Value) =>
       val k2 = k.copy(seq = k.seq + 1)
       val hashKey = HashKey(k.a, k.b, k.c)
-      val queryAsc = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.column)
-      val queryDesc = QueryImpl.forHash[HashKey](hashKey = hashKey, scanDirection = ScanDirection.Descending)(table.name, HashKey.column)
+      val queryAsc = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.named)
+      val queryDesc = QueryImpl.forHash[HashKey](hashKey = hashKey, scanDirection = ScanDirection.Descending)(table.name, HashKey.named)
       (for {
         _ <- DynamoDB.write(k, v1, Overwrite)(table.name, Key.column, Value.column)
         _ <- DynamoDB.write(k2, v2, Overwrite)(table.name, Key.column, Value.column)
-        ascResult <- DynamoDB.query(queryAsc)(RangeKey.column, Value.column)
-        descResult <- DynamoDB.query(queryDesc)(RangeKey.column, Value.column)
+        ascResult <- DynamoDB.query(queryAsc)(RangeKey.named.column, Value.column)
+        descResult <- DynamoDB.query(queryDesc)(RangeKey.named.column, Value.column)
       } yield (ascResult, descResult)) must returnResult {
         case (page1, page2) =>
           page1.result must equal(List(v1, v2)) and
@@ -231,12 +231,12 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       val k2 = k.copy(seq = k.seq + 1)
       val k3 = k2.copy(seq = k2.seq + 1)
       val hashKey = HashKey(k.a, k.b, k.c)
-      val query = QueryImpl.forHashAndRange[HashKey, RangeKey](hashKey, RangeKey(k2.seq), Comparison.Lte)(table.name, HashKey.column, RangeKey.column)
+      val query = QueryImpl.forHashAndRange[HashKey, RangeKey](hashKey, RangeKey(k2.seq), Comparison.Lte)(table.name, HashKey.named, RangeKey.named)
       (for {
         _ <- DynamoDB.write(k, v1, Overwrite)(table.name, Key.column, Value.column)
         _ <- DynamoDB.write(k2, v2, Overwrite)(table.name, Key.column, Value.column)
         _ <- DynamoDB.write(k3, v3, Overwrite)(table.name, Key.column, Value.column)
-        result <- DynamoDB.query(query)(RangeKey.column, Value.column)
+        result <- DynamoDB.query(query)(RangeKey.named.column, Value.column)
       } yield result) must returnResult { page =>
         page.result must equal(List(v1, v2)) and
           (page.next must beNone)
@@ -270,7 +270,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       }
     })
     val action: DynamoDBAction[Page[TestTable.R, TestTable.V]] =
-      DynamoDB.interpreter(TestTable)(table)(TestTable.DBOp.QueryOp(query))
+      DynamoDB.interpreter(TestTable)(table).apply(TestTable.DBOp.QueryOp(query))
     action must returnResult[Page[TestTable.R, TestTable.V]] {
       _.result.length == 1
     }(client)
