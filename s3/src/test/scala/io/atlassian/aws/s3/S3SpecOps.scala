@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 
 trait S3SpecOps extends MustMatchers with S3Arbitraries {
   import ArraySpecOps._
-  import AwsAction._
+  import S3Action._
 
   def createTestFolder(bucket: Bucket, testFolder: String)(implicit client: SDKS3Client) =
     runS3Action(S3.createFolder(bucket, testFolder))

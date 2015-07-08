@@ -5,7 +5,7 @@ package akka
 import _root_.akka.actor.{ Props, Actor, PoisonPill }
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import kadai.log.json.JsonLogging
-import AwsAction._
+import SWFAction._
 
 import scala.concurrent.duration._
 

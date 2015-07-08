@@ -21,7 +21,7 @@ import scalaz.syntax.id._
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaCheck with S3Arbitraries with S3SpecOps with Mockito {
 
-  import S3Key._, LargeObjectToStore._, spec.NumericTypes._
+  import S3Key._, S3Action._, LargeObjectToStore._, spec.NumericTypes._
 
   implicit val S3_CLIENT = new SDKS3Client()
 

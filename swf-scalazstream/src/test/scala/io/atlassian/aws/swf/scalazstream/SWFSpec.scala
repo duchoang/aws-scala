@@ -119,7 +119,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   }
 
   def createTestWorkflow = {
-    import AwsAction._
+    import SWFAction._
     val action = SWF.registerWorkflow(workflowDef)
     action.runAction(CLIENT).run match {
       case -\/(e) =>

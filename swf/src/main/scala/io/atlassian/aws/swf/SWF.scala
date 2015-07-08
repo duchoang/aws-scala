@@ -9,7 +9,7 @@ import scalaz.syntax.all._
 import scala.collection.JavaConverters._
 
 object SWF {
-  import AwsAction._
+  import SWFAction._
 
   def register(domain: Domain, config: DomainConfig): SWFAction[Domain] =
     SWFAction.withClient {

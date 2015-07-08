@@ -47,4 +47,7 @@ trait Types {
     case object Copied extends CopyResult
     case object NotCopied extends CopyResult
   }
+
+  case class S3RequestId(regular: String, extended: String)
+  case class S3MetaData(requestIds: List[S3RequestId])
 }

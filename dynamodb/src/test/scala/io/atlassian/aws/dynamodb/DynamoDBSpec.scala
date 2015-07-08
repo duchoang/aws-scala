@@ -19,7 +19,7 @@ import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDynamoDB with DynamoDBActionMatchers {
-  import TestData._, Attempt._
+  import TestData._, Attempt._, DynamoDBAction._
 
   val NUM_TESTS =
     if (IS_LOCAL) 100

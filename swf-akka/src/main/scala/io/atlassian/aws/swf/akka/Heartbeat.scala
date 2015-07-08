@@ -21,7 +21,7 @@ object Heartbeat {
 }
 
 class Heartbeat(swf: AmazonSimpleWorkflow, owner: ActorRef, taskToken: TaskToken, interval: FiniteDuration) extends Actor with JsonLogging {
-  import AwsAction._
+  import SWFAction._
   import Heartbeat.Protocol._
   import context.dispatcher
   import JsonLogging._

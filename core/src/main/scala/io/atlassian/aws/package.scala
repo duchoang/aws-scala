@@ -16,15 +16,8 @@ package object aws extends AwsActionTypes with Types {
       unwrap.toString
   }
 
-  type MetaData = Map[String, List[String]]
-  object MetaData {
-    val none: MetaData = Map.empty
-    def apply(key: String, value: String): MetaData = Map(key -> List(value))
-  }
-  implicit def MetaDataMonoid: Monoid[MetaData] = scalaz.std.map.mapMonoid[String, List[String]]
+  type WriterAttempt[W, A] = ResultT[Writer[W, ?], A]
+  def WriterAttemptMonad[R, W](implicit M: Monoid[W]): Monad[WriterAttempt[W, ?]] = EitherT.eitherTMonad[Writer[W, ?], Invalid]
 
-  type WriterAttempt[A] = ResultT[Writer[MetaData, ?], A]
-  implicit val WriterAttemptMonad: Monad[WriterAttempt] = EitherT.eitherTMonad[Writer[MetaData, ?], Invalid]
-
-  type AwsAction[R, A] = ReaderT[WriterAttempt, R, A]
+  type AwsAction[R, W, A] = ReaderT[WriterAttempt[W, ?], R, A]
 }

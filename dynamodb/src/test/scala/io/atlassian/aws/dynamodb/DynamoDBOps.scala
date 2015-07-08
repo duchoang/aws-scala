@@ -10,7 +10,7 @@ import org.specs2.execute.{ Success, Failure }
 import reflect.ClassTag
 
 object DynamoDBOps extends Logging {
-  import AwsAction._
+  import DynamoDBAction._
   import Logging._
 
   def runAction(implicit client: AmazonDynamoDB): DynamoDBAction ~> (Invalid \/ ?) =

@@ -17,6 +17,7 @@ import argonaut._, Argonaut._
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class EncodeDecodeSpec extends ScalaCheckSpec {
   import Attempt._
+  import DynamoDBAction._
 
   def is = s2"""
   Encode/Decode pairs should correctly:

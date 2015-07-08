@@ -23,7 +23,7 @@ object ActivityActor {
 
 class ActivityActor(swf: AmazonSimpleWorkflow, activityDef: ActivityConfig, instance: ActivityInstance, function: ActivityFunction[Task]) extends Actor with JsonLogging {
   import JsonLogging._
-  import AwsAction._
+  import SWFAction._
 
   def receive = {
     case ActivityActor.Protocol.Start =>

@@ -24,7 +24,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
                      executorService: ExecutorService,
                      scheduledExecutorService: ScheduledExecutorService,
                      activityExecutionTimeout: FiniteDuration) extends JsonLogging {
-  import AwsAction._
+  import SWFAction._
   import JsonLogging._
 
   implicit val es = executorService

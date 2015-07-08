@@ -13,7 +13,7 @@ import scalaz.stream.{ Process, sink, Sink }
 import scalaz.syntax.monad._
 
 class Decider(swf: AmazonSimpleWorkflow, workflow: WorkflowDefinition, identity: SWFIdentity, executor: ExecutorService) extends JsonLogging {
-  import AwsAction._
+  import SWFAction._
   import JsonLogging._
 
   implicit val es = executor

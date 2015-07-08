@@ -31,7 +31,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
 
   import context.dispatcher
   import ActivityPoller.Protocol._
-  import AwsAction._
+  import SWFAction._
   import kadai.Invalid.syntax._
   import kadai.log.json.JsonLogging._
   implicit val timeout = Timeout(config.masterTimeout)

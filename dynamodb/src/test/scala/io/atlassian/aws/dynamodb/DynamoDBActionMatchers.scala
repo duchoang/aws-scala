@@ -6,12 +6,12 @@ import kadai.Invalid
 import org.specs2.matcher.{ Expectable, Matcher }
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import kadai.log.Logging
-import org.specs2.execute.{ Success, Failure }
 import reflect.ClassTag
 
 trait DynamoDBActionMatchers extends Logging {
 
   import Logging._
+  import DynamoDBAction._
 
   def returnFailure[A](implicit client: AmazonDynamoDB) =
     new ServiceMatcher[A]({
@@ -57,12 +57,7 @@ trait DynamoDBActionMatchers extends Logging {
       }
     }
 
-  def requestIdRecorded(md: MetaData): Boolean =
-    (for {
-      key <- AWSRequestIdRetriever.DynamoDb.metaDataKey
-      list <- md.get(key)
-      id <- list.headOption
-    } yield id).isDefined
+  def requestIdRecorded[A](md: MetaData): Boolean = md.requestIds.nonEmpty
 
   class ServiceMatcher[A](check: \/[Invalid, A] => (Boolean, String))(implicit client: AmazonDynamoDB) extends Matcher[DynamoDBAction[A]] {
     def apply[S <: DynamoDBAction[A]](s: Expectable[S]) = {

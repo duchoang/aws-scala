@@ -4,7 +4,7 @@ import com.amazonaws.services.rds.AmazonRDS
 import com.amazonaws.services.rds.model.CreateDBInstanceRequest
 
 package object rds extends rds.Types {
-  type RDSAction[A] = AwsAction[AmazonRDS, A]
+  type RDSAction[A] = AwsAction[AmazonRDS, MetaData, A]
 
   implicit class AvailabilityZoneSyntax(val a: AvailabilityZone) extends AnyVal {
     def aws(request: CreateDBInstanceRequest): CreateDBInstanceRequest =

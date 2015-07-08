@@ -10,7 +10,7 @@ import org.specs2.matcher.{ Matcher, Expectable }
 import scalaz.{ \/-, -\/, \/ }
 
 object SQSSpecOps extends Logging {
-  import AwsAction._
+  import SQSAction._
   import Logging._
 
   def createTestQueue(name: String)(implicit client: AmazonSQSClient) =
