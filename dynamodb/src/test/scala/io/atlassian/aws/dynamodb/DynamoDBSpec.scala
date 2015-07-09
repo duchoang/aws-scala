@@ -53,6 +53,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     have a describeTable that handles unknown tables $describeTableHandlesUnknownTable
     return error when trying to replace an entry while NoOverwrite is set $noOverwriteWorks
     record aws request id metadata                $recordRequestIdMetadata
+    record aws request id metadata in failures    $recordRequestIdMetadataInFailure
 
   DynamoDB query capability should
     support querying for non-existent hash keys   $queryWorksWhenHashKeyDoesntExist
@@ -279,19 +280,13 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
 
   def recordRequestIdMetadata = {
     Prop.forAll { (key: Key, value: Value) =>
-      val keyAttr = Key.column.marshall.toFlattenedMap(key)
-      val valueAttr = Value.column.marshall.toFlattenedMap(value).mapValues {
-        av => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(av)
-      }
+      DynamoDB.write(key, value, Write.Mode.Overwrite)(table.name, Key.column, Value.column) must returnMetaData
+    }.set(minTestsOk = NUM_TESTS)
+  }
 
-      DYNAMO_CLIENT.updateItem {
-        new UpdateItemRequest()
-          .withTableName(table.name)
-          .withKey(keyAttr.asJava)
-          .withAttributeUpdates(valueAttr.asJava)
-      }
-
-      DynamoDB.get[Key, Value](key)(table.name, Key.column, Value.column) must returnMetaData
+  def recordRequestIdMetadataInFailure = {
+    Prop.forAll { (key: Key, value: Value) =>
+      DynamoDB.write(key, value, Write.Mode.Overwrite)(null, Key.column, Value.column) must returnMetaData
     }.set(minTestsOk = NUM_TESTS)
   }
 

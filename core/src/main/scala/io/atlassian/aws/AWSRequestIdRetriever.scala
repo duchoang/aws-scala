@@ -5,6 +5,9 @@ import com.amazonaws.{ AmazonServiceException, Request, Response }
 
 import java.util.{ Map => JMap }
 
+import AmazonExceptions.ServiceException
+import kadai.Invalid
+
 import scala.collection.concurrent.TrieMap
 import scalaz.{ \/, Monoid }
 import scalaz.syntax.either._
@@ -14,7 +17,6 @@ import scala.collection.convert.decorateAsScala._
 case class HttpHeaders(headers: Map[String, String])
 
 object AWSRequestIdRetriever {
-  import AwsAction._
 
   private val contexts = TrieMap[Int, AmazonServiceException \/ JMap[String, String]]()
 
@@ -54,16 +56,21 @@ object AWSRequestIdRetriever {
     } yield w)
 
   // A must be whatever the aws client returns
-  def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit M: Monoid[W]): AwsAction[C, W, A] =
-    AwsAction.withMetaData { client: C =>
-      try {
-        val a = f(client)
-        (buildMetaData(a.hashCode)(fromHeaders), Attempt.ok(a))
-      } catch {
-        case util.control.NonFatal(t) =>
-          (buildMetaDataFromException(t.hashCode)(fromException), Attempt.exception(t))
-      }
-    } recover {
-      AmazonExceptions.transformException andThen invalid[C, W, A]
+  def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit M: Monoid[W]): AwsAction[C, W, A] = {
+    implicit val monad = new AwsAction.AwsActionMonad[C, W]
+    import monad.monadSyntax._
+    import monad.monadErrorSyntax._
+    import AwsAction._
+
+    AwsAction.withClient(f) handleError {
+      case i @ Invalid.Err(ase: AmazonServiceException) =>
+        AwsAction.invalid[C, W, A](i) :++>> buildMetaDataFromException(ase.hashCode)(fromException)
+      case i @ Invalid.Err(ServiceException(_, ase)) =>
+        AwsAction.invalid[C, W, A](i) :++>> buildMetaDataFromException(ase.hashCode)(fromException)
+      case i =>
+        AwsAction.invalid(i)
+    } >>= { a: A =>
+      AwsAction.ok[C, W, A](a) :++>> buildMetaData(a.hashCode)(fromHeaders)
     }
+  }
 }

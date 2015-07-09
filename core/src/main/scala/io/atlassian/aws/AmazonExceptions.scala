@@ -32,10 +32,9 @@ object AmazonExceptions {
       e => ExceptionType.unapply(e).map { t => ServiceException(t, e) }
   }
 
-  private[aws] def transformException: Invalid => Invalid =
-    _ match {
-      case Invalid.Err(e: AmazonServiceException) =>
-        AmazonExceptions.ServiceException.from(e).getOrElse(e) |> Invalid.Err
-      case i => i
-    }
+  private[aws] def transformException: Invalid => Invalid = {
+    case Invalid.Err(e: AmazonServiceException) =>
+      AmazonExceptions.ServiceException.from(e).getOrElse(e) |> Invalid.Err
+    case i => i
+  }
 }
