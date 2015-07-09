@@ -2,14 +2,13 @@ package io.atlassian.aws
 
 import com.amazonaws.AmazonServiceException
 
-import scalaz.{ Monad, Monoid, Kleisli, Writer, \/ }
+import scalaz.{ Catchable, EitherT, Id, Monad, MonadError, MonadListen, MonadPlus, MonadReader, Monoid, Kleisli, ReaderT, Writer, WriterT, \/ }
 import scalaz.syntax.either._
 import kadai.{ Invalid, result }
 
 trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
   object AwsAction {
     import result.ResultT
-    private implicit def writerAttemptMonad[W](implicit M: Monoid[W]) = WriterAttemptMonad
 
     def apply[R, W, A](f: R => Attempt[A])(implicit M: Monoid[W]): AwsAction[R, W, A] =
       Kleisli[WriterAttempt[W, ?], R, A] { r: R => ResultT[Writer[W, ?], A](Writer(M.zero, f(r).run)) }
@@ -21,10 +20,10 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
       AwsAction { _ => Attempt.ok(v) }
 
     def ask[R, W](implicit M: Monoid[W]): AwsAction[R, W, R] =
-      Kleisli.ask[WriterAttempt[W, ?], R]
+      new BigMonadAction().ask
 
     def local[R, W, A](f: R => R)(fa: AwsAction[R, W, A])(implicit M: Monoid[W]): AwsAction[R, W, A] =
-      Kleisli.local[WriterAttempt[W, ?], A, R](f)(fa)
+      new BigMonadAction().local(f)(fa)
 
     def ok[R, W, A](strict: A)(implicit M: Monoid[W]): AwsAction[R, W, A] =
       value(strict)
@@ -87,14 +86,65 @@ trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
         recover { f orElse { case i => invalid(i) } }
     }
 
-    private implicit def AwsActionMonad[R, W](implicit M: Monoid[W]): Monad[AwsAction[R, W, ?]] = Kleisli.kleisliMonadReader[WriterAttempt[W, ?], R](WriterAttemptMonad)
+    private type WriterAttemptWithLeftSide[W, E, A] = EitherT[Writer[W, ?], E, A]
+
+    private class BigMonadAction[R, W](implicit M: Monoid[W]) extends
+      MonadReader[({type λ[α, β] = AwsAction[α, W, β]})#λ, R] with
+      MonadListen[({type λ[α, β] = AwsAction[R, α, β]})#λ, W] with
+      MonadError[({type λ[α, β] = ReaderT[WriterAttemptWithLeftSide[W, α, ?], R, β]})#λ, Invalid] with
+      MonadPlus[({type λ[β] = AwsAction[R, W, β]})#λ] with
+      Monad[({type λ[β] = AwsAction[R, W, β]})#λ] {
+
+      private type TypedWriter[A] = Writer[W, A]
+      private type TypedWriterAttempt[A] = WriterAttempt[W, A]
+      private val wame = WriterAttemptMonadError[W]
+      private val waml = EitherT.monadListen[Writer, W, Invalid](WriterT.writerTMonadListen[Id.Id, W])
+      private val wamp = EitherT.eitherTMonadPlus[TypedWriter, Invalid](WriterT.writerMonad, Invalid.InvalidMonoid)
+
+      private def kleisli[A](f: R => TypedWriterAttempt[A]): AwsAction[R, W, A] =
+        Kleisli.kleisli[TypedWriterAttempt, R, A](f)
+
+      override def ask: AwsAction[R, W, R] =
+        kleisli(r => wame.point(r))
+
+      override def local[A](f: (R) => R)(fa: AwsAction[R, W, A]): AwsAction[R, W, A] =
+        kleisli(r => fa.run(f(r)))
+
+      override def point[A](a: => A): AwsAction[R, W, A] =
+        kleisli(_ => wame.point(a))
+
+      override def bind[A, B](fa: AwsAction[R, W, A])(f: (A) => AwsAction[R, W, B]): AwsAction[R, W, B] =
+        kleisli(r => wame.bind(fa.run(r)) { a => f(a).run(r) } )
+
+      override def listen[A](ma: AwsAction[R, W, A]): AwsAction[R, W, (A, W)] =
+        kleisli(r => waml.listen(ma.run(r)))
+
+      override def writer[A](w: W, v: A): AwsAction[R, W, A] =
+        kleisli(r => waml.writer(w, v))
+
+      override def raiseError[A](e: Invalid): AwsAction[R, W, A] =
+        kleisli(r => wame.raiseError(e))
+
+      override def handleError[A](fa: AwsAction[R, W, A])(f: Invalid => AwsAction[R, W, A]): AwsAction[R, W, A] =
+        kleisli(r => wame.handleError(fa.run(r)) { e => f(e).run(r) } )
+
+      override def empty[A]: AwsAction[R, W, A] =
+        kleisli(R => wamp.empty[A])
+
+      def plus[A](f1: AwsAction[R, W, A], f2: => AwsAction[R, W, A]): AwsAction[R, W, A] =
+        kleisli(r => wamp.plus[A](f1.run(r), f2.run(r)))
+    }
 
     trait Functions[C, W] {
       import scalaz.syntax.std.option._
 
       implicit def WMonoid: Monoid[W]
-      implicit def WAMonad: Monad[WriterAttempt[W, ?]] = WriterAttemptMonad
-      implicit def ActionMonad: Monad[Action] = AwsActionMonad[C, W]
+      implicit def WAMonad: Monad[WriterAttempt[W, ?]] =
+        WriterAttemptMonadError[W]
+      implicit def ActionMonad: Monad[Action] =
+        new BigMonadAction[C, W]
+      implicit def ActionCatchable: Catchable[Action] =
+        Kleisli.kleisliCatchable[WriterAttempt[W, ?], C](ResultT.CatachableResultT[Writer[W, ?]])
 
       implicit class ActionOps[A](action: AwsAction[C, W, A]) extends AwsActionOps[C, W, A](action)
 

@@ -3,7 +3,6 @@ package io.atlassian
 import kadai.Invalid
 import kadai.result.ResultT
 import scalaz._
-import scalaz.std.list.listMonoid
 
 package object aws extends AwsActionTypes with Types {
   type Attempt[A] = kadai.Attempt[A]
@@ -17,7 +16,7 @@ package object aws extends AwsActionTypes with Types {
   }
 
   type WriterAttempt[W, A] = ResultT[Writer[W, ?], A]
-  def WriterAttemptMonad[R, W](implicit M: Monoid[W]): Monad[WriterAttempt[W, ?]] = EitherT.eitherTMonad[Writer[W, ?], Invalid]
+  def WriterAttemptMonadError[W](implicit M: Monoid[W]) = EitherT.eitherTMonadError[Writer[W, ?], Invalid]
 
   type AwsAction[R, W, A] = ReaderT[WriterAttempt[W, ?], R, A]
 }
