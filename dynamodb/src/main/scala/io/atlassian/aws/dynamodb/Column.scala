@@ -26,18 +26,20 @@ sealed trait Column[A] {
 }
 
 /**
- * A specific field/column in a table. Has a name and an Encoder/Decoder to
- * prepare the encoded representation to the Dynamo driver, and to return
- * the de-serialized value back from the database, respectively.
- */
-final class NamedColumn[A](val name: String)(implicit val encoder: Encoder[A], val decoder: Decoder[A]) extends Column[A] {
-  override val marshall = Marshaller[A] { a => Map(name -> encoder.encode(a)) }
-  override val unmarshall = Unmarshaller.get(name)
-}
+  * A specific field/column in a table. Has a name and an Encoder/Decoder to
+  * prepare the encoded representation to the Dynamo driver, and to return
+  * the de-serialized value back from the database, respectively.
+  */
+case class NamedColumn[A](name: String, column: Column[A])
 
 object Column extends ColumnComposites {
-  def apply[A: Encoder: Decoder](s: String): NamedColumn[A] =
-    new NamedColumn[A](s)
+  def apply[A: Encoder: Decoder](s: String): NamedColumn[A] = {
+    val c = new Column[A] {
+      override val marshall = Marshaller[A] { a => Map(s -> Encoder[A].encode(a)) }
+      override val unmarshall = Unmarshaller.get(s)
+    }
+    NamedColumn(s, c)
+  }
 
   private[dynamodb] def unmarshall[A, B](ca: Column[A], cb: Column[B])(map: DynamoMap): Attempt[(A, B)] =
     for {

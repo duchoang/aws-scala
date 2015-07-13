@@ -239,7 +239,7 @@ object DynamoDB {
       case Some(value) => new AttributeValueUpdate().withAction(AttributeAction.PUT).withValue(value)
     }
 
-  def interpreter(kv: Table)(t: TableDefinition[kv.K, kv.V, kv.H, kv.R]): kv.DBOp ~> DynamoDBAction =
+  def interpreter(kv: Table)(t: TableDefinition[kv.K, kv.V, kv.H, kv.R])(implicit EH: Encoder[kv.H], DH: Decoder[kv.H], ER: Encoder[kv.R], DR: Decoder[kv.R]): kv.DBOp ~> DynamoDBAction =
     new (kv.DBOp ~> DynamoDBAction) {
       import kv.DBOp._
       import kv.Query._
@@ -255,8 +255,8 @@ object DynamoDB {
         }
 
       def queryImpl: kv.Query => DynamoDBAction[Page[kv.R, kv.V]] = {
-        case Hashed(h, Config(dir, _, consistency))         => query(QueryImpl.forHash(h, scanDirection = dir, consistency = consistency)(t.name, t.hash))(t.range, t.value)
-        case Ranged(h, r, cmp, Config(dir, _, consistency)) => query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir, consistency = consistency)(t.name, t.hash, t.range))(t.range, t.value)
+        case Hashed(h, Config(dir, limit, consistency))         => query(QueryImpl.forHash(h, scanDirection = dir, consistency = consistency, limit = limit)(t.name, t.hash))(t.range.column, t.value)
+        case Ranged(h, r, cmp, Config(dir, limit, consistency)) => query(QueryImpl.forHashAndRange(h, r, rangeComparison = cmp, scanDirection = dir, consistency = consistency, limit = limit)(t.name, t.hash, t.range))(t.range.column, t.value)
       }
     }
 }

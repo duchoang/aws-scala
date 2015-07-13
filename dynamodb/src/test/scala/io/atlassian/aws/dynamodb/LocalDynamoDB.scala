@@ -4,6 +4,7 @@ package dynamodb
 import java.io.File
 import java.net.ServerSocket
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
@@ -83,11 +84,10 @@ trait LocalDynamoDB {
   def runScript(script: String, args: List[String], name: String) = {
     val target = new File(targetDirectory, script)
 
-    if (!target.exists()) {
-      targetDirectory.mkdirs()
-
+    targetDirectory.mkdirs()
+    if (target.createNewFile()) {
       val stream = classOf[LocalDynamoDB].getClassLoader.getResourceAsStream("scripts/" + script)
-      Files.copy(stream, target.toPath)
+      Files.copy(stream, target.toPath, REPLACE_EXISTING)
       target.setExecutable(true)
     }
 
