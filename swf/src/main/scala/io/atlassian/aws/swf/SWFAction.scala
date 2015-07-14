@@ -3,7 +3,7 @@ package swf
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 
-object SWFAction extends AwsAction.Functions[AmazonSimpleWorkflow, MetaData] {
+object SWFAction extends Functions[AmazonSimpleWorkflow, MetaData] {
   override type Action[A] = SWFAction[A]
   override implicit def WMonoid = MetaDataMonoid
 }

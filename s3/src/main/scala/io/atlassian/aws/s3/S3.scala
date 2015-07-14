@@ -23,7 +23,6 @@ import scalaz.syntax.std.option._
 
 object S3 {
   import S3Key._
-  import AwsAction._
   import S3Action._
 
   val MultipartChunkSize = 5 * 1024 * 1024

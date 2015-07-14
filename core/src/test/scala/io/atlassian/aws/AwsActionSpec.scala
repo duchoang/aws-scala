@@ -28,6 +28,8 @@ class AwsActionSpec extends SpecificationWithJUnit with ScalaCheck with Disjunct
     override def append(f1: Unit, f2: => Unit): Unit = ()
   }
 
+  implicit class ActionOps[R, W, A](action: AwsAction[R, W, A]) extends AwsActionOps(action)
+
   def withClientThrowsIsHandled =
     Prop.forAll { msg: String =>
       withClient[String, Unit, String] {

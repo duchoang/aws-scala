@@ -29,7 +29,7 @@ class TableSpec(val arguments: Arguments)
     type V = Value
     type H = HashKey
     type R = RangeKey
-    val schema = tableNamed(s"my_things2_${System.currentTimeMillis.toString}")
+    val schema = tableNamed(s"my_things5_${System.currentTimeMillis.toString}")
   }
 
   implicit val DYNAMO_CLIENT = dynamoClient

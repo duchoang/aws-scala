@@ -43,7 +43,7 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
     type H = HashKey
     type R = TwoLongs
     val schema =
-      TableDefinition.from[K, V, H, R](s"my_things3_${System.currentTimeMillis.toString}", ComplexKey.column, Value.column, HashKey.named, ComplexKey.twoLongsNamed)
+      TableDefinition.from[K, V, H, R](s"my_things4_${System.currentTimeMillis.toString}", ComplexKey.column, Value.column, HashKey.named, ComplexKey.twoLongsNamed)
     tableNamed(s"my_things3_${System.currentTimeMillis.toString}")
   }
 

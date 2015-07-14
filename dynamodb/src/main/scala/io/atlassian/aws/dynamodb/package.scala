@@ -7,7 +7,7 @@ import scalaz.ReaderT
 package object dynamodb extends QueryTypes with DynamoStringType {
   type DynamoDBAction[A] = AwsAction[AmazonDynamoDB, MetaData, A]
 
-  object DynamoDBAction extends AwsAction.Functions[AmazonDynamoDB, MetaData] {
+  object DynamoDBAction extends Functions[AmazonDynamoDB, MetaData] {
     override type Action[A] = DynamoDBAction[A]
 
     override implicit def WMonoid = MetaDataMonoid

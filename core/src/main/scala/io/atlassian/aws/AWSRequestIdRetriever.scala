@@ -5,7 +5,6 @@ import com.amazonaws.{ AmazonServiceException, Request, Response }
 
 import java.util.{ Map => JMap }
 
-import AmazonExceptions.ServiceException
 import kadai.Invalid
 
 import scala.collection.concurrent.TrieMap
@@ -56,21 +55,19 @@ object AWSRequestIdRetriever {
     } yield w)
 
   // A must be whatever the aws client returns
-  def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit M: Monoid[W]): AwsAction[C, W, A] = {
-    implicit val monad = new AwsAction.AwsActionMonad[C, W]
+  def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit monad: AwsActionMonad[C, W], wmonoid: Monoid[W]): AwsAction[C, W, A] = {
     import monad.monadSyntax._
-    import monad.monadErrorSyntax._
-    import AwsAction._
 
-    AwsAction.withClient(f) handleError {
-      case i @ Invalid.Err(ase: AmazonServiceException) =>
-        AwsAction.invalid[C, W, A](i) :++>> buildMetaDataFromException(ase.hashCode)(fromException)
-      case i @ Invalid.Err(ServiceException(_, ase)) =>
-        AwsAction.invalid[C, W, A](i) :++>> buildMetaDataFromException(ase.hashCode)(fromException)
-      case i =>
-        AwsAction.invalid(i)
-    } >>= { a: A =>
-      AwsAction.ok[C, W, A](a) :++>> buildMetaData(a.hashCode)(fromHeaders)
+    monad.ask >>= {
+      c =>
+        Attempt.safe(f(c)).fold({
+          case Invalid.Err(ase: AmazonServiceException) =>
+            monad.tell(buildMetaDataFromException(ase.hashCode)(fromException)) >>= { _ => monad.raiseError[A](Invalid.Err(AmazonExceptions.ServiceException.from(ase).getOrElse(ase))) }
+          case i =>
+            monad.raiseError(i)
+        }, a => {
+          monad.tell(buildMetaData(a.hashCode)(fromHeaders)) >>= { _ => monad.point(a) }
+        })
     }
   }
 }

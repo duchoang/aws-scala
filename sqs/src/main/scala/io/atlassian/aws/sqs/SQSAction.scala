@@ -3,7 +3,7 @@ package sqs
 
 import com.amazonaws.services.sqs.AmazonSQS
 
-object SQSAction extends AwsAction.Functions[AmazonSQS, MetaData] {
+object SQSAction extends Functions[AmazonSQS, MetaData] {
   override type Action[A] = SQSAction[A]
   override implicit def WMonoid = MetaDataMonoid
 }
