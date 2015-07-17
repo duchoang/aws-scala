@@ -16,11 +16,11 @@ object AWSRequestIdRetriever {
   private class RequestHandler[W](c: Any,
                                   fromHeaders: Option[HttpHeaders => Option[W]],
                                   fromException: Option[AmazonServiceException => Option[W]])
-                                 extends RequestHandler2 {
+      extends RequestHandler2 {
     private type MutableHeaders = java.util.Map[String, String]
     private val client = c match {
       case client: AmazonWebServiceClient => Some(client)
-      case _ => None
+      case _                              => None
     }
     private val holder = new ThreadLocal[MutableHeaders]()
     override def afterError(request: Request[_], response: Response[_], e: Exception) = ()
@@ -50,7 +50,6 @@ object AWSRequestIdRetriever {
         w <- f(ase)
       } yield w)
   }
-
 
   // A must be whatever the aws client returns
   def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit monad: AwsActionMonad[C, W], wmonoid: Monoid[W]): AwsAction[C, W, A] = {

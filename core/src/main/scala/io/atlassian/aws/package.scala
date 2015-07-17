@@ -15,7 +15,6 @@ package object aws extends Types {
   }
 
   type WriterAttempt[W, A] = ResultT[Writer[W, ?], A]
-  private[aws]type WriterAttemptWithLeftSide[W, E, A] = EitherT[Writer[W, ?], E, A]
 
   type AwsAction[R, W, A] = ReaderT[WriterAttempt[W, ?], R, A]
 }

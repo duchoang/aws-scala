@@ -14,8 +14,7 @@ class AwsActionOps[R, W, A](action: AwsAction[R, W, A]) {
     Attempt(action.run(r).run.value)
 
   def runActionWithMetaData(r: R)(implicit M: Monoid[W]): (W, Attempt[A]) = {
-    val run: WriterAttempt[W, A] = action.run(r)
-    val writer: Writer[W, Invalid \/ A] = run.run
+    val writer: Writer[W, Invalid \/ A] = action.run(r).run
     (writer.written, Attempt(writer.value))
   }
 

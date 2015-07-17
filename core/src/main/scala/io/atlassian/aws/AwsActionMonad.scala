@@ -3,11 +3,15 @@ package io.atlassian.aws
 import scalaz.{ EitherT, Id, Monad, MonadError, MonadListen, MonadPlus, MonadReader, Monoid, Kleisli, ReaderT, Writer, WriterT }
 import kadai.Invalid
 
-class AwsActionMonad[R, W](implicit M: Monoid[W]) extends MonadReader[({ type λ[α, β] = AwsAction[α, W, β] })#λ, R] with MonadListen[({ type λ[α, β] = AwsAction[R, α, β] })#λ, W] with MonadError[({ type λ[α, β] = ReaderT[WriterAttemptWithLeftSide[W, α, ?], R, β] })#λ, Invalid] with MonadPlus[({ type λ[β] = AwsAction[R, W, β] })#λ] with Monad[({ type λ[β] = AwsAction[R, W, β] })#λ] {
+class AwsActionMonad[R, W](implicit M: Monoid[W]) extends MonadReader[AwsAction[?, W, ?], R]
+    with MonadListen[AwsAction[R, ?, ?], W]
+    with MonadError[λ[(α, β) => ReaderT[λ[∂ => EitherT[λ[π => Writer[W, π]], α, ∂]], R, β]], Invalid]
+    with MonadPlus[AwsAction[R, W, ?]]
+    with Monad[AwsAction[R, W, ?]] {
 
   private type TypedWriter[A] = Writer[W, A]
   private type TypedWriterAttempt[A] = WriterAttempt[W, A]
-  private val wame = EitherT.eitherTMonadError[Writer[W, ?], Invalid]
+  private val wame = EitherT.eitherTMonadError[TypedWriter, Invalid]
   private val waml = EitherT.monadListen[Writer, W, Invalid](WriterT.writerTMonadListen[Id.Id, W])
   private val wamp = EitherT.eitherTMonadPlus[TypedWriter, Invalid](WriterT.writerMonad, Invalid.InvalidMonoid)
   private val kmr = Kleisli.kleisliMonadReader[TypedWriterAttempt, R](wame)
