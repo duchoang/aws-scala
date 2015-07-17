@@ -12,7 +12,7 @@ import org.junit.runner.RunWith
 import org.scalacheck.Prop
 import org.specs2.main.Arguments
 
-import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryResult, QueryRequest, ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
+import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryResult, QueryRequest, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
 
 import java.util.UUID.randomUUID
 import scalaz.syntax.id._, scalaz.std.AllInstances._
@@ -29,7 +29,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     if (IS_LOCAL) 20
     else 1
 
-  implicit val DYNAMO_CLIENT = dynamoClient <| { _.addRequestHandler(AWSRequestIdRetriever.requestHandler) }
+  implicit val DYNAMO_CLIENT = dynamoClient
 
   val table = tableNamed(s"my_things2_${System.currentTimeMillis.toString}")
 
