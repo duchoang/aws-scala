@@ -26,10 +26,10 @@ sealed trait Column[A] {
 }
 
 /**
-  * A specific field/column in a table. Has a name and an Encoder/Decoder to
-  * prepare the encoded representation to the Dynamo driver, and to return
-  * the de-serialized value back from the database, respectively.
-  */
+ * A specific field/column in a table. Has a name and an Encoder/Decoder to
+ * prepare the encoded representation to the Dynamo driver, and to return
+ * the de-serialized value back from the database, respectively.
+ */
 case class NamedColumn[A](name: String, column: Column[A])
 
 object Column extends ColumnComposites {
