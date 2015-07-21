@@ -1,5 +1,7 @@
 # Scala wrapper for AWS SDK
 
+[ ![Codeship Status for atlassian/aws-scala](https://codeship.com/projects/05f9e740-11cf-0133-9628-6695b09e6893/status?branch=master)](https://codeship.com/projects/92367)
+
 Dealing with the Java AWS SDK is messy. This library attempts to make it less messy by:
 
  * Making it easier to create AWS SDK clients based on configuration and supporting fallback configurations
