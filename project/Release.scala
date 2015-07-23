@@ -19,7 +19,7 @@ object Release {
         setReleaseVersion,
         commitReleaseVersion,
         tagRelease,
-        publishSignedArtifacts,
+        ReleaseStep(publishSignedArtifacts, check = identity, enableCrossBuild = true),
         setNextVersion,
         commitNextVersion,
         pushChanges
