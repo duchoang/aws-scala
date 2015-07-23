@@ -47,6 +47,11 @@ object Settings {
           .setPreference(AlignSingleLineCaseStatements, true)
           .setPreference(AlignParameters, true)
       , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.6.3")
+      , resolvers ++= Seq(
+          Resolver.sonatypeRepo("releases"),
+          Resolver.sonatypeRepo("snapshots"),
+          Resolver.typesafeIvyRepo("releases")
+        )
       , licenses := Seq("Apache2" -> url("https://bitbucket.org/atlassian/aws-scala/raw/master/LICENSE"))
       , homepage := Some(url("https://bitbucket.org/atlassian/aws-scala"))
       , pomExtra := (
