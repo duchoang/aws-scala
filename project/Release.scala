@@ -1,4 +1,3 @@
-import com.typesafe.sbt.pgp.PgpKeys._
 import sbt._
 import sbtrelease.ReleasePlugin.ReleaseKeys._
 import sbtrelease.ReleaseStateTransformations._
