@@ -7,7 +7,7 @@ import scalaz.syntax.all._
 object AwsAction {
 
   def apply[R, W: Monoid, A](f: R => Attempt[A]): AwsAction[R, W, A] =
-    M[R, W] |> { implicit m => m.ask >>= { f(_).fold(m.raiseError, a => m.point(a)) } }
+    M[R, W] |> { implicit m => m.ask >>= { f(_) |> attempt[R, W, A] } }
 
   def value[R, W: Monoid, A](v: => A): AwsAction[R, W, A] =
     M.point(v)
@@ -22,18 +22,15 @@ object AwsAction {
     value(strict)
 
   def safe[R, W: Monoid, A](f: R => A): AwsAction[R, W, A] =
-    apply { r: R => Attempt.safe { f(r) } }
+    apply { r => Attempt.safe { f(r) } }
 
   def withClient[R, W: Monoid, A](f: R => A): AwsAction[R, W, A] =
     M.handleError(safe(f)) {
       AmazonExceptions.transformException andThen invalid[R, W, A]
     }
 
-  def attempt[R, W: Monoid, A](aa: Attempt[A]): AwsAction[R, W, A] = {
-    implicit val monad = M[R, W]
-    import monad.monadSyntax._
-    aa.fold(monad.raiseError, _.point)
-  }
+  def attempt[R, W: Monoid, A](a: Attempt[A]): AwsAction[R, W, A] = 
+    a.fold(invalid[R, W, A], ok[R, W, A])
 
   def fail[R, W: Monoid, A](msg: String): AwsAction[R, W, A] =
     invalid(Invalid.Message(msg))
