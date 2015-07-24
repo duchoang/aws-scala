@@ -5,5 +5,4 @@ import com.amazonaws.services.rds.AmazonRDS
 
 object RDSAction extends Functions[AmazonRDS, MetaData] {
   override type Action[A] = RDSAction[A]
-  override implicit def WMonoid = MetaDataMonoid
 }

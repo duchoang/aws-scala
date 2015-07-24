@@ -3,22 +3,11 @@ package io.atlassian.aws
 import scalaz.{ EitherT, Id, Monad, MonadError, MonadListen, MonadPlus, MonadReader, Monoid, Kleisli, ReaderT, Writer, WriterT }
 import kadai.Invalid
 
-class AwsActionMonad[R, W](implicit M: Monoid[W]) extends MonadReader[AwsAction[?, W, ?], R]
-    with MonadListen[AwsAction[R, ?, ?], W]
-    with MonadError[λ[(α, β) => ReaderT[λ[∂ => EitherT[λ[π => Writer[W, π]], α, ∂]], R, β]], Invalid]
-    with MonadPlus[AwsAction[R, W, ?]]
-    with Monad[AwsAction[R, W, ?]] {
-
-  private type TypedWriter[A] = Writer[W, A]
-  private type TypedWriterAttempt[A] = WriterAttempt[W, A]
-  private val wame = EitherT.eitherTMonadError[TypedWriter, Invalid]
-  private val waml = EitherT.monadListen[Writer, W, Invalid](WriterT.writerTMonadListen[Id.Id, W])
-  private val wamp = EitherT.eitherTMonadPlus[TypedWriter, Invalid](WriterT.writerMonad, Invalid.InvalidMonoid)
-  private val kmr = Kleisli.kleisliMonadReader[TypedWriterAttempt, R](wame)
-  private val kmp = Kleisli.kleisliMonadPlus[TypedWriterAttempt, R](wamp)
-
-  private def kleisli[A](f: R => TypedWriterAttempt[A]): AwsAction[R, W, A] =
-    Kleisli.kleisli[TypedWriterAttempt, R, A](f)
+class AwsActionMonad[R, W: Monoid] extends Monad[AwsAction[R, W, ?]] 
+  with MonadReader[AwsAction[?, W, ?], R]
+  with MonadListen[AwsAction[R, ?, ?], W] // MonadTell+
+  with MonadPlus[AwsAction[R, W, ?]]
+  with MonadError[λ[(α, β) => ReaderT[λ[∂ => EitherT[λ[π => Writer[W, π]], α, ∂]], R, β]], Invalid] {
 
   override def ask: AwsAction[R, W, R] =
     kmr.ask
@@ -49,4 +38,32 @@ class AwsActionMonad[R, W](implicit M: Monoid[W]) extends MonadReader[AwsAction[
 
   override def plus[A](f1: AwsAction[R, W, A], f2: => AwsAction[R, W, A]): AwsAction[R, W, A] =
     kmp.plus(f1, f2)
+
+  override def tell(w: W): AwsAction[R, W, Unit] =
+    kleisli(_ => waml.tell(w))
+
+  //
+  // private
+  //
+
+  private type WriterW[A] = Writer[W, A]
+  private type ResultWriterW[A] = ResultWriter[W, A]
+
+  private val wame =
+    EitherT.eitherTMonadError[WriterW, Invalid]
+
+  private val waml =
+    EitherT.monadListen[Writer, W, Invalid](WriterT.writerTMonadListen[Id.Id, W])
+
+  private val wamp =
+    EitherT.eitherTMonadPlus[WriterW, Invalid](WriterT.writerMonad, Invalid.InvalidMonoid)
+
+  private val kmr =
+    Kleisli.kleisliMonadReader[ResultWriterW, R](wame)
+
+  private val kmp =
+    Kleisli.kleisliMonadPlus[ResultWriterW, R](wamp)
+
+  private def kleisli[A](f: R => ResultWriterW[A]): AwsAction[R, W, A] =
+    Kleisli.kleisli(f)
 }

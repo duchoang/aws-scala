@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package s3
 
-import scalaz.{ @@, Tag }
+import scalaz.{ @@, Monoid, Tag }
 import scalaz.syntax.std.list._
 
 trait Types {
@@ -50,4 +50,10 @@ trait Types {
 
   case class S3RequestId(regular: String, extended: String)
   case class S3MetaData(requestIds: List[S3RequestId])
+  object S3MetaData {
+    implicit object S3MetaDataMonoid extends Monoid[S3MetaData] {
+      override def zero = S3MetaData(Nil)
+      override def append(f1: S3MetaData, f2: => S3MetaData) = S3MetaData(f1.requestIds ++ f2.requestIds)
+    }
+  }
 }

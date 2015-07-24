@@ -14,7 +14,7 @@ package object aws extends Types {
       unwrap.toString
   }
 
-  type WriterAttempt[W, A] = ResultT[Writer[W, ?], A]
+  type ResultWriter[W, A] = ResultT[Writer[W, ?], A]
 
-  type AwsAction[R, W, A] = ReaderT[WriterAttempt[W, ?], R, A]
+  type AwsAction[R, W, A] = ReaderT[ResultWriter[W, ?], R, A]
 }

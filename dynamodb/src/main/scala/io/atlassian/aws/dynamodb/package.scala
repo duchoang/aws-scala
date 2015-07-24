@@ -10,8 +10,6 @@ package object dynamodb extends QueryTypes with DynamoStringType {
   object DynamoDBAction extends Functions[AmazonDynamoDB, MetaData] {
     override type Action[A] = DynamoDBAction[A]
 
-    override implicit def WMonoid = MetaDataMonoid
-
     override def extractRequestIds =
       Some {
         headers => headers.headers.get("x-amzn-RequestId").map(s => MetaData(List(s)))

@@ -1,29 +1,27 @@
 package io.atlassian.aws
 
-import scalaz.{ Monoid, Writer, \/ }
+import scalaz.{ Monad, Monoid, Writer, \/ }
+import scalaz.syntax.all._
 import kadai.Invalid
 
 class AwsActionOps[R, W, A](action: AwsAction[R, W, A]) {
 
-  private def actionMonad(implicit M: Monoid[W]) = new AwsActionMonad[R, W]()
+  def recover(f: Invalid => AwsAction[R, W, A])(implicit W: Monoid[W]): AwsAction[R, W, A] =
+    M.handleError(action)(f)
 
-  def recover(f: Invalid => AwsAction[R, W, A])(implicit M: Monoid[W]): AwsAction[R, W, A] =
-    actionMonad.handleError(action)(f)
-
-  def runAction(r: R)(implicit M: Monoid[W]): Attempt[A] =
+  def runAction(r: R): Attempt[A] =
     Attempt(action.run(r).run.value)
 
-  def runActionWithMetaData(r: R)(implicit M: Monoid[W]): (W, Attempt[A]) = {
-    val writer: Writer[W, Invalid \/ A] = action.run(r).run
-    (writer.written, Attempt(writer.value))
-  }
+  def runActionWithMetaData(r: R): (W, Attempt[A]) =
+    action.run(r).run |> { w => (w.written, Attempt(w.value)) }
 
-  def handle(f: PartialFunction[Invalid, AwsAction[R, W, A]])(implicit M: Monoid[W]): AwsAction[R, W, A] =
-    recover { f orElse { case i => AwsAction.invalid(i) } }
+  def handle(f: PartialFunction[Invalid, AwsAction[R, W, A]])(implicit W: Monoid[W]): AwsAction[R, W, A] =
+    recover { f orElse { case i => M.raiseError(i) } }
 
   // the original one only logs on the right path. We also want to log on lefts.
-  final def :++>>(w: => W)(implicit M: Monoid[W]): AwsAction[R, W, A] = {
-    val monad = actionMonad
-    monad.bind(monad.tell(w))(_ => action)
-  }
+  final def :++>>(w: => W)(implicit W: Monoid[W]): AwsAction[R, W, A] =
+    M.bind(M.tell(w)) { _ => action }
+
+  private def M(implicit W: Monoid[W]) = 
+    new AwsActionMonad[R, W]()
 }

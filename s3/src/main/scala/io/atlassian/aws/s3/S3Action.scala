@@ -9,11 +9,6 @@ import scalaz.Monoid
 object S3Action extends Functions[AmazonS3, S3MetaData] {
   override type Action[A] = S3Action[A]
 
-  override implicit def WMonoid = new Monoid[S3MetaData] {
-    override def zero = S3MetaData(Nil)
-    override def append(f1: S3MetaData, f2: => S3MetaData) = S3MetaData(f1.requestIds ++ f2.requestIds)
-  }
-
   override def extractRequestIds =
     Some {
       headers =>
