@@ -5,9 +5,11 @@ import kadai.Invalid
 import scalaz.syntax.all._
 
 object AwsAction {
+  private implicit def M[R, W: Monoid] = 
+    new AwsActionMonad[R, W]()
 
   def apply[R, W: Monoid, A](f: R => Attempt[A]): AwsAction[R, W, A] =
-    M[R, W] |> { implicit m => m.ask >>= { f(_) |> attempt[R, W, A] } }
+    ask[R, W] >>= { f(_) |> attempt[R, W, A] }
 
   def value[R, W: Monoid, A](v: => A): AwsAction[R, W, A] =
     M.point(v)
@@ -37,6 +39,4 @@ object AwsAction {
 
   def invalid[R, W: Monoid, A](i: Invalid): AwsAction[R, W, A] =
     M.raiseError(i)
-
-  private def M[R, W: Monoid] = new AwsActionMonad[R, W]()
 }
