@@ -1,5 +1,6 @@
 package io.atlassian.aws
 
+import scalaz.concurrent.Future
 import scalaz.{ EitherT, Id, Monad, MonadError, MonadListen, MonadPlus, MonadReader, Monoid, Kleisli, ReaderT, Writer, WriterT }
 import kadai.Invalid
 
@@ -7,7 +8,7 @@ class AwsActionMonad[R, W: Monoid] extends Monad[AwsAction[R, W, ?]]
   with MonadReader[AwsAction[?, W, ?], R]
   with MonadListen[AwsAction[R, ?, ?], W] // MonadTell+
   with MonadPlus[AwsAction[R, W, ?]]
-  with MonadError[λ[(α, β) => ReaderT[λ[∂ => EitherT[λ[π => Writer[W, π]], α, ∂]], R, β]], Invalid] {
+  with MonadError[λ[(α, β) => ReaderT[λ[∂ => EitherT[λ[π => WriterT[Future, W, π]], α, ∂]], R, β]], Invalid] {
 
   override def ask: AwsAction[R, W, R] =
     kmr.ask
@@ -46,17 +47,20 @@ class AwsActionMonad[R, W: Monoid] extends Monad[AwsAction[R, W, ?]]
   // private
   //
 
-  private type WriterW[A] = Writer[W, A]
+  private type WriterW[A] = WriterT[Future, W, A]
   private type ResultWriterW[A] = ResultWriter[W, A]
 
+  import Invalid._, WriterT._, Future._
+
+  // ReaderT and EitherT monads cannot be inferred by the Scala compiler because they use type lambdas
   private val wame =
     EitherT.eitherTMonadError[WriterW, Invalid]
 
-  private val waml =
-    EitherT.monadListen[Writer, W, Invalid](WriterT.writerTMonadListen[Id.Id, W])
+  private def waml[A] =
+    EitherT.monadListen[WriterT[Future, ?, ?], W, A]
 
   private val wamp =
-    EitherT.eitherTMonadPlus[WriterW, Invalid](WriterT.writerMonad, Invalid.InvalidMonoid)
+    EitherT.eitherTMonadPlus[WriterW, Invalid]
 
   private val kmr =
     Kleisli.kleisliMonadReader[ResultWriterW, R](wame)

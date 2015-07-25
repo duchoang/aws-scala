@@ -10,10 +10,10 @@ class AwsActionOps[R, W, A](action: AwsAction[R, W, A]) {
     M.handleError(action)(f)
 
   def runAction(r: R): Attempt[A] =
-    Attempt(action.run(r).run.value)
+    Attempt(action.run(r).run.value.run)
 
   def runActionWithMetaData(r: R): (W, Attempt[A]) =
-    action.run(r).run |> { w => (w.written, Attempt(w.value)) }
+    action.run(r).run |> { w => (w.written.run, Attempt(w.value.run)) }
 
   def handle(f: PartialFunction[Invalid, AwsAction[R, W, A]])(implicit W: Monoid[W]): AwsAction[R, W, A] =
     recover { f orElse { case i => M.raiseError(i) } }

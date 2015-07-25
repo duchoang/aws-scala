@@ -5,7 +5,8 @@ import org.junit.runner.RunWith
 import org.specs2.scalaz.Spec
 import org.specs2.ScalaCheck
 import org.scalacheck.{ Gen, Arbitrary }
-import scalaz.{ EitherT, ReaderT, Equal, Writer }
+import scalaz.concurrent.Future
+import scalaz.{ EitherT, ReaderT, Equal, WriterT }
 import scalaz.scalacheck.ScalazProperties
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
@@ -23,7 +24,7 @@ class AwsActionMonadSpec extends Spec with ScalaCheck {
   type Action[A] = AwsAction[R, W, A]
   implicit val ActionMonad = new AwsActionMonad[R, W]()(intInstance)
 
-  type WriterW[A] = Writer[W, A]
+  type WriterW[A] = WriterT[Future, W, A]
   type ActionWithLeftSide[L, A] = ReaderT[EitherT[WriterW, L, ?], R, A]
 
   implicit def AwsActionArbitrary[A](implicit A: Arbitrary[A]): Arbitrary[Action[A]] = Arbitrary {
@@ -32,8 +33,9 @@ class AwsActionMonadSpec extends Spec with ScalaCheck {
 
   implicit def ActionEqual[A](implicit E: Equal[A]): Equal[Action[A]] =
     new Equal[Action[A]] {
+      implicit class ActionOps(action: Action[A]) extends AwsActionOps[R, W, A](action)
       override def equal(a1: Action[A], a2: Action[A]): Boolean =
-        a1.run(()).run.run == a2.run(()).run.run
+        a1.runActionWithMetaData(()) == a2.runActionWithMetaData(())
     }
 
   implicit def ArbitraryInvalid: Arbitrary[Invalid] =

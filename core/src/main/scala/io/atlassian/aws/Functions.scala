@@ -3,9 +3,10 @@ package io.atlassian.aws
 import com.amazonaws.AmazonServiceException
 import kadai.Invalid
 import kadai.result.ResultT
+import scalaz.concurrent.Future
 import scalaz.syntax.all._
 
-import scalaz.{ Catchable, EitherT, Monad, Monoid, Kleisli, Writer }
+import scalaz.{ Catchable, EitherT, Monad, Monoid, Kleisli, WriterT }
 
 abstract class Functions[C, W: Monoid] {
 
@@ -63,10 +64,10 @@ abstract class Functions[C, W: Monoid] {
     new AwsActionMonad[C, W]
 
   implicit val MonadWriterAttempt: Monad[ResultWriter[W, ?]] =
-    EitherT.eitherTMonadError[Writer[W, ?], Invalid]
+    EitherT.eitherTMonadError[WriterT[Future, W, ?], Invalid]
 
   implicit val CatchableAction: Catchable[Action] =
-    Kleisli.kleisliCatchable[ResultWriter[W, ?], C](ResultT.CatachableResultT[Writer[W, ?]])
+    Kleisli.kleisliCatchable[ResultWriter[W, ?], C](ResultT.CatachableResultT[WriterT[Future, W, ?]])
 
   implicit class ActionOps[A](action: Action[A]) extends AwsActionOps[C, W, A](action)
 
