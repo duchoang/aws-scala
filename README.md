@@ -1,5 +1,7 @@
 # Scala wrapper for AWS SDK
 
+[ ![Codeship Status for atlassian/aws-scala](https://codeship.com/projects/05f9e740-11cf-0133-9628-6695b09e6893/status?branch=master)](https://codeship.com/projects/92367)
+
 Dealing with the Java AWS SDK is messy. This library attempts to make it less messy by:
 
  * Making it easier to create AWS SDK clients based on configuration and supporting fallback configurations
@@ -13,10 +15,6 @@ Currently the library has basic support for S3, DynamoDB, CloudFormation and SQS
 ## Usage
 
 ### Step 0 - Adding the dependency
-
-Currently the artifacts are published to Atlassian's public Maven repository, so you'll need to add the following resolver:
-    
-    resolvers += "atlassian-public"   at "https://maven.atlassian.com/content/groups/public/"
 
 The project is split into separate modules for each type of AWS API so you can import them separately if you wish (e.g. `aws-scala-s3`, `aws-scala-dynamodb`, `aws-scala-sqs`, `aws-scala-cloudformation`).
 Alternatively, you can:

@@ -8,7 +8,7 @@ object Settings {
   val testSettings = testOptions in Test += Tests.Argument("console", "junitxml")
 
   val scala210 = "2.10.5"
-  val scala211 = "2.11.6"
+  val scala211 = "2.11.7"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -36,18 +36,9 @@ object Settings {
       )
       , javacOptions ++= Seq("-encoding", "UTF-8", "-source", "1.6", "-target", "1.6")
       , javacOptions in doc := Seq("-encoding", "UTF-8")
-      , resolvers ++= Seq(
-          Resolver.defaultLocal
-        , Resolver.mavenLocal
-        , "atlassian-public"   at "https://maven.atlassian.com/content/groups/public/"
-        , Resolver.sonatypeRepo("public")
-        , Resolver.sonatypeRepo("releases")
-        , Resolver.sonatypeRepo("snapshots")
-        , Resolver.bintrayRepo("non", "maven")
-        )
       , credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
       , mappings in (Compile, packageBin) ++= Seq(
-        file("LICENSE") -> "META-INF/LICENSE"
+        file("LICENSE.txt") -> "META-INF/LICENSE"
         , file("NOTICE")  -> "META-INF/NOTICE"
         )
       , incOptions := incOptions.value.withNameHashing(true) // SBT 0.13.2 name hashing
@@ -55,8 +46,37 @@ object Settings {
       , ScalariformKeys.preferences := ScalariformKeys.preferences.value
           .setPreference(AlignSingleLineCaseStatements, true)
           .setPreference(AlignParameters, true)
-      , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.6.0")
-      )
+      , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.6.3")
+      , licenses := Seq("Apache2" -> url("https://bitbucket.org/atlassian/aws-scala/raw/master/LICENSE"))
+      , homepage := Some(url("https://bitbucket.org/atlassian/aws-scala"))
+      , pomExtra := (
+        <scm>
+            <url>git@bitbucket.org:atlassian/aws-scala.git</url>
+            <connection>scm:git:git@bitbucket.org:atlassian/aws-scala.git</connection>
+            <developerConnection>scm:git:git@bitbucket.org:atlassian/aws-scala.git</developerConnection>
+        </scm>
+        <developers>
+            <developer>
+                <id>jwesleysmith</id>
+                <name>Jed Wesley-Smith</name>
+                <email>jwesleysmith@atlassian.com</email>
+                <organization>Atlassian</organization>
+                <organizationUrl>http://www.atlassian.com</organizationUrl>
+            </developer>
+            <developer>
+                <id>sshek</id>
+                <name>Sidney Shek</name>
+                <email>sshek@atlassian.com</email>
+                <organization>Atlassian</organization>
+                <organizationUrl>http://www.atlassian.com</organizationUrl>
+            </developer>
+        </developers>
+        <issueManagement>
+            <system>Bitbucket</system>
+            <url>https://bitbucket.org/atlassian/aws-scala/issues</url>
+        </issueManagement>)
+      , pomIncludeRepository := { (repo: MavenRepository) => false } // no repositories in the pom
+     )
 
   lazy val standardSettingsAndDependencies =
     standardSettings ++

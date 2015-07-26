@@ -4,11 +4,11 @@ import Keys._
 object Dependencies {
 
   object Version {
-    val scalaz        = "7.1.2"
+    val scalaz        = "7.1.3"
     val scalazStream  = "0.7a"
     val argonaut      = "6.1"
-    val aws_sdk       = "1.9.16"
-    val kadai         = "3.3.0"
+    val aws_sdk       = "1.10.5.1"
+    val kadai         = "3.3.4"
     val akka          = "2.3.9"
     val specs2        = "3.6"
     val scalacheck    = "1.12.2"
@@ -22,11 +22,47 @@ object Dependencies {
       "org.scalaz"        %% "scalaz-core"        % Version.scalaz
     , "org.scalaz"        %% "scalaz-concurrent"  % Version.scalaz
     , "io.argonaut"       %% "argonaut"           % Version.argonaut
-    , "com.amazonaws"     %  "aws-java-sdk"       % Version.aws_sdk
+    , "com.amazonaws"     %  "aws-java-sdk-core"  % Version.aws_sdk
     , "io.atlassian"      %% "kadai-core"         % Version.kadai
     , "io.atlassian"      %% "kadai-config"       % Version.kadai
     , "io.atlassian"      %% "kadai-logging-json" % Version.kadai
     , "io.atlassian"      %% "kadai-concurrent"   % Version.kadai
+    )
+  )
+
+  lazy val s3 = Seq(
+    libraryDependencies ++= Seq(
+    "com.amazonaws"     %  "aws-java-sdk-s3"       % Version.aws_sdk
+    )
+  )
+
+  lazy val dynamodb = Seq(
+    libraryDependencies ++= Seq(
+    "com.amazonaws"     %  "aws-java-sdk-dynamodb" % Version.aws_sdk
+    )
+  )
+
+  lazy val sqs = Seq(
+    libraryDependencies ++= Seq(
+    "com.amazonaws"     %  "aws-java-sdk-sqs"      % Version.aws_sdk
+    )
+  )
+
+  lazy val cloudformation = Seq(
+    libraryDependencies ++= Seq(
+    "com.amazonaws"     %  "aws-java-sdk-cloudformation"      % Version.aws_sdk
+    )
+  )
+
+  lazy val swf = Seq(
+    libraryDependencies ++= Seq(
+    "com.amazonaws"     %  "aws-java-sdk-simpleworkflow"      % Version.aws_sdk
+    )
+  )
+
+  lazy val rds = Seq(
+    libraryDependencies ++= Seq(
+    "com.amazonaws"     %  "aws-java-sdk-rds"      % Version.aws_sdk
     )
   )
 
