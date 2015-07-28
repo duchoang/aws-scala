@@ -28,7 +28,7 @@ object AwsAction {
 
   def withClient[R, W: Monoid, A](f: R => A): AwsAction[R, W, A] =
     M.handleError(safe(f)) {
-      AmazonExceptions.transformException andThen invalid[R, W, A]
+      AmazonExceptions.transformInvalid andThen invalid[R, W, A]
     }
 
   def attempt[R, W: Monoid, A](a: Attempt[A]): AwsAction[R, W, A] = 
