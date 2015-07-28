@@ -21,20 +21,19 @@ object AmazonExceptions {
         case 401 => Unauthenticated.some
         case 403 => Forbidden.some
         case 416 => RangeRequestedNotSatisfiable.some
-        case _   => None
+        case _ => None
       }
   }
 
   case class ServiceException(exceptionType: ExceptionType, e: AmazonServiceException) extends Exception(e)
 
   object ServiceException {
-    def from: AmazonServiceException => Option[ServiceException] =
-      e => ExceptionType.unapply(e).map { t => ServiceException(t, e) }
+    def from(e: AmazonServiceException): Option[ServiceException] =
+      ExceptionType.unapply(e).map { t => ServiceException(t, e) }
   }
 
-  private[aws] def transformException: Invalid => Invalid = {
-    case Invalid.Err(e: AmazonServiceException) =>
-      AmazonExceptions.ServiceException.from(e).getOrElse(e) |> Invalid.Err
+  private[aws] def transformInvalid: Invalid => Invalid = {
+    case Invalid.Err(e: AmazonServiceException) => ServiceException.from(e).getOrElse(e) |> Invalid.Err
     case i => i
   }
 }

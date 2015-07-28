@@ -34,7 +34,7 @@ object AwsAction {
     val ME = MonadError[ReaderEitherAction[R, W, ?, ?], Invalid]
     import ME.monadErrorSyntax._
     safe(f) handleError {
-      AmazonExceptions.transformException andThen invalid[R, W, A]
+      AmazonExceptions.transformInvalid andThen invalid[R, W, A]
     }
   }
 
