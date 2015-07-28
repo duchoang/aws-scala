@@ -52,7 +52,7 @@ object AWSRequestIdRetriever {
   }
 
   // A must be whatever the aws client returns
-  def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit monad: AwsActionMonad[C, W], wmonoid: Monoid[W]): AwsAction[C, W, A] = {
+  def withClient[C, W : Monoid, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit monad: AwsActionMonad[C, W]): AwsAction[C, W, A] = {
     import monad.monadSyntax._
 
     monad.ask >>= {

@@ -1,73 +1,86 @@
 package io.atlassian.aws
 
-import scalaz.concurrent.Future
-import scalaz.{ EitherT, Id, Monad, MonadError, MonadListen, MonadPlus, MonadReader, Monoid, Kleisli, ReaderT, Writer, WriterT }
+import scalaz.{ EitherT, Monad, MonadError, MonadListen, MonadPlus, MonadReader, Monoid, Kleisli, Plus, PlusEmpty, ReaderT }
 import kadai.Invalid
+
+import scalaz.syntax.all._
 
 class AwsActionMonad[R, W: Monoid] extends Monad[AwsAction[R, W, ?]] 
   with MonadReader[AwsAction[?, W, ?], R]
   with MonadListen[AwsAction[R, ?, ?], W] // MonadTell+
   with MonadPlus[AwsAction[R, W, ?]]
-  with MonadError[λ[(α, β) => ReaderT[λ[∂ => EitherT[λ[π => WriterT[Future, W, π]], α, ∂]], R, β]], Invalid] {
+  with MonadError[ReaderEitherAction[R, W, ?, ?], Invalid]
+{
 
   override def ask: AwsAction[R, W, R] =
-    kmr.ask
+    MonadReader[ReaderAction, R].ask
 
   override def local[A](f: (R) => R)(fa: AwsAction[R, W, A]): AwsAction[R, W, A] =
-    kmr.local(f)(fa)
+    MonadReader[ReaderAction, R].local(f)(fa)
 
   override def point[A](a: => A): AwsAction[R, W, A] =
-    kmr.point(a)
+    a.point[Action]
 
-  override def bind[A, B](fa: AwsAction[R, W, A])(f: (A) => AwsAction[R, W, B]): AwsAction[R, W, B] =
-    kmr.bind(fa)(f)
+  override def bind[A, B](fa: AwsAction[R, W, A])(f: A => AwsAction[R, W, B]): AwsAction[R, W, B] =
+    Monad[Action].bind(fa)(f)
 
   override def listen[A](fa: AwsAction[R, W, A]): AwsAction[R, W, (A, W)] =
-    kleisli(r => waml.listen(fa.run(r)))
+    kleisli(r => MonadListen[ResultWriter, W].listen(fa.run(r)))
 
   override def writer[A](w: W, v: A): AwsAction[R, W, A] =
-    kleisli(_ => waml.writer(w, v))
+    kleisli(MonadListen[ResultWriter, W].writer(w, v))
 
   override def raiseError[A](e: Invalid): AwsAction[R, W, A] =
-    kleisli(_ => wame.raiseError(e))
+    kleisli(e.raiseError[EitherWriterW, A])
 
   override def handleError[A](fa: AwsAction[R, W, A])(f: Invalid => AwsAction[R, W, A]): AwsAction[R, W, A] =
-    kleisli(r => wame.handleError(fa.run(r)) { e => f(e).run(r) })
+    kleisli(r => eitherMonadError.handleError(fa.run(r)) { e => f(e).run(r) })
 
   override def empty[A]: AwsAction[R, W, A] =
-    kmp.empty
+    mempty[Action, A]
 
   override def plus[A](f1: AwsAction[R, W, A], f2: => AwsAction[R, W, A]): AwsAction[R, W, A] =
-    kmp.plus(f1, f2)
+    f1 <+> f2
 
   override def tell(w: W): AwsAction[R, W, Unit] =
-    kleisli(_ => waml.tell(w))
+    kleisli(MonadListen[ResultWriter, W].tell(w))
 
   //
   // private
   //
 
-  private type WriterW[A] = WriterT[Future, W, A]
+  // private helper types
+  private type Action[A] = AwsAction[R, W, A]
+  private type ReaderAction[RR, A] = AwsAction[RR, W, A]
+  private type WriterAction[WW, A] = AwsAction[R, WW, A]
+
+  private type WriterW[A] = WriterF[W, A]
+  private type ResultWriter[X, A] = EitherWriter[X, Invalid, A]
   private type ResultWriterW[A] = ResultWriter[W, A]
+  private type EitherWriterW[L, A] = EitherT[WriterW, L, A]
 
-  import Invalid._, WriterT._, Future._
+  private implicit val eitherMonadListen: MonadListen[ResultWriter, W] =
+    EitherT.monadListen[WriterF, W, Invalid] // EitherT.monadListen isn't implicit!
 
-  // ReaderT and EitherT monads cannot be inferred by the Scala compiler because they use type lambdas
-  private val wame =
-    EitherT.eitherTMonadError[WriterW, Invalid]
+  private implicit val eitherMonadError =
+    MonadError[EitherWriterW, Invalid]
 
-  private def waml[A] =
-    EitherT.monadListen[WriterT[Future, ?, ?], W, A]
-
-  private val wamp =
+  private implicit val eitherMonadPlus: PlusEmpty[ResultWriterW] = // TODO: implicit resolution of PlusEmpty
     EitherT.eitherTMonadPlus[WriterW, Invalid]
 
-  private val kmr =
-    Kleisli.kleisliMonadReader[ResultWriterW, R](wame)
+  private implicit val kleisliMonadReader: MonadReader[ReaderAction, R] =
+    Kleisli.kleisliMonadReader[ResultWriterW, R](eitherMonadError) // have both monadError and monadListen in scope. Need to choose one
 
-  private val kmp =
-    Kleisli.kleisliMonadPlus[ResultWriterW, R](wamp)
+  private implicit val kleisliMonadPlus: PlusEmpty[Action] = // TODO: implicit resolution of PlusEmpty
+     Kleisli.kleisliPlusEmpty[ResultWriterW, R]
 
   private def kleisli[A](f: R => ResultWriterW[A]): AwsAction[R, W, A] =
     Kleisli.kleisli(f)
+
+  private def kleisli[A](a: => ResultWriterW[A]): AwsAction[R, W, A] =
+    kleisli(_ => a)
+}
+
+object AwsActionMonad {
+  def apply[R, W : Monoid]: AwsActionMonad[R, W] = new AwsActionMonad[R, W]
 }

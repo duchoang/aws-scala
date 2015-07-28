@@ -1,7 +1,8 @@
 package io.atlassian.aws
 
-import scalaz.{ Monad, Monoid, Writer, \/ }
-import scalaz.syntax.all._
+import scalaz.{ Monad, Monoid }
+import scalaz.syntax.id._
+import scalaz.syntax.monad._
 import kadai.Invalid
 
 class AwsActionOps[R, W, A](action: AwsAction[R, W, A]) {
@@ -20,8 +21,11 @@ class AwsActionOps[R, W, A](action: AwsAction[R, W, A]) {
 
   // the original one only logs on the right path. We also want to log on lefts.
   final def :++>>(w: => W)(implicit W: Monoid[W]): AwsAction[R, W, A] =
-    M.bind(M.tell(w)) { _ => action }
+    M.tell(w) >> action
 
-  private def M(implicit W: Monoid[W]) = 
-    new AwsActionMonad[R, W]()
+  private implicit def monad(implicit W: Monoid[W]): Monad[AwsAction[R, W, ?]] =
+    M
+
+  private def M(implicit W: Monoid[W]) =
+    AwsActionMonad[R, W]
 }

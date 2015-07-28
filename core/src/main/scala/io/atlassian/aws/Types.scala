@@ -1,6 +1,7 @@
 package io.atlassian.aws
 
-import scalaz.{ @@, Tag }
+import scalaz.concurrent.Future
+import scalaz._
 import scalaz.syntax.std.option._
 
 import argonaut._, Argonaut._
@@ -30,4 +31,7 @@ trait Types {
         case _              => None
       }, "OverwriteMode")
   }
+  private[aws] type WriterF[W, A] = WriterT[Future, W, A]
+  private[aws] type EitherWriter[W, L, A] = EitherT[WriterF[W, ?], L, A]
+  private[aws] type ReaderEitherAction[R, W, L, A] = ReaderT[EitherWriter[W, L, ?], R, A]
 }

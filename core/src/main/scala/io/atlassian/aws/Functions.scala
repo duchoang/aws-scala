@@ -3,14 +3,14 @@ package io.atlassian.aws
 import com.amazonaws.AmazonServiceException
 import kadai.Invalid
 import kadai.result.ResultT
-import scalaz.concurrent.Future
 import scalaz.syntax.all._
 
-import scalaz.{ Catchable, EitherT, Monad, Monoid, Kleisli, WriterT }
+import scalaz.{ Catchable, Monad, Monoid, Kleisli }
 
 abstract class Functions[C, W: Monoid] {
 
   type Action[A] = AwsAction[C, W, A]
+  private type Error[L, A] = ReaderEitherAction[C, W, L, A]
 
   def extractRequestIds: Option[HttpHeaders => Option[W]] =
     None
@@ -50,7 +50,7 @@ abstract class Functions[C, W: Monoid] {
     raise(t)
 
   def invalid[A](i: Invalid): Action[A] =
-    MonadAction.raiseError(i)
+    i.raiseError[Error, A]
 
   /** don't use overloaded version, use invalid instead */
   def fail[A](i: Invalid): Action[A] =
@@ -60,14 +60,19 @@ abstract class Functions[C, W: Monoid] {
   // private
   //
 
-  implicit val MonadAction =
-    new AwsActionMonad[C, W]
+  implicit val MonadAction: AwsActionMonad[C, W] =
+    AwsActionMonad[C, W]
 
-  implicit val MonadWriterAttempt: Monad[ResultWriter[W, ?]] =
-    EitherT.eitherTMonadError[WriterT[Future, W, ?], Invalid]
+  implicit val MonadWriterAttempt =
+    Monad[ResultWriterW]
+
+  type WriterW[A] = WriterF[W, A]
+  type ResultWriterW[A] = ResultT[WriterW, A]
+
+  import ResultT._
 
   implicit val CatchableAction: Catchable[Action] =
-    Kleisli.kleisliCatchable[ResultWriter[W, ?], C](ResultT.CatachableResultT[WriterT[Future, W, ?]])
+    Kleisli.kleisliCatchable[ResultWriterW, C]
 
   implicit class ActionOps[A](action: Action[A]) extends AwsActionOps[C, W, A](action)
 

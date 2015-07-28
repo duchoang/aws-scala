@@ -1,8 +1,7 @@
 package io.atlassian
 
-import kadai.result.ResultT
+import kadai.Invalid
 import scalaz._
-import scalaz.concurrent.Future
 
 package object aws extends Types {
   type Attempt[A] = kadai.Attempt[A]
@@ -14,8 +13,5 @@ package object aws extends Types {
     override def toString =
       unwrap.toString
   }
-
-  type ResultWriter[W, A] = ResultT[WriterT[Future, W, ?], A]
-
-  type AwsAction[R, W, A] = ReaderT[ResultWriter[W, ?], R, A]
+  type AwsAction[R, W, A] = ReaderT[EitherWriter[W, Invalid, ?], R, A]
 }
