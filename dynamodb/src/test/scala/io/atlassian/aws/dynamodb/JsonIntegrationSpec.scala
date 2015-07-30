@@ -13,6 +13,8 @@ import scalaz.std.option._
 import scalaz.Equal
 
 class JsonIntegrationSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDynamoDB with DynamoDBActionMatchers {
+  import DynamoDBAction._
+
   val NUM_TESTS =
     if (IS_LOCAL) 100
     else 10

@@ -1,6 +1,7 @@
 package io.atlassian.aws
 package s3
 
+import AwsAction._
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.regions.Region
 import com.amazonaws.services.s3.model._
@@ -20,7 +21,7 @@ import scalaz.syntax.id._
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaCheck with S3Arbitraries with S3SpecOps with Mockito {
 
-  import S3Key._, LargeObjectToStore._, spec.NumericTypes._
+  import S3Key._, S3Action._, LargeObjectToStore._, spec.NumericTypes._
 
   implicit val S3_CLIENT = new SDKS3Client()
 
@@ -303,7 +304,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       s3client.initiateMultipartUpload(any[InitiateMultipartUploadRequest]) returns (new InitiateMultipartUploadResult() <| { _.setUploadId("1") })
       s3client.uploadPart(any[UploadPartRequest]) returns new UploadPartResult
       s3client.abortMultipartUpload(any[AbortMultipartUploadRequest]) answers { _ => () }
-      S3.putStreamWithMultipart(ContentLocation(BUCKET, key), dataStream).run(s3client).run.toEither must beLeft and
+      S3.putStreamWithMultipart(ContentLocation(BUCKET, key), dataStream).runAction(s3client).run.toEither must beLeft and
         (there was one(s3client).initiateMultipartUpload(any[InitiateMultipartUploadRequest])) and
         (there was one(s3client).abortMultipartUpload(any[AbortMultipartUploadRequest]))
   }
@@ -315,7 +316,7 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       s3client.initiateMultipartUpload(any[InitiateMultipartUploadRequest]) returns (new InitiateMultipartUploadResult() <| { _.setUploadId("1") })
       s3client.uploadPart(any[UploadPartRequest]) throws new AmazonServiceException("FOO")
       s3client.abortMultipartUpload(any[AbortMultipartUploadRequest]) answers { _ => () }
-      S3.putStreamWithMultipart(ContentLocation(BUCKET, key), dataStream).run(s3client).run.toEither must beLeft and
+      S3.putStreamWithMultipart(ContentLocation(BUCKET, key), dataStream).runAction(s3client).run.toEither must beLeft and
         (there was one(s3client).initiateMultipartUpload(any[InitiateMultipartUploadRequest])) and
         (there was one(s3client).abortMultipartUpload(any[AbortMultipartUploadRequest]))
   }
@@ -325,6 +326,6 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
       val s3client = mock[AmazonS3]
       val dataStream = new ByteArrayInputStream(new Array[Byte](len.i))
       s3client.uploadPart(any[UploadPartRequest]) returns new UploadPartResult
-      S3.putChunks(ContentLocation(BUCKET, key), dataStream, "FOO", new Array[Byte](1000)).run(s3client).run.toEither must beRight
+      S3.putChunks(ContentLocation(BUCKET, key), dataStream, "FOO", new Array[Byte](1000)).runAction(s3client).run.toEither must beRight
   }
 }

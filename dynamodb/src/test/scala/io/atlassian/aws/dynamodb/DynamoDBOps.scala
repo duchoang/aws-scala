@@ -10,12 +10,13 @@ import org.specs2.execute.{ Success, Failure }
 import reflect.ClassTag
 
 object DynamoDBOps extends Logging {
+  import DynamoDBAction._
   import Logging._
 
   def runAction(implicit client: AmazonDynamoDB): DynamoDBAction ~> (Invalid \/ ?) =
     new (DynamoDBAction ~>(Invalid \/ ?)) {
       def apply[A](action: DynamoDBAction[A]) =
-        action.run(client).run
+        action.runAction(client).run
     }
 
   def createTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDB) = {

@@ -1,4 +1,5 @@
-package io.atlassian.aws.sqs
+package io.atlassian.aws
+package sqs
 
 import com.amazonaws.services.sqs.AmazonSQSClient
 import kadai.Invalid
@@ -9,6 +10,7 @@ import org.specs2.matcher.{ Matcher, Expectable }
 import scalaz.{ \/-, -\/, \/ }
 
 object SQSSpecOps extends Logging {
+  import SQSAction._
   import Logging._
 
   def createTestQueue(name: String)(implicit client: AmazonSQSClient) =
@@ -30,7 +32,7 @@ object SQSSpecOps extends Logging {
   }
 
   def runSQSAction[A](action: SQSAction[A])(implicit client: AmazonSQSClient) =
-    action.run(client).run
+    action.runAction(client).run
 
   def returnResult[A](check: A => Boolean)(implicit client: AmazonSQSClient) =
     new ServiceMatcher[A]({

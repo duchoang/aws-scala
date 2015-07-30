@@ -1,8 +1,9 @@
 package io.atlassian
 
-import scalaz.{ ReaderT, Tag, @@ }
+import kadai.Invalid
+import scalaz._
 
-package object aws extends AwsActionTypes with Types {
+package object aws extends Types {
   type Attempt[A] = kadai.Attempt[A]
   val Attempt = kadai.Attempt
 
@@ -12,6 +13,5 @@ package object aws extends AwsActionTypes with Types {
     override def toString =
       unwrap.toString
   }
-
-  type AwsAction[R, A] = ReaderT[Attempt, R, A]
+  type AwsAction[R, W, A] = ReaderT[EitherWriter[W, Invalid, ?], R, A]
 }

@@ -9,7 +9,6 @@ import scalaz.syntax.traverse._
 import kadai.Invalid
 import scala.collection.JavaConverters._
 import Unmarshaller._
-import AwsAction._
 import com.amazonaws.services.dynamodbv2.model.{
   AttributeAction,
   AttributeValue,
@@ -53,7 +52,7 @@ import com.amazonaws.services.dynamodbv2.model.{
 object DynamoDB {
 
   import scala.concurrent.duration._
-  import DynamoDBAction.withClient
+  import DynamoDBAction._
 
   def get[K, V](key: K, consistency: ReadConsistency = ReadConsistency.Eventual)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Option[V]] =
     withClient {
@@ -74,10 +73,18 @@ object DynamoDB {
     DynamoDBAction.withClient {
       _.updateItem {
         new UpdateItemRequest()
-          .withTableName { table }
-          .withReturnValues { ReturnValue.ALL_OLD }
-          .withKey { kc.marshall.toFlattenedMap(k).asJava }
-          .withAttributeUpdates { toUpdates(vc.marshall(v)).asJava } |> { req =>
+          .withTableName {
+            table
+          }
+          .withReturnValues {
+            ReturnValue.ALL_OLD
+          }
+          .withKey {
+            kc.marshall.toFlattenedMap(k).asJava
+          }
+          .withAttributeUpdates {
+            toUpdates(vc.marshall(v)).asJava
+          } |> { req =>
             m match {
               case Overwrite => req
               case Insert => // all keys shouldn't be present, should this be all values aren't present?
@@ -100,9 +107,16 @@ object DynamoDB {
           }
       }
     }.flatMap {
-      res => DynamoDBAction.attempt { vc.unmarshall.option(res.getAttributes) }.map { m.result }
+      res =>
+        DynamoDBAction.attempt {
+          vc.unmarshall.option(res.getAttributes)
+        }.map {
+          m.result
+        }
     }.handle {
-      case Invalid.Err(e: ConditionalCheckFailedException) => DynamoDBAction.ok { m.fail }
+      case Invalid.Err(e: ConditionalCheckFailedException) => DynamoDBAction.ok {
+        m.fail
+      }
     }
 
   def update[K, V](key: K, old: V, newValue: V)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, Write.Mode.Replace.type]] =
@@ -193,7 +207,9 @@ object DynamoDB {
    */
   private[dynamodb] def describeTable(name: String): DynamoDBAction[TableDescription] =
     withClient {
-      _.describeTable(name).getTable
+      _.describeTable(name)
+    } map {
+      _.getTable
     }
 
   /**

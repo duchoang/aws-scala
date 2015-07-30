@@ -12,7 +12,7 @@ object Dependencies {
     val akka          = "2.3.9"
     val specs2        = "3.6"
     val scalacheck    = "1.12.2"
-    val junit         = "4.11"
+    val junit         = "4.12"
     val scodecBits    = "1.0.6"
 
   }
