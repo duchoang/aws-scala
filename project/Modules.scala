@@ -13,7 +13,7 @@ trait Modules {
     )
 
   lazy val core =
-    Project(id = "core", base = file("core"), settings = standardSettingsAndDependencies)
+    Project(id = "core", base = file("core"), settings = standardSettingsAndDependencies).enablePlugins(sbtbuildinfo.BuildInfoPlugin)
 
   lazy val cloudformation =
     Project(id = "cloudformation", base = file("cloudformation"), settings = standardSettingsAndDependencies) dependsOn (core % depTest)

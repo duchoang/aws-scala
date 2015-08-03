@@ -1,7 +1,7 @@
 import sbt._
-import sbtrelease.ReleasePlugin.ReleaseKeys._
-import sbtrelease.ReleaseStateTransformations._
 import sbtrelease._
+import ReleasePlugin.autoImport._
+import ReleaseStateTransformations._
 import sbt.Keys._
 import com.typesafe.sbt.pgp.PgpKeys._
 
@@ -10,7 +10,7 @@ object Release {
    * RELEASE PROCESS
    */
   lazy val customReleaseSettings =
-    ReleasePlugin.releaseSettings ++ Seq(
+    Seq(
       releaseProcess := Seq[ReleaseStep](
         checkSnapshotDependencies,
         inquireVersions,
@@ -18,13 +18,13 @@ object Release {
         setReleaseVersion,
         commitReleaseVersion,
         tagRelease,
-        ReleaseStep(publishSignedArtifacts, check = identity, enableCrossBuild = true),
+        publishSignedArtifacts,
         setNextVersion,
         commitNextVersion,
         pushChanges
       )
-      , crossBuild := true
-      , nextVersion    := { ver => Version(ver).map(_.bumpBugfix.asSnapshot.string).getOrElse(versionFormatError) } // bump patch numbers
+      , releaseCrossBuild  := true
+      , releaseNextVersion := { ver => Version(ver).map(_.bumpBugfix.asSnapshot.string).getOrElse(versionFormatError) } // bump patch numbers
     ) ++
       customVcsMessages
 
@@ -32,7 +32,20 @@ object Release {
   /**
    * PUBLICATION
    */
-  lazy val publishSignedArtifacts = executeAggregateTask(publishSigned, "Publishing signed artifacts")
+  lazy val publishSignedArtifacts = ReleaseStep(
+    action = st => {
+      val runner = if (st.get(ReleaseKeys.versions) map { _._1 } exists { _ contains "-" }) {
+        // a milestone, or RC
+        executeAggregateTask(releasePublishArtifactsAction, "Publishing non-signed artifacts")
+      } else {
+        // a proper release
+        executeAggregateTask(publishSigned, "Publishing signed artifacts")
+      }
+      runner(st)
+    },
+    check = identity,
+    enableCrossBuild = true
+  )
 
   /**
    * UTILITIES
@@ -56,7 +69,7 @@ object Release {
   }
 
   private lazy val customVcsMessages = Seq(
-    tagComment    <<= (version in ThisBuild) map { v => "[sbt-release] Releasing %s" format v }
-    , commitMessage <<= (version in ThisBuild) map { v => "[sbt-release] Setting version to %s" format v }
+    releaseTagComment    <<= (version in ThisBuild) map { v => "[sbt-release] Releasing %s" format v }
+    , releaseCommitMessage <<= (version in ThisBuild) map { v => "[sbt-release] Setting version to %s" format v }
   )
 }
