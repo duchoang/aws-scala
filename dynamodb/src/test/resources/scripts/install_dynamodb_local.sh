@@ -24,7 +24,7 @@ fi
 
 JAR_HREF=http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest
 SCRIPT_DIR=`dirname "$0"`
-DYNAMO_DB_LIB_HOME="$SCRIPT_DIR/../../dynamodb"
+DYNAMO_DB_LIB_HOME="$SCRIPT_DIR/dynamodb"
 TIMEOUT_SECONDS=20
 
 if [ ! -z "$dynalite" ]; then
