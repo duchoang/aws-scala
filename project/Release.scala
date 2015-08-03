@@ -34,7 +34,7 @@ object Release {
    */
   lazy val publishSignedArtifacts = ReleaseStep(
     action = st => {
-      val runner = if (st.get(ReleaseKeys.versions) map { _._1 } exists { _ contains "-" }) {
+      val runner = if (st.get(ReleaseKeys.versions) map { _._1 } exists candidate) {
         // a milestone, or RC
         executeAggregateTask(releasePublishArtifactsAction, "Publishing non-signed artifacts")
       } else {
@@ -46,6 +46,9 @@ object Release {
     check = identity,
     enableCrossBuild = true
   )
+
+  def candidate(version: String) =
+   version contains "-"
 
   /**
    * UTILITIES
