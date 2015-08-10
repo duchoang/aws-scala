@@ -195,7 +195,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         val valuesToSave = window.map { i =>
           k.copy(seq = i.toLong) -> valueToSave.copy(length = i.toLong)
         }.toMap
-        DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column).run(DYNAMO_CLIENT).run
+        DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column).runAction(DYNAMO_CLIENT).run
       }
 
       val hashKey = HashKey(k.a, k.b, k.c)
