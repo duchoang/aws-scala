@@ -34,7 +34,7 @@ object Convert {
   //
 
   implicit object ThroughputToProvisioned extends Convert[Throughput, ProvisionedThroughput] {
-    def convert = { case Throughput(r, w) => new ProvisionedThroughput(r, w) }
+    def convert = { t => new ProvisionedThroughput(t.read, t.write) }
   }
 
   implicit def NamedToAttributeDefinition[H, R] =
@@ -73,7 +73,7 @@ object Convert {
     }
   }
 
-  implicit def IndexToLocalSecondaryIndex: Convert[LocalIndexDef, LocalSecondaryIndex] =
+  implicit def LocalIndexDefToLocalSecondaryIndex: Convert[LocalIndexDef, LocalSecondaryIndex] =
     new Convert[LocalIndexDef, LocalSecondaryIndex] {
       def convert = indexDef =>
         new LocalSecondaryIndex()
@@ -82,7 +82,7 @@ object Convert {
           .withProjection(indexDef.projection.convertTo[Projection])
     }
 
-  implicit def IndexToGlobalSecondaryIndex: Convert[GlobalIndexDef, GlobalSecondaryIndex] =
+  implicit def GlobalIndexDefToGlobalSecondaryIndex: Convert[GlobalIndexDef, GlobalSecondaryIndex] =
       new Convert[GlobalIndexDef, GlobalSecondaryIndex] {
         def convert = indexDef =>
           new GlobalSecondaryIndex()

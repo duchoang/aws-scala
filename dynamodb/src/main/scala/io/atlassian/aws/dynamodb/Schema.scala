@@ -10,6 +10,9 @@ object Schema {
   case class Named[A, B](a: NamedColumn[A], b: NamedColumn[B]) {
     val tupled: Column[(A, B)] = Column.compose2[(A, B)](a.column, b.column)(identity)(Tuple2.apply)
   }
+  object Named {
+    def apply[A](a: NamedColumn[A]): Named[A, Nothing] = Named[A, Nothing](a, Column.NoColumn)
+  }
 
   /**
    * An index contains the optional index name (none for primary index), the key-value table that is indexed and
@@ -92,7 +95,7 @@ object Schema {
    * The key column is derived from the hash-range key columns. The primary key consists of the hash key and the range key.
    */
   object ComplexKeyTable {
-    def apply[K, V, H, R](name: String, hashRange: Named[H, R], value: Column[V])(keyIso: K <=> (H, R)) =
+    def apply[K, V, H, R](name: String, hashRange: Named[H, R], value: Column[V])(implicit keyIso: K <=> (H, R)) =
       Standard[K, V, H, R](KeyValue(name, hashRange.tupled.xmap(keyIso.from, keyIso.to), value), hashRange)
   }
 
@@ -103,7 +106,7 @@ object Schema {
    */
   object SimpleKeyTable {
     def apply[K, V](name: String, key: NamedColumn[K], value: Column[V]) =
-      Standard[K, V, K, Nothing](KeyValue[K, V](name, key.column, value), Named[K, Nothing](key, Column.NoColumn))
+      Standard[K, V, K, Nothing](KeyValue[K, V](name, key.column, value), Named(key))
   }
 
   /**
@@ -111,7 +114,7 @@ object Schema {
    */
   object Create {
 
-    case class Throughput(write: Long, read: Long)
+    case class Throughput(read: Long, write: Long)
 
     def complexKey[K, V, H, R](tableSchema: Standard[K, V, H, R], throughput: Throughput) = CreateTable(tableSchema, throughput)
     def simple[K, V](tableSchema: SimpleKeyTable[K, V], throughput: Throughput) = CreateTable[K, V, K, Nothing](tableSchema, throughput)
