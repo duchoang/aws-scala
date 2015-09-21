@@ -23,7 +23,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
                      activities: List[ActivityDefinition[Task]],
                      executorService: ExecutorService,
                      scheduledExecutorService: ScheduledExecutorService,
-                     activityExecutionTimeout: FiniteDuration) extends JsonLogging {
+                     defaultActivityExecutionTimeout: FiniteDuration) extends JsonLogging {
   import SWFAction._
   import JsonLogging._
 
@@ -70,8 +70,12 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
       case \/-(_) => ()
     }, cancel)
 
+    //  If the activity definition has timeout specified, use that as the task timeout, otherwise use the
+    // defaultActivityExecutionTimeout specified on ActivityPoller
+    val taskTimeout: Duration = ad.definition.defaultTaskStartToCloseTimeout.getOrElse(defaultActivityExecutionTimeout)
+
     Task { ad.function(ai).run }(executorService)
-      .timed(activityExecutionTimeout)(scheduledExecutorService)
+      .timed(taskTimeout)(scheduledExecutorService)
       .onFinish {
         _ => Task.delay { cancel.set(true) }
       }.handle {
