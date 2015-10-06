@@ -19,15 +19,15 @@ Currently the library has basic support for S3, DynamoDB, CloudFormation and SQS
 The project is split into separate modules for each type of AWS API so you can import them separately if you wish (e.g. `aws-scala-s3`, `aws-scala-dynamodb`, `aws-scala-sqs`, `aws-scala-cloudformation`).
 Alternatively, you can:
 
-    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "2.0.0-M2"
+    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "4.0.2"
     
 If you want the `test` JAR for some useful helpers, at the moment you will need to import the individual modules and core, e.g.: 
     
     libraryDependencies ++= Seq(
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "2.0.0-M2",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "2.0.0-M2",
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "2.0.0-M2"  % "test" classifier "tests",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "2.0.0-M2"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "4.0.2",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "4.0.2",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "4.0.2"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "4.0.2"  % "test" classifier "tests",
         )
 
 Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x onwards have a Scalaz 7.1 dependency. Versions 1.x onwards 
