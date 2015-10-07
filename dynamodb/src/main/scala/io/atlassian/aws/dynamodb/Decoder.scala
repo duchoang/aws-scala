@@ -1,6 +1,8 @@
 package io.atlassian.aws
 package dynamodb
 
+import java.util.UUID
+
 import argonaut._, Argonaut._
 import org.joda.time.{ DateTimeZone, DateTime, Instant }
 
@@ -8,7 +10,7 @@ import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import scodec.bits.ByteVector
 
 import scalaz.Free.Trampoline
-import scalaz.{ Traverse, Foldable, Functor }
+import scalaz.{ Traverse, Foldable, Functor, Tag, @@ }
 import scalaz.syntax.id._
 
 /**
@@ -85,6 +87,12 @@ object Decoder {
 
   implicit val StringDecode: Decoder[String] =
     DynamoStringDecode.mapAttempt { _.asString.fold(Attempt.fail[String]("No string value present")) { Attempt.ok } }
+
+  implicit val UUIDDecode: Decoder[UUID] =
+    Decoder[String].mapAttempt{ s => Attempt.safe(UUID.fromString(s)) }
+
+  implicit def TaggedTypeDecode[A: Decoder, B]: Decoder[A @@ B] =
+    Decoder[A].map(Tag.apply)
 
   implicit def OptionDecode[A](implicit d: Decoder[A]): Decoder[Option[A]] =
     decoder(d.dynamoType) {
