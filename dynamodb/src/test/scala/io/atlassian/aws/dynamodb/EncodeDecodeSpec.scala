@@ -87,9 +87,9 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     }
   implicit val ArbitraryJson: Arbitrary[Json] = Arbitrary(JsonData.jsonValueGenerator(8))
 
-  implicit def EqualTaggedType[A: Equal, B]: Equal[A @@ B] = Equal.equalBy[A @@ B, A](Tag.unwrap)
-  implicit def ArbitraryTag[A: Arbitrary, B]: Arbitrary[A @@ B] = Arbitrary {
-    arbitrary[A] map Tag.apply
+  implicit val EqualTaggedType: Equal[TaggedString] = Equal.equalBy[TaggedString, String](Tag.unwrap)
+  implicit val ArbitraryTaggedType: Arbitrary[TaggedString] = Arbitrary {
+    arbitrary[String] map Tag.apply
   }
 
   implicit val EqualUUID: Equal[UUID] = Equal.equalA
