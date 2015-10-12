@@ -1,12 +1,14 @@
 package io.atlassian.aws
 package dynamodb
 
+import java.util.UUID
+
 import io.atlassian.aws.spec.ScalaCheckSpec
 import org.junit.runner.RunWith
 import org.scalacheck.Gen._
 import org.scalacheck.{ Gen, Arbitrary, Prop }
 import Arbitrary._
-import scalaz.{ @@, Equal }
+import scalaz.{ @@, Equal, Tag }
 import scalaz.syntax.id._
 import scalaz.std.option._
 import scalaz.std.string._
@@ -17,7 +19,6 @@ import argonaut._, Argonaut._
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class EncodeDecodeSpec extends ScalaCheckSpec {
   import Attempt._
-  import DynamoDBAction._
 
   def is = s2"""
   Encode/Decode pairs should correctly:
@@ -31,6 +32,8 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     round-trip binary converted type                             ${Prop.forAll { roundTrip(_: TwoLongs) }}
     round-trip JSON                                              ${Prop.forAll { roundTrip(_: Json) }}
     round-trip deep JSON to test stack overflows                 ${Prop.forAll { roundTrip(_: DeepJson) }}
+    round-trip java UUIDs                                        ${Prop.forAll { roundTrip(_: UUID) }}
+    round-trip tagged String type                                ${Prop.forAll { roundTrip(_: TaggedString) }}
     JSON string can be decoded                                   $testDecodeJsonString
   """
 
@@ -43,6 +46,9 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
 
   type DeepJson = Json @@ DeepJson.Marker
   object DeepJson extends Tagger[Json]
+
+  type TaggedString = String @@ TaggedString.Marker
+  object TaggedString extends Tagger[String]
 
   // The max limit without trampolining is about 320
   implicit val deepJsonArbitrary: Arbitrary[DeepJson] =
@@ -80,4 +86,12 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
       } yield Foo(s, i)
     }
   implicit val ArbitraryJson: Arbitrary[Json] = Arbitrary(JsonData.jsonValueGenerator(8))
+
+  implicit val EqualTaggedType: Equal[TaggedString] = Equal.equalBy[TaggedString, String](Tag.unwrap)
+  implicit val ArbitraryTaggedType: Arbitrary[TaggedString] = Arbitrary {
+    arbitrary[String] map Tag.apply
+  }
+
+  implicit val EqualUUID: Equal[UUID] = Equal.equalA
+  implicit val ArbitraryUUID: Arbitrary[UUID] = Arbitrary(Gen.uuid)
 }
