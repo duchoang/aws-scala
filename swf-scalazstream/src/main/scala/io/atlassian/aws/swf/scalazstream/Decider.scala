@@ -47,7 +47,7 @@ class Decider(swf: AmazonSimpleWorkflow, workflow: WorkflowDefinition, identity:
     (deciderStream to decisionCompletionSink).run
 
   private def pollDecision(swf: AmazonSimpleWorkflow, workflow: WorkflowDefinition, identity: SWFIdentity): Attempt[Option[DecisionInstance]] =
-    SWF.poll(DecisionQuery(workflow.domain, workflow.workflowConfig.defaultTaskList, None, Some(25), reverseOrder = true, identity)).runAction(swf)
+    SWF.poll(DecisionQuery(workflow.domain, workflow.workflowConfig.defaultTaskList, None, None, reverseOrder = true, identity)).runAction(swf)
 
   private def complete(taskToken: TaskToken, context: String, decisions: List[Decision]): Attempt[Unit] =
     SWF.completeDecision(taskToken, context, decisions).runAction(swf)
