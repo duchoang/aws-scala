@@ -176,3 +176,5 @@ To release and publish, use the standard `sbt`-ism:
     sbt 'release cross'     # To tag a release and publish to maven private release repo
     
 Obviously be sure the run the integration before releasing.
+
+Internally in Atlassian, we have a build and release pipeline on [Bamboo](https://engservices-bamboo.internal.atlassian.com/browse/OSSC-AWSSCALA), hopefully to be made public at some point soon.
