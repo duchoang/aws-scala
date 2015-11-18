@@ -7,6 +7,8 @@ import java.net.URL
 import scala.io.Source
 import scalaz.syntax.id._
 
+import CFAction._
+
 object CloudFormation {
   def createOrUpdateStackFrom(file: File)(name: StackName): CFAction[StackOperationId] =
     stackExists(name).flatMap {

@@ -20,7 +20,7 @@ import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDynamoDB with DynamoDBActionMatchers {
-  import TestData._, Attempt._
+  import TestData._, Attempt._, DynamoDBAction._
 
   val NUM_TESTS =
     if (IS_LOCAL) 100
@@ -51,6 +51,8 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     have a working describeTable                  $describeTableWorks
     have a describeTable that handles unknown tables $describeTableHandlesUnknownTable
     return error when trying to replace an entry while NoOverwrite is set $noOverwriteWorks
+    record aws request id metadata                $recordRequestIdMetadata
+    record aws request id metadata in failures    $recordRequestIdMetadataInFailure
 
   DynamoDB query capability should
     support querying for non-existent hash keys   $queryWorksWhenHashKeyDoesntExist
@@ -191,7 +193,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         val valuesToSave = window.map { i =>
           k.copy(seq = i.toLong) -> valueToSave.copy(length = IndexRange(i.toLong))
         }.toMap
-        DynamoDB.batchPut(valuesToSave)(table.tableName, Key.column, Value.column).run(DYNAMO_CLIENT).run
+        DynamoDB.batchPut(valuesToSave)(table.tableName, Key.column, Value.column).runAction(DYNAMO_CLIENT).run
       }
 
       val hashKey = HashKey(k.a, k.b, k.c)
@@ -272,6 +274,18 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     action must returnResult[Page[TestTable.K, TestTable.V]] {
       _.result.length == 1
     }(client)
+  }
+
+  def recordRequestIdMetadata = {
+    Prop.forAll { (key: Key, value: Value) =>
+      DynamoDB.write(key, value, Write.Mode.Overwrite)(table.tableName, Key.column, Value.column) must returnMetaData
+    }.set(minTestsOk = NUM_TESTS)
+  }
+
+  def recordRequestIdMetadataInFailure = {
+    Prop.forAll { (key: Key, value: Value) =>
+      DynamoDB.write(key, value, Write.Mode.Overwrite)(null, Key.column, Value.column) must returnMetaData
+    }.set(minTestsOk = NUM_TESTS)
   }
 
   object TestTable extends Table.ComplexKey {

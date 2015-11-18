@@ -11,7 +11,7 @@ done
 
 SCRIPT_DIR=`dirname "$0"`
 PORT=${portOpt:-8000}
-DYNAMO_DB_LIB_HOME="$SCRIPT_DIR/../../dynamodb"
+DYNAMO_DB_LIB_HOME="$SCRIPT_DIR/dynamodb"
 DYNAMO_DB_HOME="$DYNAMO_DB_LIB_HOME/$PORT"
 TIMEOUT_SECONDS=${timeoutOpt:-30}
 

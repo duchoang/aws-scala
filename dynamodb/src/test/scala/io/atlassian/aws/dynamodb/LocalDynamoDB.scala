@@ -79,8 +79,8 @@ trait LocalDynamoDB {
   }
 
   /**
-    * Override this to specify custom location for start/stop scripts for a local Dynamo instance
-    */
+   * Override this to specify custom location for start/stop scripts for a local Dynamo instance
+   */
   def runScript(script: String, args: List[String], name: String) = {
     val target = new File(targetDirectory, script)
 

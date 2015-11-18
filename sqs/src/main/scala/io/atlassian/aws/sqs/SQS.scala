@@ -12,7 +12,7 @@ import scalaz.syntax.std.option._
 import scala.collection.JavaConverters._
 
 object SQS {
-  import AwsAction._
+  import SQSAction._
 
   def createQueue(parameters: QueueParameters): SQSAction[QueueURL] =
     SQSAction.withClient {

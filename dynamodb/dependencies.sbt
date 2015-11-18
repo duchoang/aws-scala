@@ -1,1 +1,3 @@
 Dependencies.scodecBits
+
+Dependencies.dynamodb

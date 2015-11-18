@@ -16,32 +16,20 @@ import sbt._
 import Keys._
 
 object Publishing extends Plugin {
-  val nexus = "https://maven.atlassian.com/"
-  lazy val release = Some("releases" at nexus + "public")
-  lazy val snapshots = Some("snapshots" at nexus + "public-snapshot")
-  lazy val local = Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository")))
+  val nexus = "https://maven.atlassian.com/central-"
+  lazy val release = Some("releases" at nexus + "staging")
+  lazy val snapshots = Some("snapshots" at nexus + "snapshot")
+  lazy val localM2 = Some(Resolver.file("localm2", Path.userHome / ".m2" / "repository"))
 
   override def settings = 
     Seq(
       publishTo <<= version { (v: String) =>
         if (v.trim endsWith "SNAPSHOT")
-          local
+          snapshots
         else
           release
       }
       , publishMavenStyle := true
       , publishArtifact in Test := true
-      , pomExtra :=
-        <scm>
-          <url>https://bitbucket.org/atlassian/aws-scala</url>
-          <connection>scm:ssh://git@bitbucket.org:atlassian/aws-scala.git</connection>
-          <developerConnection>scm:git:ssh://git@bitbucket.org:atlassian/aws-scala.git</developerConnection>
-        </scm>
-          <issueManagement>
-            <system>Bitbucket</system>
-            <url>https://bitbucket.org/atlassian/aws-scala/issues</url>
-          </issueManagement>
-
-      , pomIncludeRepository := { (repo: MavenRepository) => false } // no repositories in the pom
     )
 }

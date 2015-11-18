@@ -1,78 +1,49 @@
 package io.atlassian.aws
 
-import scalaz.{ Kleisli, Monad, ReaderT, \/-, -\/ }
-import scalaz.syntax.either._
-import scalaz.syntax.monad._
+import scalaz.{ Monoid, MonadReader, MonadError }
 import kadai.Invalid
+import scalaz.syntax.id._
+import scalaz.syntax.monad._
+import scalaz.syntax.monadError._
 
-trait AwsActionTypes { // https://issues.scala-lang.org/browse/SI-9025
-  object AwsAction {
-    def apply[R, A](f: R => Attempt[A]): AwsAction[R, A] =
-      Kleisli { f }
+object AwsAction {
 
-    def value[R, A](v: => A): AwsAction[R, A] =
-      AwsAction { _ => Attempt.ok(v) }
+  private implicit def M[R, W: Monoid] =
+    AwsActionMonad[R, W]
 
-    def ask[R]: AwsAction[R, R] =
-      Kleisli.ask
+  def apply[R, W: Monoid, A](f: R => Attempt[A]): AwsAction[R, W, A] = {
+    ask[R, W] >>= { f(_) |> attempt[R, W, A] }
+  }
 
-    def local[A, R](f: R => R)(fa: AwsAction[R, A]): AwsAction[R, A] =
-      Kleisli.local(f)(fa)
+  def value[R, W: Monoid, A](v: => A): AwsAction[R, W, A] =
+    v.point[AwsAction[R, W, ?]]
 
-    def ok[R, A](strict: A): AwsAction[R, A] =
-      value(strict)
+  def ask[R, W: Monoid]: AwsAction[R, W, R] =
+    MonadReader[AwsAction[?, W, ?], R].ask
 
-    def withClient[R, A](f: R => A): AwsAction[R, A] =
-      AwsAction { r: R => Attempt.safe { f(r) } }.recover {
-        AmazonExceptions.transformException andThen invalid[R, A]
-      }
+  def local[R, W: Monoid, A](f: R => R)(fa: AwsAction[R, W, A]): AwsAction[R, W, A] =
+    MonadReader[AwsAction[?, W, ?], R].local(f)(fa)
 
-    def attempt[R, A](a: Attempt[A]): AwsAction[R, A] =
-      this.apply { _ => a }
+  def ok[R, W: Monoid, A](strict: A): AwsAction[R, W, A] =
+    value(strict)
 
-    def fail[R, A](msg: String): AwsAction[R, A] =
-      AwsAction { _ => Attempt.fail(msg) }
+  def safe[R, W: Monoid, A](f: R => A): AwsAction[R, W, A] =
+    apply { r => Attempt.safe { f(r) } }
 
-    def invalid[R, A](i: Invalid): AwsAction[R, A] =
-      AwsAction { _ => Attempt(i.left) }
-
-    implicit class AwsActionOps[R, A](action: AwsAction[R, A]) {
-      def recover(f: Invalid => AwsAction[R, A]): AwsAction[R, A] =
-        AwsAction[R, A] { r => action.run(r).run.fold(f, ok[R, A](_)).run(r) }
-
-      def handle(f: PartialFunction[Invalid, AwsAction[R, A]]): AwsAction[R, A] =
-        recover { f orElse { case i => invalid(i) } }
-    }
-
-    trait Functions[C] {
-      type Action[A] = AwsAction[C, A]
-
-      def apply[A](run: C => Attempt[A]): Action[A] =
-        AwsAction(run)
-
-      def safe[A](v: => A): Action[A] =
-        AwsAction.attempt { Attempt.safe(v) }
-
-      def value[A](v: => A): Action[A] =
-        AwsAction.value(v)
-
-      def attempt[A](a: Attempt[A]): Action[A] =
-        AwsAction.attempt(a)
-
-      def withClient[A](f: C => A): Action[A] =
-        AwsAction.withClient(f)
-
-      def ok[A](strict: A): Action[A] =
-        value(strict)
-
-      def fail[A](msg: String): Action[A] =
-        attempt(Attempt.fail(msg))
-
-      def fail[A](t: Throwable): Action[A] =
-        attempt(Attempt.exception(t))
-
-      def fail[A](i: Invalid): Action[A] =
-        attempt(Attempt.apply(i.left))
+  def withClient[R, W: Monoid, A](f: R => A): AwsAction[R, W, A] = {
+    val ME = MonadError[ReaderEitherAction[R, W, ?, ?], Invalid]
+    import ME.monadErrorSyntax._
+    safe(f) handleError {
+      AmazonExceptions.transformInvalid andThen invalid[R, W, A]
     }
   }
+
+  def attempt[R, W: Monoid, A](a: Attempt[A]): AwsAction[R, W, A] = 
+    a.fold(invalid[R, W, A], ok[R, W, A])
+
+  def fail[R, W: Monoid, A](msg: String): AwsAction[R, W, A] =
+    invalid(Invalid.Message(msg))
+
+  def invalid[R, W: Monoid, A](i: Invalid): AwsAction[R, W, A] =
+    i.raiseError[ReaderEitherAction[R, W, ?, ?], A]
 }

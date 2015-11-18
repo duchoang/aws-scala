@@ -10,8 +10,25 @@ import scalaz.syntax.traverse._
 import kadai.Invalid
 import scala.collection.JavaConverters._
 import Unmarshaller._
-import AwsAction._
-import com.amazonaws.services.dynamodbv2.model._
+import com.amazonaws.services.dynamodbv2.model.{
+  AttributeAction,
+  AttributeValue,
+  AttributeValueUpdate,
+  BatchWriteItemRequest,
+  ComparisonOperator,
+  ConditionalCheckFailedException,
+  CreateTableRequest,
+  DeleteItemResult,
+  DeleteTableResult,
+  ExpectedAttributeValue,
+  PutRequest,
+  ResourceNotFoundException,
+  ReturnValue,
+  TableDescription,
+  TableStatus,
+  UpdateItemRequest,
+  WriteRequest
+}
 
 /**
  * Contains functions that perform operations on a DynamoDB table. Functions return a DynamoDBAction that can be run by
@@ -37,7 +54,7 @@ import com.amazonaws.services.dynamodbv2.model._
 object DynamoDB {
   import Convert._
   import scala.concurrent.duration._
-  import DynamoDBAction.withClient
+  import DynamoDBAction._
 
   def get[K, V](key: K, consistency: ReadConsistency = ReadConsistency.Eventual)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Option[V]] =
     withClient {
@@ -56,14 +73,22 @@ object DynamoDB {
    * Note that replace mode only works correctly if you supply an old value to replace.
    */
   def write[K, V](k: K, v: V, m: Write.Mode, old: Option[V] = None)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, m.Mode]] =
-    DynamoDBAction.withClient { client =>
+    withClient { client =>
       val keyAttrs = kc.marshall.toFlattenedMap(k)
       client.updateItem {
         new UpdateItemRequest()
-          .withTableName { table }
-          .withReturnValues { ReturnValue.ALL_OLD }
-          .withKey { keyAttrs.asJava }
-          .withAttributeUpdates { toUpdates(vc.marshall(v).filterNot { case (keyAttrName, _) => keyAttrs.contains(keyAttrName)}).asJava } |> { req =>
+          .withTableName {
+            table
+          }
+          .withReturnValues {
+            ReturnValue.ALL_OLD
+          }
+          .withKey {
+            keyAttrs.asJava
+          }
+          .withAttributeUpdates {
+            toUpdates(vc.marshall(v).filterNot { case (keyAttrName, _) => keyAttrs.contains(keyAttrName)}).asJava
+          } |> { req =>
             m match {
               case Overwrite => req
               case Insert => // all keys shouldn't be present, should this be all values aren't present?
@@ -86,9 +111,16 @@ object DynamoDB {
           }
       }
     }.flatMap {
-      res => DynamoDBAction.attempt { vc.unmarshall.option(res.getAttributes) }.map { m.result }
+      res =>
+        DynamoDBAction.attempt {
+          vc.unmarshall.option(res.getAttributes)
+        }.map {
+          m.result
+        }
     }.handle {
-      case Invalid.Err(e: ConditionalCheckFailedException) => DynamoDBAction.ok { m.fail }
+      case Invalid.Err(e: ConditionalCheckFailedException) => DynamoDBAction.ok {
+        m.fail
+      }
     }
 
   def update[K, V](key: K, old: V, newValue: V)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, Write.Mode.Replace.type]] =
@@ -101,7 +133,7 @@ object DynamoDB {
     }
 
   def query[K, V](q: QueryImpl)(ck: Column[K], cv: Column[V]): DynamoDBAction[Page[K, V]] =
-    DynamoDBAction.withClient {
+    withClient {
       _.query(q.asQueryRequest)
     } flatMap { res =>
       DynamoDBAction.attempt {
@@ -173,7 +205,9 @@ object DynamoDB {
    */
   private[dynamodb] def describeTable(name: String): DynamoDBAction[TableDescription] =
     withClient {
-      _.describeTable(name).getTable
+      _.describeTable(name)
+    } map {
+      _.getTable
     }
 
   /**
@@ -251,15 +285,15 @@ object DynamoDB {
   }
 
   private def queryImpl[K](t: Table.Index)(idx: Schema.Index[K, t.V, t.H, t.R])(implicit iso: t.K <=> K): t.Query => DynamoDBAction[Page[t.K, t.V]] = {
-    case t.Query.Hashed(h, t.Query.Config(_, dir, _, consistency)) =>
+    case t.Query.Hashed(h, t.Query.Config(_, dir, limit, consistency)) =>
       query(QueryImpl.forHash(
-        h, scanDirection = dir, indexName = idx.indexName, consistency = consistency
+        h, scanDirection = dir, indexName = idx.indexName, consistency = consistency, limit = limit
       )(idx.kv.name, idx.hashRange.a))(idx.kv.key, idx.kv.value) map {
         case Page(result, next) => Page(result, next.map(iso.from))
       }
-    case t.Query.Ranged(h, r, cmp, t.Query.Config(_, dir, _, consistency)) =>
+    case t.Query.Ranged(h, r, cmp, t.Query.Config(_, dir, limit, consistency)) =>
       query(QueryImpl.forHashAndRange(
-        h, r, rangeComparison = cmp, scanDirection = dir, indexName = idx.indexName, consistency = consistency
+        h, r, rangeComparison = cmp, scanDirection = dir, indexName = idx.indexName, consistency = consistency, limit = limit
       )(idx.kv.name, idx.hashRange.a, idx.hashRange.b))(idx.kv.key, idx.kv.value) map {
         case Page(result, next) => Page(result, next.map(iso.from))
       }

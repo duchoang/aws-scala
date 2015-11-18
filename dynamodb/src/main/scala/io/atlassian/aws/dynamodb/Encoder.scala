@@ -1,13 +1,15 @@
 package io.atlassian.aws
 package dynamodb
 
+import java.util.UUID
+
 import argonaut._
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
-import org.joda.time.{ DateTimeZone, DateTime, Instant }
-import scalaz.Contravariant
-import scalaz.Free.Trampoline
+import org.joda.time.{DateTime, DateTimeZone, Instant}
+
 import scalaz.syntax.id._
 import scalaz.syntax.std.option._
+import scalaz.{@@, Contravariant, Tag}
 
 case class Encoder[A](run: A => Option[AttributeValue]) {
   def encode(a: A): Option[AttributeValue] =
@@ -49,11 +51,17 @@ object Encoder {
   implicit val InstantEncode: Encoder[Instant] =
     Encoder[DateTime].contramap { _.toDateTime }
 
+  implicit val UUIDEncode: Encoder[UUID] =
+    Encoder[String].contramap { _.toString }
+
   implicit def OptionEncode[A: Encoder]: Encoder[Option[A]] =
     Encoder { _.flatMap { Encoder[A].run } }
 
   implicit def JsonEncode[A: EncodeJson]: Encoder[A] =
     JsonEncoder.encode.contramap { a => implicitly[EncodeJson[A]].encode(a) }
+
+  implicit def TaggedTypeEncode[A: Encoder, B]: Encoder[A @@ B] =
+    Encoder[A].contramap(Tag.unwrap)
 
   implicit val NonEmptyBytesEncode: Encoder[NonEmptyBytes] =
     attribute { b => _.withB(b.bytes.toByteBuffer) }

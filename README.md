@@ -1,5 +1,7 @@
 # Scala wrapper for AWS SDK
 
+[ ![Codeship Status for atlassian/aws-scala](https://codeship.com/projects/05f9e740-11cf-0133-9628-6695b09e6893/status?branch=master)](https://codeship.com/projects/92367)
+
 Dealing with the Java AWS SDK is messy. This library attempts to make it less messy by:
 
  * Making it easier to create AWS SDK clients based on configuration and supporting fallback configurations
@@ -14,22 +16,18 @@ Currently the library has basic support for S3, DynamoDB, CloudFormation and SQS
 
 ### Step 0 - Adding the dependency
 
-Currently the artifacts are published to Atlassian's public Maven repository, so you'll need to add the following resolver:
-    
-    resolvers += "atlassian-public"   at "https://maven.atlassian.com/content/groups/public/"
-
 The project is split into separate modules for each type of AWS API so you can import them separately if you wish (e.g. `aws-scala-s3`, `aws-scala-dynamodb`, `aws-scala-sqs`, `aws-scala-cloudformation`).
 Alternatively, you can:
 
-    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "2.0.0-M2"
+    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "4.0.2"
     
 If you want the `test` JAR for some useful helpers, at the moment you will need to import the individual modules and core, e.g.: 
     
     libraryDependencies ++= Seq(
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "2.0.0-M2",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "2.0.0-M2",
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "2.0.0-M2"  % "test" classifier "tests",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "2.0.0-M2"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "4.0.2",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "4.0.2",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "4.0.2"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "4.0.2"  % "test" classifier "tests",
         )
 
 Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x onwards have a Scalaz 7.1 dependency. Versions 1.x onwards 
@@ -178,3 +176,5 @@ To release and publish, use the standard `sbt`-ism:
     sbt 'release cross'     # To tag a release and publish to maven private release repo
     
 Obviously be sure the run the integration before releasing.
+
+Internally in Atlassian, we have a build and release pipeline on [Bamboo](https://engservices-bamboo.internal.atlassian.com/browse/OSSC-AWSSCALA), hopefully to be made public at some point soon.

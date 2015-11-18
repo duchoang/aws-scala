@@ -26,7 +26,7 @@ class TableSpec(val arguments: Arguments)
 
     def keyIso = Key.Iso
 
-    val schema = defineSchema(s"my_things2_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.named, RangeKey.named)
+    val schema = defineSchema(s"my_things5_${System.currentTimeMillis.toString}", this)(Key.column, Value.column, HashKey.named, RangeKey.named)
   }
 
   implicit val DYNAMO_CLIENT = dynamoClient
