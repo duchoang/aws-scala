@@ -1,4 +1,5 @@
-package io.atlassian.aws.swf
+package io.atlassian.aws
+package swf
 package scalazstream
 
 import java.util.UUID
@@ -36,6 +37,7 @@ import scalaz.syntax.std.option._
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   import Logging._
+  import SWFAction._
 
   val IS_LOCAL = !arguments.commandLine.contains("aws-integration")
   val REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
@@ -119,7 +121,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
 
   def createTestWorkflow = {
     val action = SWF.registerWorkflow(workflowDef)
-    action.run(CLIENT).run match {
+    action.runAction(CLIENT).run match {
       case -\/(e) =>
         error(s"Error registering test workflow: $e")
         Failure(s"Error registering test workflow: $e")
@@ -153,10 +155,11 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     val workflowId = WorkflowId(UUID.randomUUID().toString)
     val latch = addLatch(workflowId)
 
-    SWF.startWorkflow(testDomain, testWorkflow, workflowId, DeciderCrash).run(CLIENT).run
+    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, DeciderCrash).runAction(CLIENT).run.toEither
 
     // wait for map to be updated...
     latch.await(1, TimeUnit.MINUTES)
+    (workflowResult must beRight) and
     (latch.getCount must_=== 0L) and
       (activityResultMap.get(workflowId) must beNone)
   }
@@ -165,11 +168,12 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     val workflowId = WorkflowId(UUID.randomUUID().toString)
     val latch: CountDownLatch = addLatch(workflowId)
 
-    SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivityCrash).run(CLIENT).run
+    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivityCrash).runAction(CLIENT).run.toEither
 
     // wait for map to be updated...
     latch.await(1, TimeUnit.MINUTES)
     // nb. the current testing code triggers the failure AFTER putting values into the activityResultMap...
+    (workflowResult must beRight) and
     (latch.getCount must_=== 0L) and
       (activityResultMap(workflowId) must beSome(ActivityCrash))
   }
@@ -177,10 +181,12 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   def postToWorkflowHappyPath() = {
     val workflowId = WorkflowId(UUID.randomUUID().toString)
     val latch = addLatch(workflowId)
-    SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivitySuccess).run(CLIENT).run
+    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivitySuccess).runAction(CLIENT).run.toEither
 
     // wait for map to be updated...
     latch.await(1, TimeUnit.MINUTES)
+
+    (workflowResult must beRight) and
     (latch.getCount must_=== 0L) and
       (activityResultMap(workflowId) must beSome(ActivitySuccess))
   }
@@ -188,10 +194,12 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   def postToWorkflowAndActivityFails() = {
     val workflowId = WorkflowId(UUID.randomUUID().toString)
     val latch = addLatch(workflowId)
-    SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivityFail).run(CLIENT).run
+    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivityFail).runAction(CLIENT).run.toEither
 
     // wait for map to be updated...
     latch.await(1, TimeUnit.MINUTES)
+
+    (workflowResult must beRight) and
     (latch.getCount must_=== 0L) and
       (activityResultMap(workflowId) must beSome(ActivityFail))
   }

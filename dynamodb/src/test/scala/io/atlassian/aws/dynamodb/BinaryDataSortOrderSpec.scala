@@ -51,7 +51,7 @@ class BinaryDataSortOrderSpec(val arguments: Arguments)
     }
 
     val schema =
-      defineSchema(s"my_things3_${System.currentTimeMillis.toString}", this)(ComplexKey.column, Value.column, HashKey.named, ComplexKey.twoLongsNamed)
+      defineSchema(s"my_things4_${System.currentTimeMillis.toString}", this)(ComplexKey.column, Value.column, HashKey.named, ComplexKey.twoLongsNamed)
   }
 
   implicit val DYNAMO_CLIENT = dynamoClient

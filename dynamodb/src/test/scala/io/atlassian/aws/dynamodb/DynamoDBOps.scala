@@ -8,12 +8,13 @@ import kadai.log.Logging
 import org.specs2.execute.{ Success, Failure }
 
 object DynamoDBOps extends Logging {
+  import DynamoDBAction._
   import Logging._
 
   def runAction(implicit client: AmazonDynamoDB): DynamoDBAction ~> (Invalid \/ ?) =
     new (DynamoDBAction ~>(Invalid \/ ?)) {
       def apply[A](action: DynamoDBAction[A]) =
-        action.run(client).run
+        action.runAction(client).run
     }
 
   def createTable[K, V, H, R](create: Schema.Create.CreateTable[K, V, H, R])(implicit client: AmazonDynamoDB) = {

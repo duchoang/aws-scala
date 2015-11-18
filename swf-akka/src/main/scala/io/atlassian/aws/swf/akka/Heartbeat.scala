@@ -1,8 +1,9 @@
-package io.atlassian.aws.swf.akka
+package io.atlassian.aws
+package swf
+package akka
 
-import akka.actor.{ Actor, Props, ActorRef }
+import _root_.akka.actor.{ Actor, Props, ActorRef }
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
-import io.atlassian.aws.swf._
 import kadai.Invalid
 import kadai.log.json.JsonLogging
 
@@ -20,6 +21,7 @@ object Heartbeat {
 }
 
 class Heartbeat(swf: AmazonSimpleWorkflow, owner: ActorRef, taskToken: TaskToken, interval: FiniteDuration) extends Actor with JsonLogging {
+  import SWFAction._
   import Heartbeat.Protocol._
   import context.dispatcher
   import JsonLogging._
@@ -34,7 +36,7 @@ class Heartbeat(swf: AmazonSimpleWorkflow, owner: ActorRef, taskToken: TaskToken
 
   def receive = {
     case Poll =>
-      SWF.heartbeat(taskToken).run(swf).fold(
+      SWF.heartbeat(taskToken).runAction(swf).fold(
         { i => owner ! HeartbeatError(i) },
         { r => if (r.isCancelRequested) owner ! Cancelled }
       )

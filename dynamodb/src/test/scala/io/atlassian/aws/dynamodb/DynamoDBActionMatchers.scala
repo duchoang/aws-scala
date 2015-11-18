@@ -6,12 +6,12 @@ import kadai.Invalid
 import org.specs2.matcher.{ Expectable, Matcher }
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import kadai.log.Logging
-import org.specs2.execute.{ Success, Failure }
 import reflect.ClassTag
 
 trait DynamoDBActionMatchers extends Logging {
 
   import Logging._
+  import DynamoDBAction._
 
   def returnFailure[A](implicit client: AmazonDynamoDB) =
     new ServiceMatcher[A]({
@@ -48,10 +48,21 @@ trait DynamoDBActionMatchers extends Logging {
       case \/-(v) => (check(v), s"Expected value, but match failed with value $v")
     })
 
+  def returnMetaData[A](implicit client: AmazonDynamoDB) =
+    new Matcher[DynamoDBAction[A]] {
+      def apply[S <: DynamoDBAction[A]](s: Expectable[S]) = {
+        import AwsAction._
+        val (metaData, _) = s.value.runActionWithMetaData(client)
+        result(requestIdRecorded(metaData), "AWS Request Id successfully recorded", "Expected AWS Request Id but none found", s)
+      }
+    }
+
+  def requestIdRecorded[A](md: MetaData): Boolean = md.requestIds.nonEmpty
+
   class ServiceMatcher[A](check: \/[Invalid, A] => (Boolean, String))(implicit client: AmazonDynamoDB) extends Matcher[DynamoDBAction[A]] {
     def apply[S <: DynamoDBAction[A]](s: Expectable[S]) = {
-      val execResult = DynamoDBOps.runAction.apply(s.value)
-      val (comparisonResult, message) = check(execResult)
+      import AwsAction._
+      val (comparisonResult, message) = check(s.value.runAction(client).run)
       result(comparisonResult, message, message, s)
     }
   }

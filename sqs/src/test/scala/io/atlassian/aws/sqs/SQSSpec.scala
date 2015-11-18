@@ -15,7 +15,7 @@ import scala.concurrent.duration.Duration
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
 
-  import Examples._, Arbitraries._, SQSSpecOps._
+  import Examples._, Arbitraries._, SQSSpecOps._, SQSAction._
 
   val IS_LOCAL = !arguments.commandLine.contains("aws-integration")
   val REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))

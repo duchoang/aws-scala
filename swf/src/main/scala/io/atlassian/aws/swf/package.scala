@@ -11,7 +11,7 @@ import scala.concurrent.duration.{ FiniteDuration, Duration }
 import scalaz.syntax.std.option._
 
 package object swf extends swf.Types with ActivityTypes {
-  type SWFAction[A] = AwsAction[AmazonSimpleWorkflow, A]
+  type SWFAction[A] = AwsAction[AmazonSimpleWorkflow, MetaData, A]
 
   type DecisionFunction = DecisionInstance => List[Decision]
 

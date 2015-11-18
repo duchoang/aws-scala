@@ -1,8 +1,9 @@
-package io.atlassian.aws.swf.akka
+package io.atlassian.aws
+package swf
+package akka
 
 import _root_.akka.actor.{ Props, PoisonPill, Actor }
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
-import io.atlassian.aws.swf._
 import kadai.Invalid
 import kadai.log.json.JsonLogging
 
@@ -22,6 +23,7 @@ object ActivityActor {
 
 class ActivityActor(swf: AmazonSimpleWorkflow, activityDef: ActivityConfig, instance: ActivityInstance, function: ActivityFunction[Task]) extends Actor with JsonLogging {
   import JsonLogging._
+  import SWFAction._
 
   def receive = {
     case ActivityActor.Protocol.Start =>
@@ -62,5 +64,5 @@ class ActivityActor(swf: AmazonSimpleWorkflow, activityDef: ActivityConfig, inst
     }
 
   private def runSWFAction[A](a: SWFAction[A]): Invalid \/ A =
-    a.run(swf).run
+    a.runAction(swf).run
 }

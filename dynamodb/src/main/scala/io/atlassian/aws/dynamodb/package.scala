@@ -5,10 +5,20 @@ import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import scalaz.ReaderT
 
 package object dynamodb extends QueryTypes with DynamoStringType {
-  type DynamoDBAction[A] = AwsAction[AmazonDynamoDB, A]
+  type DynamoDBAction[A] = AwsAction[AmazonDynamoDB, MetaData, A]
 
-  object DynamoDBAction extends AwsAction.Functions[AmazonDynamoDB] {
+  object DynamoDBAction extends Functions[AmazonDynamoDB, MetaData] {
     override type Action[A] = DynamoDBAction[A]
+
+    override def extractRequestIds =
+      Some {
+        headers => headers.headers.get("x-amzn-RequestId").map(s => MetaData(List(s)))
+      }
+
+    override def extractRequestIdsFromException =
+      Some {
+        ase => Some(MetaData(List(ase.getRequestId)))
+      }
   }
 
   type Value = Option[AttributeValue]

@@ -1,9 +1,10 @@
-package io.atlassian.aws.swf.akka
+package io.atlassian.aws
+package swf
+package akka
 
-import akka.actor.{ Actor, PoisonPill, Props }
-import akka.util.Timeout
+import _root_.akka.actor.{ Actor, PoisonPill, Props }
+import _root_.akka.util.Timeout
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
-import io.atlassian.aws.swf._
 import kadai.log.json.JsonLogging
 
 import scala.concurrent.duration._
@@ -29,7 +30,8 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
                      activities: List[ActivityDefinition[Task]]) extends Actor with JsonLogging {
 
   import context.dispatcher
-  import io.atlassian.aws.swf.akka.ActivityPoller.Protocol._
+  import ActivityPoller.Protocol._
+  import SWFAction._
   import kadai.Invalid.syntax._
   import kadai.log.json.JsonLogging._
   implicit val timeout = Timeout(config.masterTimeout)
@@ -40,7 +42,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
     case PoisonPill =>
       context.stop(self)
     case Poll =>
-      SWF.poll(ActivityQuery(taskList = taskList, identity = config.identity, domain = config.domain)).run(swf).fold(
+      SWF.poll(ActivityQuery(taskList = taskList, identity = config.identity, domain = config.domain)).runAction(swf).fold(
         { i => warn(i); triggerPoll },
         {
           case None => triggerPoll
