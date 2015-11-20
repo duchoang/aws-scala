@@ -89,7 +89,7 @@ object Decoder {
     DynamoStringDecode.mapAttempt { _.asString.fold(Attempt.fail[String]("No string value present")) { Attempt.ok } }
 
   implicit val UUIDDecode: Decoder[UUID] =
-    Decoder[String].mapAttempt{ s => Attempt.safe(UUID.fromString(s)) }
+    Decoder[String].mapAttempt { s => Attempt.safe(UUID.fromString(s)) }
 
   implicit def TaggedTypeDecode[A: Decoder, B]: Decoder[A @@ B] =
     Decoder[A].map(Tag.apply)

@@ -38,7 +38,7 @@ object AwsAction {
     }
   }
 
-  def attempt[R, W: Monoid, A](a: Attempt[A]): AwsAction[R, W, A] = 
+  def attempt[R, W: Monoid, A](a: Attempt[A]): AwsAction[R, W, A] =
     a.fold(invalid[R, W, A], ok[R, W, A])
 
   def fail[R, W: Monoid, A](msg: String): AwsAction[R, W, A] =
