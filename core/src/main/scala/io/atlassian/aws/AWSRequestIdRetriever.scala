@@ -62,7 +62,7 @@ object AWSRequestIdRetriever {
     def unapply(c: Any): Option[AmazonWebServiceClient] =
       c match {
         case client: AmazonWebServiceClient => Some(client)
-        case _ => None
+        case _                              => None
       }
   }
 }

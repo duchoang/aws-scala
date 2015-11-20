@@ -4,7 +4,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import scalaz.ReaderT
 
-package object dynamodb extends QueryTypes with DynamoStringType {
+package object dynamodb extends QueryTypes with DynamoStringType with DynamoTask {
   type DynamoDBAction[A] = AwsAction[AmazonDynamoDB, MetaData, A]
 
   object DynamoDBAction extends Functions[AmazonDynamoDB, MetaData] {

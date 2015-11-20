@@ -21,7 +21,7 @@ object AmazonExceptions {
         case 401 => Unauthenticated.some
         case 403 => Forbidden.some
         case 416 => RangeRequestedNotSatisfiable.some
-        case _ => None
+        case _   => None
       }
   }
 
@@ -34,6 +34,6 @@ object AmazonExceptions {
 
   private[aws] def transformInvalid: Invalid => Invalid = {
     case Invalid.Err(e: AmazonServiceException) => ServiceException.from(e).getOrElse(e) |> Invalid.Err
-    case i => i
+    case i                                      => i
   }
 }

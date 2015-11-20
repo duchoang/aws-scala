@@ -5,12 +5,11 @@ import kadai.Invalid
 
 import scalaz.syntax.all._
 
-class AwsActionMonad[R, W: Monoid] extends Monad[AwsAction[R, W, ?]] 
-  with MonadReader[AwsAction[?, W, ?], R]
-  with MonadListen[AwsAction[R, ?, ?], W] // MonadTell+
-  with MonadPlus[AwsAction[R, W, ?]]
-  with MonadError[ReaderEitherAction[R, W, ?, ?], Invalid]
-{
+class AwsActionMonad[R, W: Monoid] extends Monad[AwsAction[R, W, ?]]
+    with MonadReader[AwsAction[?, W, ?], R]
+    with MonadListen[AwsAction[R, ?, ?], W] // MonadTell+
+    with MonadPlus[AwsAction[R, W, ?]]
+    with MonadError[ReaderEitherAction[R, W, ?, ?], Invalid] {
 
   override def ask: AwsAction[R, W, R] =
     MonadReader[ReaderAction, R].ask
@@ -72,7 +71,7 @@ class AwsActionMonad[R, W: Monoid] extends Monad[AwsAction[R, W, ?]]
     Kleisli.kleisliMonadReader[ResultWriterW, R](eitherMonadError) // have both monadError and monadListen in scope. Need to choose one
 
   private implicit val kleisliMonadPlus: PlusEmpty[Action] = // TODO: implicit resolution of PlusEmpty
-     Kleisli.kleisliPlusEmpty[ResultWriterW, R]
+    Kleisli.kleisliPlusEmpty[ResultWriterW, R]
 
   private def kleisli[A](f: R => ResultWriterW[A]): AwsAction[R, W, A] =
     Kleisli.kleisli(f)
@@ -82,5 +81,5 @@ class AwsActionMonad[R, W: Monoid] extends Monad[AwsAction[R, W, ?]]
 }
 
 object AwsActionMonad {
-  def apply[R, W : Monoid]: AwsActionMonad[R, W] = new AwsActionMonad[R, W]
+  def apply[R, W: Monoid]: AwsActionMonad[R, W] = new AwsActionMonad[R, W]
 }

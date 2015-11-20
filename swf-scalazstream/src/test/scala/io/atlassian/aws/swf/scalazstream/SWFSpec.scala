@@ -160,7 +160,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     // wait for map to be updated...
     latch.await(1, TimeUnit.MINUTES)
     (workflowResult must beRight) and
-    (latch.getCount must_=== 0L) and
+      (latch.getCount must_=== 0L) and
       (activityResultMap.get(workflowId) must beNone)
   }
 
@@ -174,7 +174,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     latch.await(1, TimeUnit.MINUTES)
     // nb. the current testing code triggers the failure AFTER putting values into the activityResultMap...
     (workflowResult must beRight) and
-    (latch.getCount must_=== 0L) and
+      (latch.getCount must_=== 0L) and
       (activityResultMap(workflowId) must beSome(ActivityCrash))
   }
 
@@ -187,7 +187,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     latch.await(1, TimeUnit.MINUTES)
 
     (workflowResult must beRight) and
-    (latch.getCount must_=== 0L) and
+      (latch.getCount must_=== 0L) and
       (activityResultMap(workflowId) must beSome(ActivitySuccess))
   }
 
@@ -200,7 +200,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     latch.await(1, TimeUnit.MINUTES)
 
     (workflowResult must beRight) and
-    (latch.getCount must_=== 0L) and
+      (latch.getCount must_=== 0L) and
       (activityResultMap(workflowId) must beSome(ActivityFail))
   }
 

@@ -31,7 +31,7 @@ trait Types {
         case _              => None
       }, "OverwriteMode")
   }
-  private[aws] type WriterF[W, A] = WriterT[Future, W, A]
-  private[aws] type EitherWriter[W, L, A] = EitherT[WriterF[W, ?], L, A]
-  private[aws] type ReaderEitherAction[R, W, L, A] = ReaderT[EitherWriter[W, L, ?], R, A]
+  private[aws]type WriterF[W, A] = WriterT[Future, W, A]
+  private[aws]type EitherWriter[W, L, A] = EitherT[WriterF[W, ?], L, A]
+  private[aws]type ReaderEitherAction[R, W, L, A] = ReaderT[EitherWriter[W, L, ?], R, A]
 }

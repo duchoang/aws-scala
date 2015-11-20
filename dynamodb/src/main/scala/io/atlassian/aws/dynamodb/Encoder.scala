@@ -5,11 +5,11 @@ import java.util.UUID
 
 import argonaut._
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
-import org.joda.time.{DateTime, DateTimeZone, Instant}
+import org.joda.time.{ DateTime, DateTimeZone, Instant }
 
 import scalaz.syntax.id._
 import scalaz.syntax.std.option._
-import scalaz.{@@, Contravariant, Tag}
+import scalaz.{ @@, Contravariant, Tag }
 
 case class Encoder[A](run: A => Option[AttributeValue]) {
   def encode(a: A): Option[AttributeValue] =
