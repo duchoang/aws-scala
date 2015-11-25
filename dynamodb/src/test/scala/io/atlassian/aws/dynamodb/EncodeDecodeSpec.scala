@@ -33,7 +33,7 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     round-trip JSON                                              ${Prop.forAll { roundTrip(_: Json) }}
     round-trip deep JSON to test stack overflows                 ${Prop.forAll { roundTrip(_: DeepJson) }}
     round-trip java UUIDs                                        ${Prop.forAll { roundTrip(_: UUID) }}
-    round-trip tagged String type                                ${Prop.forAll { roundTrip(_: TaggedString) }}
+    round-trip tagged String type                                $testTaggedTypeJsonDecode
     JSON string can be decoded                                   $testDecodeJsonString
   """
 
@@ -42,6 +42,14 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
 
   def testDecodeJsonString = Prop.forAll { f: Foo =>
     (Encoder[String].encode(f.jencode.nospaces) |> Decoder[Foo].decode) must equal(Attempt.ok(f))
+  }
+
+  def testTaggedTypeJsonDecode = Prop.forAll { t: TaggedString =>
+    import io.atlassian.aws.dynamodb.Encoder._
+    import io.atlassian.aws.dynamodb.Decoder._
+    implicit val taggedEncode: Encoder[TaggedString] = TaggedTypeEncode
+    implicit val taggedDecode: Decoder[TaggedString] = TaggedTypeDecode
+    roundTrip(t)
   }
 
   type DeepJson = Json @@ DeepJson.Marker

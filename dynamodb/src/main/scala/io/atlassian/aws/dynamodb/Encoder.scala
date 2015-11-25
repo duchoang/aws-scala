@@ -60,7 +60,7 @@ object Encoder {
   implicit def JsonEncode[A: EncodeJson]: Encoder[A] =
     JsonEncoder.encode.contramap { a => implicitly[EncodeJson[A]].encode(a) }
 
-  implicit def TaggedTypeEncode[A: Encoder, B]: Encoder[A @@ B] =
+  def TaggedTypeEncode[A: Encoder, B]: Encoder[A @@ B] =
     Encoder[A].contramap(Tag.unwrap)
 
   implicit val NonEmptyBytesEncode: Encoder[NonEmptyBytes] =

@@ -91,7 +91,7 @@ object Decoder {
   implicit val UUIDDecode: Decoder[UUID] =
     Decoder[String].mapAttempt{ s => Attempt.safe(UUID.fromString(s)) }
 
-  implicit def TaggedTypeDecode[A: Decoder, B]: Decoder[A @@ B] =
+  def TaggedTypeDecode[A: Decoder, B]: Decoder[A @@ B] =
     Decoder[A].map(Tag.apply)
 
   implicit def OptionDecode[A](implicit d: Decoder[A]): Decoder[Option[A]] =
