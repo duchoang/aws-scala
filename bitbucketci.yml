@@ -1,0 +1,4 @@
+pipeline:
+    - job:
+        script:
+            - sbt +test:compile +core/test +s3/test +sqs/test
