@@ -10,7 +10,7 @@ object Dependencies {
     val aws_sdk       = "1.10.5.1"
     val kadai         = "4.0.1"
     val akka          = "2.3.9"
-    val specs2        = "3.6"
+    val specs2        = "3.6.6"
     val scalacheck    = "1.12.2"
     val junit         = "4.12"
     val scodecBits    = "1.0.6"
