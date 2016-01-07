@@ -7,6 +7,7 @@ import kadai.Invalid
 import scalaz.std.list._
 import scalaz.syntax.all._
 import scala.collection.JavaConverters._
+import com.amazonaws.services.simpleworkflow.model.{TaskList => AWSTaskList}
 
 object SWF {
   import SWFAction._
@@ -114,11 +115,11 @@ object SWF {
   def poll(query: ActivityQuery): SWFAction[Option[ActivityInstance]] =
     withClient { _.pollForActivityTask(query.aws) |> ActivityInstance.unapply }
 
-  def startWorkflow(domain: Domain, workflow: Workflow, id: WorkflowId, input: String): SWFAction[RunId] =
+  def startWorkflow(domain: Domain, workflow: Workflow, taskList: TaskList, id: WorkflowId, input: String): SWFAction[RunId] =
     withClient {
       _.startWorkflowExecution(
         new StartWorkflowExecutionRequest().withDomain(domain.unwrap).withWorkflowId(id.unwrap).withWorkflowType(workflow.aws)
-          .withInput(input)
+          .withInput(input).withTaskList(new AWSTaskList().withName(taskList.unwrap))
       ).getRunId |> RunId.apply
     }
 
