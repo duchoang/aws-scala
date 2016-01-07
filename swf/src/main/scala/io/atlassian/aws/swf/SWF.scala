@@ -115,13 +115,18 @@ object SWF {
   def poll(query: ActivityQuery): SWFAction[Option[ActivityInstance]] =
     withClient { _.pollForActivityTask(query.aws) |> ActivityInstance.unapply }
 
-  def startWorkflow(domain: Domain, workflow: Workflow, taskList: TaskList, id: WorkflowId, input: String): SWFAction[RunId] =
+  def startWorkflow(domain: Domain, workflow: Workflow, id: WorkflowId, input: String, taskList: Option[TaskList] = None): SWFAction[RunId] = {
+    val request: StartWorkflowExecutionRequest =
+      new StartWorkflowExecutionRequest().withDomain(domain.unwrap).withWorkflowId(id.unwrap).withWorkflowType(workflow.aws).withInput(input)
+
+    // If taskList is not specified, SWF will use the defaultTaskList defined during workflow registration.
+    taskList.foreach(tl => request.withTaskList(new AWSTaskList().withName(tl.unwrap)))
+
     withClient {
-      _.startWorkflowExecution(
-        new StartWorkflowExecutionRequest().withDomain(domain.unwrap).withWorkflowId(id.unwrap).withWorkflowType(workflow.aws)
-          .withInput(input).withTaskList(new AWSTaskList().withName(taskList.unwrap))
-      ).getRunId |> RunId.apply
+      _.startWorkflowExecution(request).getRunId |> RunId.apply
     }
+  }
+
 
   def completeDecision(taskToken: TaskToken, context: String, decisions: List[Decision]): SWFAction[Unit] =
     withClient {

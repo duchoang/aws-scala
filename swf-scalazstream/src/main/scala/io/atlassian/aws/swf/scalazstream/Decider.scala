@@ -12,7 +12,7 @@ import scalaz.concurrent.Task
 import scalaz.stream.{ Process, sink, Sink }
 import scalaz.syntax.monad._
 
-class Decider(swf: AmazonSimpleWorkflow, workflow: WorkflowDefinition, taskList: TaskList, identity: SWFIdentity, executor: ExecutorService) extends JsonLogging {
+class Decider(swf: AmazonSimpleWorkflow, workflow: WorkflowDefinition, identity: SWFIdentity, executor: ExecutorService, taskList: Option[TaskList] = None) extends JsonLogging {
   import SWFAction._
   import JsonLogging._
 
@@ -20,7 +20,7 @@ class Decider(swf: AmazonSimpleWorkflow, workflow: WorkflowDefinition, taskList:
 
   private def deciderStream: Process[Task, Option[DecisionInstance]] =
     Process.repeatEval {
-      Task { pollDecision(swf, workflow.domain, taskList, identity).run }(executor) flatMap {
+      Task { pollDecision(swf, workflow.domain, taskList.getOrElse(workflow.workflowConfig.defaultTaskList), identity).run }(executor) flatMap {
         _.fold(
           invalid => Task.fail(WrappedInvalidException.orUnderlying(invalid)),
           Task.now
