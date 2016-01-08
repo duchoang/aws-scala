@@ -144,7 +144,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   }
 
   def startDeciders() = {
-    val task: Task[Unit] = new Decider(CLIENT, workflowDef, SWFIdentity("decider"), deciderExecutorService).decider
+    val task: Task[Unit] = new Decider(CLIENT, workflowDef, SWFIdentity("decider"), deciderExecutorService, Some(workflowDef.activityTaskList)).decider
     task runAsync {
       case -\/(throwable) => error(s"Decider error: $throwable")
       case \/-(_)         => ()
