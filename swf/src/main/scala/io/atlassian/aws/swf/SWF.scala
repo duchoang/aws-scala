@@ -7,7 +7,7 @@ import kadai.Invalid
 import scalaz.std.list._
 import scalaz.syntax.all._
 import scala.collection.JavaConverters._
-import com.amazonaws.services.simpleworkflow.model.{TaskList => AWSTaskList}
+import com.amazonaws.services.simpleworkflow.model.{ TaskList => AWSTaskList }
 
 object SWF {
   import SWFAction._
@@ -126,7 +126,6 @@ object SWF {
       _.startWorkflowExecution(request).getRunId |> RunId.apply
     }
   }
-
 
   def completeDecision(taskToken: TaskToken, context: String, decisions: List[Decision]): SWFAction[Unit] =
     withClient {

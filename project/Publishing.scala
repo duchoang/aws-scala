@@ -17,7 +17,7 @@ import Keys._
 
 object Publishing extends Plugin {
   val nexus = "https://maven.atlassian.com/central-"
-  lazy val release = Some("releases" at nexus + "staging")
+  lazy val release = Some("releases" at "http://nexus-atlassian-central.buildeng.atlassian.com:8081/service/local/staging/deploy/maven2")
   lazy val snapshots = Some("snapshots" at nexus + "snapshot")
   lazy val localM2 = Some(Resolver.file("localm2", Path.userHome / ".m2" / "repository"))
 
