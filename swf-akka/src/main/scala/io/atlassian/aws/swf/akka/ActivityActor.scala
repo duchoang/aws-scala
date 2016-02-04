@@ -33,7 +33,7 @@ class ActivityActor(swf: AmazonSimpleWorkflow, activityDef: ActivityConfig, inst
 
       function(instance).runAsync {
         case -\/(t) => fail(t.getMessage, t.getMessage)
-        case \/-(r) => r.fold(fail, complete)
+        case \/-(r) => r.fold(fail, complete, {})
       }
     case Heartbeat.Protocol.Cancelled =>
       cancelled()
