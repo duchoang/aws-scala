@@ -27,7 +27,7 @@ trait ActivityTypes {
       FailedActivity(reason, detail)
 
     /**
-      * If the activity returns this result, AWS-Scala will report to SWF with en ActivityTaskCompleted
+      * If the activity returns this result, AWS-Scala will report to SWF with an ActivityTaskCompleted
       * using the same output.
       */
     def success(output: String): Result =

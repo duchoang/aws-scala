@@ -1,3 +1,4 @@
 target
 dynamodb/src/test/resources/scripts/dynamodb
 **/bin
+.idea
