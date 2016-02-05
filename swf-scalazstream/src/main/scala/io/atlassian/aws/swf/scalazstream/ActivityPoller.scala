@@ -106,7 +106,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
   private def activityCompletionSink: Sink[Task, Option[(ActivityInstance, SWFResult)]] =
     sink.lift {
       case None                  => Task.now(())
-      case Some((ai, swfResult)) => Task { swfResult.fold(fail(ai), complete(ai)) }(executorService)
+      case Some((ai, swfResult)) => Task { swfResult.fold(fail(ai), complete(ai), ()) }(executorService)
     }
 
   private def activityPollers: Process[Task, Process[Task, Unit]] =
