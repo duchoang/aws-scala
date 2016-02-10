@@ -9,6 +9,7 @@ object Dependencies {
     val argonaut      = "6.1"
     val aws_sdk       = "1.10.5.1"
     val kadai         = "4.0.1"
+    val kadai_log     = "5.1.2"
     val akka          = "2.3.9"
     val specs2        = "3.6.6"
     val scalacheck    = "1.12.2"
@@ -25,7 +26,7 @@ object Dependencies {
     , "com.amazonaws"     %  "aws-java-sdk-core"  % Version.aws_sdk
     , "io.atlassian"      %% "kadai-core"         % Version.kadai
     , "io.atlassian"      %% "kadai-config"       % Version.kadai
-    , "io.atlassian"      %% "kadai-logging-json" % Version.kadai
+    , "io.atlassian"      %% "kadai-logging-json" % Version.kadai_log
     , "io.atlassian"      %% "kadai-concurrent"   % Version.kadai
     )
   )
