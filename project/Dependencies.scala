@@ -9,7 +9,7 @@ object Dependencies {
     val argonaut      = "6.1"
     val aws_sdk       = "1.10.5.1"
     val kadai         = "4.0.1"
-    val kadai_log     = "5.1.2"
+    val kadai_log     = "5.1.3"
     val akka          = "2.3.9"
     val specs2        = "3.6.6"
     val scalacheck    = "1.12.2"
