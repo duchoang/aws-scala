@@ -2,6 +2,7 @@ package io.atlassian.aws
 package dynamodb
 
 import scalaz.Isomorphism.<=>
+import scalaz.NonEmptyList
 
 // TODO: renamed the file to Schema.scala
 object Schema {
@@ -121,13 +122,18 @@ object Schema {
 
     sealed trait IndexProjection
     object IndexProjection {
-      case object KeyOnly extends IndexProjection
-      case object All extends IndexProjection
+      sealed trait AllOrKeyOnly extends IndexProjection
+      case object KeyOnly extends AllOrKeyOnly
+      case object All extends AllOrKeyOnly
       /**
        * A partial projection requires the names of all columns not used in the keys.
        * @param nonKeyAttributes a list of the column names in the projection that is not used in the key.
        */
-      case class Partial(nonKeyAttributes: List[String]) extends IndexProjection
+      case class Partial(nonKeyAttributes: NonEmptyList[String]) extends IndexProjection
+
+      val keyOnly: IndexProjection = KeyOnly
+      val all: IndexProjection = All
+      def partial(nonKeyAttributes: NonEmptyList[String]): IndexProjection = Partial(nonKeyAttributes)
     }
 
     sealed trait IndexDef {

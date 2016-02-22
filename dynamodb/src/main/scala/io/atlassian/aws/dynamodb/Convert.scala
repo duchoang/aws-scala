@@ -58,7 +58,7 @@ object Convert {
       def convert = p => (p match {
         case IndexProjection.KeyOnly => (ProjectionType.KEYS_ONLY, List())
         case IndexProjection.All => (ProjectionType.ALL, List())
-        case IndexProjection.Partial(nonKeyAttributes) => (ProjectionType.INCLUDE, nonKeyAttributes)
+        case IndexProjection.Partial(nonKeyAttributes) => (ProjectionType.INCLUDE, nonKeyAttributes.list)
       }) |> {
         case (projectionType, nonKeyAttributes) =>
           new Projection().withProjectionType(projectionType)

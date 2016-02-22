@@ -3,6 +3,7 @@ package dynamodb
 
 import java.util.UUID
 
+import argonaut._, Argonaut._
 import io.atlassian.aws.spec.ScalaCheckSpec
 import org.junit.runner.RunWith
 import org.scalacheck.Gen._
@@ -14,7 +15,6 @@ import scalaz.std.option._
 import scalaz.std.string._
 import scalaz.std.anyVal._
 import org.joda.time.DateTime
-import argonaut._, Argonaut._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class EncodeDecodeSpec extends ScalaCheckSpec {
@@ -76,7 +76,7 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     Equal[Json].contramap { _.unwrap }
 
   case class Foo(s: String, i: Int)
-  implicit val CodecFoo = casecodec2(Foo.apply, Foo.unapply)("s", "i")
+  implicit val CodecFoo: CodecJson[Foo] = casecodec2(Foo.apply, Foo.unapply)("s", "i")
   implicit val EqualFoo: Equal[Foo] = Equal.equalA
   implicit val ArbitraryFoo: Arbitrary[Foo] =
     Arbitrary {
