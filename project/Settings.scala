@@ -14,7 +14,6 @@ object Settings {
     Defaults.coreDefaultSettings ++
       testSettings ++
       Release.customReleaseSettings ++ // sbt-release
-      net.virtualvoid.sbt.graph.Plugin.graphSettings ++ // dependency plugin settings
       defaultScalariformSettings ++
       Seq[Def.Setting[_]] (
         organization := "io.atlassian.aws-scala"
