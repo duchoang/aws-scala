@@ -49,7 +49,7 @@ The `io.atlassian.aws.AmazonClient` object has some useful functions for creatin
     
     val withConfig = AmazonClient[AmazonS3Client].withClientConfiguration(config, fallbackConfig)   // Create an S3 client with config from `config`, filling in any unset config items using the fallback config. 
 
-`AmazonClientConnectionDef` can be created programmatically or loaded via `kadai-config`. There is an `Accessor` already, so you just need to `import AmazonClientConnectionDef._` e.g.:
+`AmazonClientConnectionDef` can be created programmatically or loaded via [kadai-config](https://bitbucket.org/atlassian/kadai). There is an `Accessor` already, so you just need to `import AmazonClientConnectionDef._` e.g.:
 
 Config settings:
 
