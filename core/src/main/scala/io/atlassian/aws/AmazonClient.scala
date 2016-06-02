@@ -93,7 +93,7 @@ object AmazonClient extends AmazonClientOps {
   )
 }
 
-sealed class AmazonClient[A <: AmazonWebServiceClient](val constructor: AmazonClient.Constructor[A], serviceName: String)
+class AmazonClient[A <: AmazonWebServiceClient](val constructor: AmazonClient.Constructor[A], serviceName: String)
 
 trait AmazonClientOps {
   def fromClientConfigurationDef[A <: AmazonWebServiceClient: AmazonClient](config: AmazonClientConnectionDef)(metricsCollector: Option[RequestMetricCollector]): A =
