@@ -245,7 +245,7 @@ object DynamoDB {
       import kv.Query._
       def apply[A](fa: kv.DBOp[A]): DynamoDBAction[A] =
         fa match {
-          case GetOp(k)             => get(k)(t.name, t.key, t.value)
+          case GetOp(k, c)          => get(k, c)(t.name, t.key, t.value)
           case WriteOp(k, v, mode)  => write(k, v, mode)(t.name, t.key, t.value).asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
           case ReplaceOp(k, old, v) => write(k, v, Write.Mode.Replace, Some(old))(t.name, t.key, t.value)
           case DeleteOp(k)          => delete(k)(t.name, t.key).map { _ => () }

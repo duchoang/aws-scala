@@ -1,6 +1,8 @@
 package io.atlassian.aws.dynamodb
 
-import scalaz.{ Coyoneda, Free, Monad, ~> }
+import io.atlassian.aws.dynamodb.DynamoDB.ReadConsistency
+
+import scalaz.{Coyoneda, Free, Monad, ~>}
 
 /**
  * A key-value table.
@@ -61,7 +63,7 @@ trait Table extends Queries {
 
   sealed trait DBOp[A]
   object DBOp {
-    case class GetOp(key: K) extends DBOp[Option[V]]
+    case class GetOp(key: K, consistency: ReadConsistency = ReadConsistency.Eventual) extends DBOp[Option[V]]
     case class WriteOp[X] private[DBOp] (key: K, value: V, m: Write.Mode) extends DBOp[Write.Result[V, Write.Mode]]
 
     def writeOp(k: K, v: V, m: Write.Mode) =
