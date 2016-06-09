@@ -2,7 +2,7 @@ package io.atlassian.aws.dynamodb
 
 import io.atlassian.aws.dynamodb.DynamoDB.ReadConsistency
 
-import scalaz.{Coyoneda, Free, Monad, ~>}
+import scalaz.{ Coyoneda, Free, Monad, ~> }
 
 /**
  * A key-value table.

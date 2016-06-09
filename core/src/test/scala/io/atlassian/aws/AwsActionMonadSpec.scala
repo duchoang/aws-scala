@@ -1,17 +1,17 @@
 package io.atlassian.aws
 
+import io.atlassian.aws.spec.{ Arbitraries, MutableScalaCheckSpec, ScalazProperties }
 import kadai.Invalid
 import org.junit.runner.RunWith
-import org.specs2.scalaz.Spec
-import org.specs2.ScalaCheck
-import org.scalacheck.{ Gen, Arbitrary }
+import org.scalacheck.{ Arbitrary, Gen }
+
 import scalaz.concurrent.Future
-import scalaz.{ EitherT, ReaderT, Equal, WriterT }
-import scalaz.scalacheck.ScalazProperties
+import scalaz.{ EitherT, Equal, ReaderT, WriterT }
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
-class AwsActionMonadSpec extends Spec with ScalaCheck {
+class AwsActionMonadSpec extends MutableScalaCheckSpec {
 
+  import Arbitraries._
   import ScalazProperties._
   import Invalid.InvalidMonoid
   import scalaz.std.anyVal.intInstance
@@ -48,5 +48,5 @@ class AwsActionMonadSpec extends Spec with ScalaCheck {
 
   checkAll("AwsActionMonad Monad laws", monad.laws[Action])
   checkAll("AwsActionMonad MonadPlus laws", monadPlus.laws[Action])
-  checkAll("AwsActionMonad MonadError laws", monadError.laws[ActionWithLeftSide, Invalid])
+  checkAll("AwsActionMonad MonadError laws", monadError.laws[ActionWithLeftSide[Invalid, ?], Invalid])
 }

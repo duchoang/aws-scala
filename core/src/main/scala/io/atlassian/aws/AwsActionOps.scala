@@ -14,7 +14,7 @@ class AwsActionOps[R, W, A](action: AwsAction[R, W, A]) {
     runActionWithMetaData(r)._2
 
   def runActionWithMetaData(r: R): (W, Attempt[A]) =
-    action.run(r).run.run.run match {
+    action.run(r).run.run.unsafePerformSync match {
       case (w, result) => (w, Attempt(result))
     }
 

@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package s3
 
-import java.io.{ File, ByteArrayInputStream, InputStream }
+import java.io.{ ByteArrayInputStream, File, InputStream }
 import java.util.ArrayList
 
 import com.amazonaws.regions.Region
@@ -12,8 +12,8 @@ import kadai.Invalid
 
 import scala.collection.immutable.List
 import scala.collection.JavaConverters._
+import scalaz.{ Functor, Monad }
 import scalaz.concurrent.Task
-
 import scalaz.std.list._
 import scalaz.std.option._
 import scalaz.syntax.id._
@@ -29,14 +29,19 @@ object S3 {
 
   def get(location: ContentLocation, range: Range = Range.All): S3Action[S3Object] =
     S3Action.withClient {
-      _ getObject new GetObjectRequest(location.bucket.unwrap, location.key.unwrap) <| {
-        req => range.get.foreach { case (from, to) => req.setRange(from, to) }
-      }
+      _.getObject({
+        val req = new GetObjectRequest(location.bucket.unwrap, location.key.unwrap)
+        range.get.foreach { case (from, to) => req.setRange(from, to) }
+        req
+      })
     }
 
   def safeGet(location: ContentLocation, range: Range = Range.All): S3Action[Option[S3Object]] =
-    get(location, range).map { some }.handle {
-      case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => S3Action.ok(None)
+    {
+      val x: S3Action[S3Object] = get(location, range)
+      x.map[Option[S3Object]] { some }.handle {
+        case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => S3Action.ok(None)
+      }
     }
 
   def putStream(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[PutObjectResult] =
@@ -54,6 +59,7 @@ object S3 {
 
   /**
    * Uploads stream of data to S3 using multi-part uploads if the length is not known.
+   *
    * @return length of content that was uploaded
    */
   def putStreamWithMultipart(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[ContentLength] =
@@ -117,6 +123,7 @@ object S3 {
    * Creates a folder in an S3 bucket. A folder is just an empty 'file' with a / on the end of the name. However, if you
    * want to create a folder in a bucket that enforces encryption, you need to create it using the appropriate
    * metadata, which this function can do.
+   *
    * @param bucket Bucket name
    * @param folder Folder name (without trailing slash)
    * @param metaData Folder metadata (default enforces encryption)
@@ -129,6 +136,7 @@ object S3 {
 
   /**
    * Copy contents at the oldBucket and oldKey to a newBucket and newKey.
+   *
    * @param from The source bucket and key
    * @param to The destination bucket and key
    * @param meta The function will copy the existing metadata of the source object unless you specify newMetaData which will be used instead.

@@ -1,15 +1,13 @@
 package io.atlassian.aws
 
-import com.amazonaws.auth.{ AWSCredentialsProvider, DefaultAWSCredentialsProviderChain }
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.metrics.RequestMetricCollector
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.amazonaws.services.rds.AmazonRDSClient
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient
 import com.amazonaws.services.sqs.AmazonSQSClient
 import com.amazonaws.{ AmazonWebServiceClient, ClientConfiguration }
-import scalaz.syntax.id._
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.regions.ServiceAbbreviations
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
 
 object AmazonClient extends AmazonClientOps {
@@ -56,56 +54,59 @@ object AmazonClient extends AmazonClientOps {
    * @tparam A The type of the Amazon client (e.g. AmazonS3Client)
    * @return An instance of the client
    */
-  def withEndpoint[A <: AmazonWebServiceClient: AmazonClient](endpoint: String): A =
-    default[A] <| { _.setEndpoint(endpoint) }
+  def withEndpoint[A <: AmazonWebServiceClient: AmazonClient](endpoint: String): A = {
+    val a = default[A]
+    a.setEndpoint(endpoint)
+    a
+  }
 
   def apply[A <: AmazonWebServiceClient: AmazonClient] =
     implicitly[AmazonClient[A]]
 
   implicit object DynamoDBClient extends AmazonClient[AmazonDynamoDBClient](
-    constructor = new AmazonDynamoDBClient(_, _, _),
-    serviceName = ServiceAbbreviations.Dynamodb
+    constructor = new AmazonDynamoDBClient(_, _, _)
   )
 
   implicit object S3Client extends AmazonClient[AmazonS3Client](
-    constructor = new AmazonS3Client(_, _, _),
-    serviceName = ServiceAbbreviations.S3
+    constructor = new AmazonS3Client(_, _, _)
   )
 
   implicit object CFClient extends AmazonClient[AmazonCloudFormationClient](
-    constructor = new AmazonCloudFormationClient(_, _, _),
-    serviceName = ServiceAbbreviations.CloudFormation
+    constructor = new AmazonCloudFormationClient(_, _, _)
   )
 
   implicit object SQSClient extends AmazonClient[AmazonSQSClient](
-    constructor = new AmazonSQSClient(_, _, _),
-    serviceName = ServiceAbbreviations.SQS
+    constructor = new AmazonSQSClient(_, _, _)
   )
 
   implicit object SWFClient extends AmazonClient[AmazonSimpleWorkflowClient](
-    constructor = new AmazonSimpleWorkflowClient(_, _, _),
-    serviceName = ServiceAbbreviations.SimpleWorkflow
+    constructor = new AmazonSimpleWorkflowClient(_, _, _)
   )
 
   implicit object RDSClient extends AmazonClient[AmazonRDSClient](
-    constructor = new AmazonRDSClient(_, _, _),
-    serviceName = ServiceAbbreviations.RDS
+    constructor = new AmazonRDSClient(_, _, _)
   )
 }
 
-sealed class AmazonClient[A <: AmazonWebServiceClient](val constructor: AmazonClient.Constructor[A], serviceName: String)
+sealed class AmazonClient[A <: AmazonWebServiceClient](val constructor: AmazonClient.Constructor[A])
 
 trait AmazonClientOps {
-  def fromClientConfigurationDef[A <: AmazonWebServiceClient: AmazonClient](config: AmazonClientConnectionDef)(metricsCollector: Option[RequestMetricCollector]): A =
-    AmazonClient[A].constructor(
+  def fromClientConfigurationDef[A <: AmazonWebServiceClient: AmazonClient](config: AmazonClientConnectionDef)(metricsCollector: Option[RequestMetricCollector]): A = {
+    val a = AmazonClient[A].constructor(
       config.credential.getOrElse(Credential.default).run,
-      new ClientConfiguration() <| { c =>
+      {
+        val c = new ClientConfiguration()
         config.connectionTimeoutMs.foreach { c.setConnectionTimeout }
         config.maxConnections.foreach { c.setMaxConnections }
         config.maxErrorRetry.foreach { c.setMaxErrorRetry }
         config.socketTimeoutMs.foreach { c.setSocketTimeout }
         config.proxyHost.foreach { c.setProxyHost }
         config.proxyPort.foreach { c.setProxyPort }
+        c
       },
-      metricsCollector.orNull) <| { a => config.region.foreach { a.setRegion } } <| { a => config.endpointUrl.foreach { a.setEndpoint } }
+      metricsCollector.orNull)
+    config.region.foreach { a.setRegion }
+    config.endpointUrl.foreach { a.setEndpoint }
+    a
+  }
 }

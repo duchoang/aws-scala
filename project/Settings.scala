@@ -7,8 +7,8 @@ object Settings {
 
   val testSettings = testOptions in Test += Tests.Argument("console", "junitxml")
 
-  val scala210 = "2.10.5"
-  val scala211 = "2.11.7"
+  val scala210 = "2.10.6"
+  val scala211 = "2.11.8"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -45,7 +45,7 @@ object Settings {
       , ScalariformKeys.preferences := ScalariformKeys.preferences.value
           .setPreference(AlignSingleLineCaseStatements, true)
           .setPreference(AlignParameters, true)
-      , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.6.3")
+      , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.8.0" cross CrossVersion.binary)
       , resolvers += "Scalaz Bintray Repo" at "https://dl.bintray.com/scalaz/releases"
       , licenses := Seq("Apache2" -> url("https://bitbucket.org/atlassian/aws-scala/raw/master/LICENSE"))
       , homepage := Some(url("https://bitbucket.org/atlassian/aws-scala"))

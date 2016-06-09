@@ -1,22 +1,35 @@
 package io.atlassian.aws.spec
 
-import org.joda.time.{ DateTime, DateTimeZone, Instant }
-import org.scalacheck.{ Arbitrary, Gen }
-import org.specs2.matcher.{ Expectable, MatchResult, Matcher }
-import org.specs2.{ ScalaCheck, SpecificationWithJUnit }
-
 import scalaz.Equal
 import scalaz.std.AllInstances._
 
-trait ScalaCheckSpec extends SpecificationWithJUnit with ScalaCheck with Arbitraries with ScalazEqualMatcher with MoreEqualsInstances
+import org.specs2._
+import org.specs2.matcher._
+import org.specs2.specification._
+import org.specs2.specification.core._
+import org.specs2.scalacheck._
+import org.specs2.main.{ ArgumentsShortcuts, ArgumentsArgs }
 
-trait Arbitraries {
-  implicit def DateTimeArbitrary: Arbitrary[DateTime] =
-    Arbitrary { Arbitrary.arbitrary[Int].map { i => new DateTime(i.toLong) } }
+import org.scalacheck.Properties
+import org.scalacheck.util.{ FreqMap, Pretty }
 
-  implicit def InstantArbitrary: Arbitrary[Instant] =
-    Arbitrary { Arbitrary.arbitrary[Int].map { i => new Instant(i.toLong) } }
+import org.joda.time.{ DateTime, Instant }
+import org.specs2.matcher.{ Expectable, MatchResult, Matcher }
+
+trait MutableScalaCheckSpec extends org.specs2.mutable.Spec with ScalaCheck with ScalazEqualMatcher with MoreEqualsInstances
+    with MatchersImplicits with StandardMatchResults
+    with ArgumentsShortcuts with ArgumentsArgs {
+  val ff = fragmentFactory; import ff._
+  setArguments(fullStackTrace)
+
+  def checkAll(name: String, props: Properties)(implicit p: Parameters, f: FreqMap[Set[Any]] => Pretty) {
+    addFragment(text(s"$name  ${props.name} must satisfy"))
+    addFragments(Fragments.foreach(props.properties) { case (name, prop) => Fragments(name in check(prop, p, f)) })
+    ()
+  }
 }
+
+trait ScalaCheckSpec extends Specification with ScalaCheck with ScalazEqualMatcher with MoreEqualsInstances
 
 trait ScalazEqualMatcher {
   def equal[T: Equal](expected: T): Matcher[T] = new Matcher[T] {

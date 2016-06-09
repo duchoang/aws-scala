@@ -63,7 +63,12 @@ class AwsActionSpec extends SpecificationWithJUnit with ScalaCheck with Disjunct
   def amazonNotFound =
     Prop.forAll { msg: String =>
       withClient[String, Unit, String] {
-        s => throw new AmazonServiceException(s) <| { _.setStatusCode(404) }
+        s =>
+          {
+            val e = new AmazonServiceException(s)
+            e.setStatusCode(404)
+            throw e
+          }
       }.runAction(msg).run should be_-\/ like {
         case -\/(Invalid.Err(ServiceException(ExceptionType.NotFound, t))) => t.getErrorMessage === msg
       }

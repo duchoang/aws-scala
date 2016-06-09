@@ -2,11 +2,11 @@ package io.atlassian.aws
 
 import scalaz.{ Monoid, MonadReader, MonadError }
 import kadai.Invalid
-import scalaz.syntax.id._
-import scalaz.syntax.monad._
-import scalaz.syntax.monadError._
 
 object AwsAction {
+
+  import scalaz.syntax.id._
+  import scalaz.syntax.monadError._
 
   private implicit def M[R, W: Monoid] =
     AwsActionMonad[R, W]
@@ -19,10 +19,10 @@ object AwsAction {
     v.point[AwsAction[R, W, ?]]
 
   def ask[R, W: Monoid]: AwsAction[R, W, R] =
-    MonadReader[AwsAction[?, W, ?], R].ask
+    MonadReader[AwsAction[R, W, ?], R].ask
 
   def local[R, W: Monoid, A](f: R => R)(fa: AwsAction[R, W, A]): AwsAction[R, W, A] =
-    MonadReader[AwsAction[?, W, ?], R].local(f)(fa)
+    MonadReader[AwsAction[R, W, ?], R].local(f)(fa)
 
   def ok[R, W: Monoid, A](strict: A): AwsAction[R, W, A] =
     value(strict)
@@ -31,7 +31,7 @@ object AwsAction {
     apply { r => Attempt.safe { f(r) } }
 
   def withClient[R, W: Monoid, A](f: R => A): AwsAction[R, W, A] = {
-    val ME = MonadError[ReaderEitherAction[R, W, ?, ?], Invalid]
+    val ME = MonadError[AwsAction[R, W, ?], Invalid]
     import ME.monadErrorSyntax._
     safe(f) handleError {
       AmazonExceptions.transformInvalid andThen invalid[R, W, A]
@@ -45,5 +45,5 @@ object AwsAction {
     invalid(Invalid.Message(msg))
 
   def invalid[R, W: Monoid, A](i: Invalid): AwsAction[R, W, A] =
-    i.raiseError[ReaderEitherAction[R, W, ?, ?], A]
+    i.raiseError[AwsAction[R, W, ?], A]
 }

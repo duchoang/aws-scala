@@ -4,8 +4,6 @@ package s3
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.AmazonS3Exception
 
-import scalaz.Monoid
-
 object S3Action extends Functions[AmazonS3, S3MetaData] {
   override type Action[A] = S3Action[A]
 

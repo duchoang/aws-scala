@@ -10,7 +10,7 @@ trait ActivityTypes {
       this match {
         case FailedActivity(r, d)  => fail(r, d)
         case SuccessfulActivity(o) => success(o)
-        case Empty => empty
+        case Empty                 => empty
       }
   }
 
@@ -20,24 +20,24 @@ trait ActivityTypes {
     object Empty extends Result
 
     /**
-      * If the activity returns this result, AWS-Scala will report to SWF with an ActivityTaskFailed
-      * using the same reason and detail (note: only the first 256 chars of reason will be used).
-      */
+     * If the activity returns this result, AWS-Scala will report to SWF with an ActivityTaskFailed
+     * using the same reason and detail (note: only the first 256 chars of reason will be used).
+     */
     def failed(reason: String, detail: String): Result =
       FailedActivity(reason, detail)
 
     /**
-      * If the activity returns this result, AWS-Scala will report to SWF with an ActivityTaskCompleted
-      * using the same output.
-      */
+     * If the activity returns this result, AWS-Scala will report to SWF with an ActivityTaskCompleted
+     * using the same output.
+     */
     def success(output: String): Result =
       SuccessfulActivity(output)
 
     /**
-      * Use this result if you don't want AWS-Scala to report activity completion (or success) back
-      * to SWF. For example, use this if your activity function spawns a long-running task in another thread pool,
-      * and you will take care of reporting back to SWF when that task completes.
-      */
+     * Use this result if you don't want AWS-Scala to report activity completion (or success) back
+     * to SWF. For example, use this if your activity function spawns a long-running task in another thread pool,
+     * and you will take care of reporting back to SWF when that task completes.
+     */
     def empty: Result = Empty
   }
 
