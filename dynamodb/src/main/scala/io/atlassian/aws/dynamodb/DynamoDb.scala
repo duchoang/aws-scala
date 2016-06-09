@@ -1,33 +1,16 @@
 package io.atlassian.aws
 package dynamodb
 
-import scalaz.~>
+import scalaz.{ Functor, Monad, ~> }
 import scalaz.concurrent.Task
 import scalaz.std.list._
 import scalaz.syntax.id._
 import scalaz.syntax.traverse._
 import kadai.Invalid
+
 import scala.collection.JavaConverters._
 import Unmarshaller._
-import com.amazonaws.services.dynamodbv2.model.{
-  AttributeAction,
-  AttributeValue,
-  AttributeValueUpdate,
-  BatchWriteItemRequest,
-  ComparisonOperator,
-  ConditionalCheckFailedException,
-  CreateTableRequest,
-  DeleteItemResult,
-  DeleteTableResult,
-  ExpectedAttributeValue,
-  PutRequest,
-  ResourceNotFoundException,
-  ReturnValue,
-  TableDescription,
-  TableStatus,
-  UpdateItemRequest,
-  WriteRequest
-}
+import com.amazonaws.services.dynamodbv2.model.{ AttributeAction, AttributeValue, AttributeValueUpdate, BatchWriteItemRequest, ComparisonOperator, ConditionalCheckFailedException, CreateTableRequest, DeleteItemResult, DeleteTableResult, ExpectedAttributeValue, PutRequest, ResourceNotFoundException, ReturnValue, TableDescription, TableStatus, UpdateItemRequest, WriteRequest }
 
 /**
  * Contains functions that perform operations on a DynamoDB table. Functions return a DynamoDBAction that can be run by
@@ -55,9 +38,9 @@ object DynamoDB {
   import DynamoDBAction._
 
   def get[K, V](key: K, consistency: ReadConsistency = ReadConsistency.Eventual)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Option[V]] =
-    withClient {
+    Monad[DynamoDBAction].bind(withClient {
       _.getItem(table, kc.marshall.toFlattenedMap(key).asJava, ReadConsistency.asBool(consistency))
-    }.flatMap { r =>
+    }) { r =>
       DynamoDBAction.attempt {
         vc.unmarshall.option(r.getItem)
       }
@@ -70,7 +53,7 @@ object DynamoDB {
    * Note that replace mode only works correctly if you supply an old value to replace.
    */
   def write[K, V](k: K, v: V, m: Write.Mode, old: Option[V] = None)(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Write.Result[V, m.Mode]] =
-    DynamoDBAction.withClient {
+    Monad[DynamoDBAction].bind(DynamoDBAction.withClient {
       _.updateItem {
         new UpdateItemRequest()
           .withTableName {
@@ -106,11 +89,11 @@ object DynamoDB {
             }
           }
       }
-    }.flatMap {
+    }) {
       res =>
-        DynamoDBAction.attempt {
+        Functor[DynamoDBAction].map(DynamoDBAction.attempt {
           vc.unmarshall.option(res.getAttributes)
-        }.map {
+        }) {
           m.result
         }
     }.handle {
@@ -130,9 +113,9 @@ object DynamoDB {
 
   /** takes a Range Key */
   def query[KR, V](q: QueryImpl)(ck: Column[KR], cv: Column[V]): DynamoDBAction[Page[KR, V]] =
-    DynamoDBAction.withClient {
+    Monad[DynamoDBAction].bind(DynamoDBAction.withClient {
       _.query(q.asQueryRequest)
-    } flatMap { res =>
+    }) { res =>
       DynamoDBAction.attempt {
         res.getItems.asScala.toList.traverse[Attempt, V] {
           cv.unmarshall.unmarshall
@@ -182,14 +165,14 @@ object DynamoDB {
    * tableNameTransformer (e.g. to create tables for different environments)
    */
   private[dynamodb] def createTable[K, V, H, R](table: TableDefinition[K, V, H, R], checkTableActiveIntervals: Seq[Duration] = Seq.fill(12)(5000.milli)): DynamoDBAction[Task[TableDescription]] =
-    withClient {
+    Monad[DynamoDBAction].bind(withClient {
       _.createTable {
         new CreateTableRequest().withTableName(table.name)
           .withAttributeDefinitions(table.attributeDefinitions.asJavaCollection)
           .withKeySchema(table.schemaElements.asJavaCollection)
           .withProvisionedThroughput(table.provisionedThroughput)
       }
-    }.flatMap { createTableResult =>
+    }) { createTableResult =>
       withClient { client =>
         Task {
           client.describeTable(createTableResult.getTableDescription.getTableName).getTable
@@ -206,9 +189,9 @@ object DynamoDB {
    * Describes the table in DynamoDB
    */
   private[dynamodb] def describeTable(name: String): DynamoDBAction[TableDescription] =
-    withClient {
+    Functor[DynamoDBAction].map(withClient {
       _.describeTable(name)
-    } map {
+    }) {
       _.getTable
     }
 
@@ -248,7 +231,7 @@ object DynamoDB {
           case GetOp(k, c)          => get(k, c)(t.name, t.key, t.value)
           case WriteOp(k, v, mode)  => write(k, v, mode)(t.name, t.key, t.value).asInstanceOf[DynamoDBAction[A]] // cast required for path dependent type limitations
           case ReplaceOp(k, old, v) => write(k, v, Write.Mode.Replace, Some(old))(t.name, t.key, t.value)
-          case DeleteOp(k)          => delete(k)(t.name, t.key).map { _ => () }
+          case DeleteOp(k)          => Functor[DynamoDBAction].map(delete(k)(t.name, t.key)) { _ => () }
           case QueryOp(q)           => queryImpl(q)
           case TableExistsOp        => tableExists(t.name)
           case BatchPutOp(kvs)      => batchPut(kvs)(t.name, t.key, t.value)

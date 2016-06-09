@@ -1,21 +1,21 @@
 package io.atlassian.aws
 package dynamodb
 
-import io.atlassian.aws.spec.ScalaCheckSpec
+import io.atlassian.aws.spec.{ Arbitraries, ScalaCheckSpec }
 
 import scala.collection.JavaConverters.{ mapAsJavaMapConverter, mapAsScalaMapConverter }
-
 import org.joda.time.DateTime
 import org.junit.runner.RunWith
 import org.scalacheck.Prop
 import org.specs2.main.Arguments
-
-import com.amazonaws.services.dynamodbv2.model.{ ConditionalCheckFailedException, AttributeAction, AttributeValueUpdate, UpdateItemRequest }
-
+import com.amazonaws.services.dynamodbv2.model.{ AttributeAction, AttributeValueUpdate, ConditionalCheckFailedException, UpdateItemRequest }
 import java.util.UUID.randomUUID
+
 import kadai.Invalid
+
 import scalaz.{ \/, ~> }
-import scalaz.syntax.id._, scalaz.std.AllInstances._
+import scalaz.syntax.id._
+import scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class TableSpec(val arguments: Arguments)
@@ -23,7 +23,7 @@ class TableSpec(val arguments: Arguments)
     with LocalDynamoDB
     with DBActionMatchers {
   import TestData._
-
+  import Arbitraries._
   object table extends Table {
     type K = Key
     type V = Value

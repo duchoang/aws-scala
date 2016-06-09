@@ -3,22 +3,25 @@ package dynamodb
 
 import java.util.UUID
 
-import io.atlassian.aws.spec.ScalaCheckSpec
+import io.atlassian.aws.spec.{ Arbitraries, ScalaCheckSpec }
 import org.junit.runner.RunWith
 import org.scalacheck.Gen._
-import org.scalacheck.{ Gen, Arbitrary, Prop }
+import org.scalacheck.{ Arbitrary, Gen, Prop }
 import Arbitrary._
+
 import scalaz.{ @@, Equal, Tag }
 import scalaz.syntax.id._
 import scalaz.std.option._
 import scalaz.std.string._
 import scalaz.std.anyVal._
 import org.joda.time.DateTime
-import argonaut._, Argonaut._
+import argonaut._
+import Argonaut._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class EncodeDecodeSpec extends ScalaCheckSpec {
   import Attempt._
+  import Arbitraries._
 
   def is = s2"""
   Encode/Decode pairs should correctly:
