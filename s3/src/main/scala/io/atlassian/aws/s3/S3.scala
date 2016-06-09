@@ -38,10 +38,11 @@ object S3 {
 
   def safeGet(location: ContentLocation, range: Range = Range.All): S3Action[Option[S3Object]] =
     {
-      val x: S3Action[S3Object] = get(location, range)
-      x.map[Option[S3Object]] { some }.handle {
-        case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => S3Action.ok(None)
-      }
+      //      get(location, range).map { some }.
+      implicitly[Functor[S3Action]].map(get(location, range)) { some }.
+        handle {
+          case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => S3Action.ok(None)
+        }
     }
 
   def putStream(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[PutObjectResult] =

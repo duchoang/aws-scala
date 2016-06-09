@@ -2,7 +2,7 @@ package io.atlassian.aws.dynamodb
 
 import io.atlassian.aws.dynamodb.DynamoDB.ReadConsistency
 
-import scalaz.{ Coyoneda, Free, Monad, ~> }
+import scalaz.{ Free, Monad, ~> }
 
 /**
  * A key-value table.
@@ -21,7 +21,7 @@ trait Table extends Queries {
   type K
   type V
 
-  type DBAction[A] = Free.FreeC[DBOp, A]
+  type DBAction[A] = Free[DBOp, A]
 
   import DBOp._
 
@@ -77,15 +77,15 @@ trait Table extends Queries {
   }
 
   implicit val MonadDBAction: Monad[DBAction] =
-    Free.freeMonad[Coyoneda[DBOp, ?]]
+    Free.freeMonad[DBOp]
 
   implicit def lift[A](op: DBOp[A]): DBAction[A] =
-    Free.liftFC(op)
+    Free.liftF(op)
 
   /** Turn a natural transform from DBOp to C into a DBAction to C */
   def transform[C[_]: Monad](op2c: DBOp ~> C): DBAction ~> C =
     new (DBAction ~> C) {
       def apply[A](a: DBAction[A]): C[A] =
-        Free.runFC[DBOp, C, A](a)(op2c)
+        a.foldMap(op2c)
     }
 }
