@@ -17,6 +17,7 @@ import scalaz.std.anyVal._
 import org.joda.time.DateTime
 import argonaut._
 import Argonaut._
+import ArgonautScalaz._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class EncodeDecodeSpec extends ScalaCheckSpec {

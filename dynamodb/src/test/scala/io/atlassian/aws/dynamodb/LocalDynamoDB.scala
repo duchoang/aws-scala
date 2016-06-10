@@ -127,6 +127,8 @@ trait LocalDynamoDB {
         None,
         None)
     } else {
-      AmazonClient.default[AmazonDynamoDBClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
+      val c = AmazonClient.default[AmazonDynamoDBClient]
+      c.setRegion(AmazonRegion.orDefault(REGION))
+      c
     }
 }

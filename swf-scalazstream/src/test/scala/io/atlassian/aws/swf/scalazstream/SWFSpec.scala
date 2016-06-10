@@ -42,7 +42,11 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   val IS_LOCAL = !arguments.commandLine.contains("aws-integration")
   val REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
 
-  implicit val CLIENT = AmazonClient.default[AmazonSimpleWorkflowClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
+  implicit val CLIENT = {
+    val c = AmazonClient.default[AmazonSimpleWorkflowClient]
+    c.setRegion(AmazonRegion.orDefault(REGION))
+    c
+  }
 
   def is = skipAllIf(IS_LOCAL) ^ sequential ^ stopOnFail ^ s2"""
      This specification test SWF functionality
@@ -137,7 +141,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   val deciderExecutorService = Executors.newFixedThreadPool(4, ThreadFactories.named("swfDecider").build)
 
   def startActivityPollers() = {
-    new ActivityPoller(CLIENT, workflowDef.domain, SWFIdentity("activityPoller"), workflowDef.activityTaskList, workflowDef.activities, activityPollerExecutorService, activityPollerHeartbeatScheduledExecutorService, 5.minutes).poller(maxConcurrentActivityExecutions = 8) runAsync {
+    new ActivityPoller(CLIENT, workflowDef.domain, SWFIdentity("activityPoller"), workflowDef.activityTaskList, workflowDef.activities, activityPollerExecutorService, activityPollerHeartbeatScheduledExecutorService, 5.minutes).poller(maxConcurrentActivityExecutions = 8) unsafePerformAsync {
       case -\/(throwable) => error(s"Activity poller error: $throwable")
       case \/-(_)         => ()
     }
@@ -145,7 +149,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
 
   def startDeciders() = {
     val task: Task[Unit] = new Decider(CLIENT, workflowDef, SWFIdentity("decider"), deciderExecutorService, Some(workflowDef.activityTaskList)).decider
-    task runAsync {
+    task unsafePerformAsync {
       case -\/(throwable) => error(s"Decider error: $throwable")
       case \/-(_)         => ()
     }
@@ -205,7 +209,9 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   }
 
   def addLatch(workflowId: WorkflowId): CountDownLatch = {
-    new CountDownLatch(1) <| { activityExecutionLatches.put(workflowId, _) }
+    val l = new CountDownLatch(1)
+    activityExecutionLatches.put(workflowId, l)
+    l
   }
 
   def shutdownThreads = {

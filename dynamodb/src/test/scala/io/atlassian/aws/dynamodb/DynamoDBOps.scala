@@ -26,7 +26,7 @@ object DynamoDBOps extends Logging {
         Failure(s"Error creating table: $e")
       case \/-(task) =>
         debug(s"Creating table ${table.name}")
-        task.run
+        task.unsafePerformSync
         debug(s"Created table ${table.name}")
         Success
     }
