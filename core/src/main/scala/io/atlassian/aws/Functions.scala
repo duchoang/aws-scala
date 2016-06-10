@@ -5,12 +5,11 @@ import kadai.Invalid
 import kadai.result.ResultT
 
 import scalaz.syntax.monadError._
-import scalaz.{ Catchable, EitherT, Kleisli, Monad, Monoid }
+import scalaz.{ Catchable, Kleisli, MonadError, Monoid, Monad }
 
 abstract class Functions[C, W: Monoid] {
 
   type Action[A] = AwsAction[C, W, A]
-  //  private type Error[L, A] = ReaderEitherAction[C, W, L, A]
 
   def extractRequestIds: Option[HttpHeaders => Option[W]] =
     None
@@ -60,8 +59,11 @@ abstract class Functions[C, W: Monoid] {
   // private
   //
 
-  implicit val MonadAction: AwsActionMonad[C, W] =
+  implicit val MonadError: MonadError[Action, Invalid] =
     AwsActionMonad[C, W]
+
+  implicit val MonadWriterAttempt: Monad[ResultWriterW] =
+    Monad[ResultWriterW]
 
   type WriterW[A] = WriterF[W, A]
   type ResultWriterW[A] = ResultT[WriterW, A]

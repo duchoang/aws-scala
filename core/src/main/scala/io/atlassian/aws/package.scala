@@ -16,13 +16,8 @@ package object aws extends Types {
       unwrap.toString
   }
 
-  private[aws]type WriterF[W, A] = WriterT[Future, W, A] // Future[(W, A)]
-  private[aws]type EitherWriter[W, L, A] = EitherT[WriterF[W, ?], L, A] // Future[ (W, Invalid \/ A) ]
-  //  private[aws]type ReaderEitherAction[R, W, L, A] = ReaderT[EitherWriter[W, L, ?], R, A] // R => Future[(W, Invalid \/ A)]
+  private[aws]type WriterF[W, A] = WriterT[Future, W, A]
+  private[aws]type EitherWriter[W, L, A] = EitherT[WriterF[W, ?], L, A]
 
   type AwsAction[R, W, A] = ReaderT[EitherWriter[W, Invalid, ?], R, A]
-  // R => Future[(W, Invalid \/ A)]
-  //ReaderEitherAction[R, W, Invalid, A]
-  // ReaderT[EitherWriter[W, L, ?], R, A]
-  // ReaderT[EitherT[WriterF[W, ?], L, A], R, A]
 }

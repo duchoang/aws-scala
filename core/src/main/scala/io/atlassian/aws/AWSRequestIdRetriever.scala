@@ -17,7 +17,9 @@ case class HttpHeaders(headers: Map[String, String])
 object AWSRequestIdRetriever {
 
   // [A] must be whatever the aws client returns
-  def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit M: AwsActionMonad[C, W], wmonoid: Monoid[W]): AwsAction[C, W, A] = {
+  def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit wmonoid: Monoid[W]): AwsAction[C, W, A] = {
+    implicit val M = AwsActionMonad[C, W]
+
     // holds the headers reference, lives for the lifetime of the call only
     class Handler extends RequestHandler2 {
       def execute(c: C): Attempt[(W, A)] = {
