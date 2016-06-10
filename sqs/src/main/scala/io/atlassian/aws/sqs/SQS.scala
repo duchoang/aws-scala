@@ -17,9 +17,8 @@ object SQS {
   def createQueue(parameters: QueueParameters): SQSAction[QueueURL] =
     SQSAction.withClient {
       _.createQueue {
-        new CreateQueueRequest(parameters.name) <| {
-          _.withAttributes(parameters.attributes).withQueueName(parameters.name)
-        }
+        val r = new CreateQueueRequest(parameters.name)
+        r.withAttributes(parameters.attributes).withQueueName(parameters.name)
       } |> { res => QueueURL(res.getQueueUrl) }
     }
 
@@ -32,7 +31,7 @@ object SQS {
     }
 
   def deleteQueue(url: QueueURL): SQSAction[Unit] =
-    SQSAction.withClient { _.deleteQueue(url.unwrap) }
+    SQSAction.withClient { c => c.deleteQueue(url.unwrap); () }
 
   def send[A: Marshaller](url: QueueURL, message: A, delay: Duration = 0.seconds): SQSAction[SendResult] =
     SQSAction.withClient {
@@ -48,21 +47,22 @@ object SQS {
   def receive[A: Unmarshaller](url: QueueURL, params: ReceiveMessageParameters = ReceiveMessageParameters()): SQSAction[List[ReceivedMessage[A]]] =
     SQSAction.withClient {
       _.receiveMessage {
-        new ReceiveMessageRequest(url.unwrap)
+        val r = new ReceiveMessageRequest(url.unwrap)
           .withMaxNumberOfMessages(params.numMessages)
           .withAttributeNames("All")
-          .withMessageAttributeNames("All") <| { r =>
-            params.visibilityTimeout.foreach { t => r.setVisibilityTimeout(t.toSeconds.toInt) }
-            params.waitTime.foreach { t => r.setWaitTimeSeconds(t.toSeconds.toInt) }
-          }
+          .withMessageAttributeNames("All")
+        params.visibilityTimeout.foreach { t => r.setVisibilityTimeout(t.toSeconds.toInt) }
+        params.waitTime.foreach { t => r.setWaitTimeSeconds(t.toSeconds.toInt) }
+        r
       }.getMessages.asScala.toList.map {
         m => Unmarshaller.receivedMessage[A].unmarshall(m).toOr.valueOr(ReceivedMessage.Invalid(m, _))
       }
     }
 
   def delete(url: QueueURL, handle: ReceiptHandle): SQSAction[Unit] =
-    SQSAction.withClient {
-      _.deleteMessage(new DeleteMessageRequest().withQueueUrl(url.unwrap).withReceiptHandle(handle.unwrap))
+    SQSAction.withClient { c =>
+      c.deleteMessage(new DeleteMessageRequest().withQueueUrl(url.unwrap).withReceiptHandle(handle.unwrap))
+      ()
     }
 
   def delete(url: QueueURL, handles: List[ReceiptHandle]): SQSAction[DeleteResult] = {
@@ -84,13 +84,14 @@ object SQS {
   }
 
   def changeVisibility(url: QueueURL, handle: ReceiptHandle, newVisibilityFromNow: Duration): SQSAction[Unit] = {
-    SQSAction.withClient {
-      _.changeMessageVisibility(
+    SQSAction.withClient { c =>
+      c.changeMessageVisibility(
         new ChangeMessageVisibilityRequest()
           .withQueueUrl(url.unwrap)
           .withReceiptHandle(handle.unwrap)
           .withVisibilityTimeout(newVisibilityFromNow.toSeconds.toInt)
       )
+      ()
     }
   }
 }

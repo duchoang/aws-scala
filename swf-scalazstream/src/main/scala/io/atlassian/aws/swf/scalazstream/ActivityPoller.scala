@@ -65,7 +65,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
 
   private def executeActivity(ai: ActivityInstance, ad: ActivityDefinition[Task]): Task[(ActivityInstance, SWFResult)] = {
     val cancel = new AtomicBoolean(false)
-    heartbeat(heartbeatDuration(ad.definition), ai.taskToken).runAsyncInterruptibly({
+    heartbeat(heartbeatDuration(ad.definition), ai.taskToken).unsafePerformAsyncInterruptibly({
       case -\/(t) => error(t)
       case \/-(_) => ()
     }, cancel)
@@ -74,7 +74,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
     // defaultActivityExecutionTimeout specified on ActivityPoller
     val taskTimeout: Duration = ad.definition.defaultTaskStartToCloseTimeout.getOrElse(defaultActivityExecutionTimeout)
 
-    Task { ad.function(ai).run }(executorService)
+    Task { ad.function(ai).unsafePerformSync }(executorService)
       .timed(taskTimeout)(scheduledExecutorService)
       .onFinish {
         _ => Task.delay { cancel.set(true) }

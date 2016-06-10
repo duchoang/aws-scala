@@ -12,8 +12,7 @@ import kadai.Invalid
 
 import scala.collection.immutable.List
 import scala.collection.JavaConverters._
-import scalaz.{ Functor, Monad }
-import scalaz.concurrent.Task
+import scalaz.Functor
 import scalaz.std.list._
 import scalaz.std.option._
 import scalaz.syntax.id._
@@ -37,12 +36,8 @@ object S3 {
     }
 
   def safeGet(location: ContentLocation, range: Range = Range.All): S3Action[Option[S3Object]] =
-    {
-      //      get(location, range).map { some }.
-      implicitly[Functor[S3Action]].map(get(location, range)) { some }.
-        handle {
-          case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => S3Action.ok(None)
-        }
+    get(location, range).map { some }.handle {
+      case Invalid.Err(ServiceException(AmazonExceptions.ExceptionType.NotFound, _)) => S3Action.ok(None)
     }
 
   def putStream(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[PutObjectResult] =
@@ -99,7 +94,7 @@ object S3 {
       }
 
     def readChunk: S3Action[ReadBytes] = S3Action.safe {
-      InputStreams.readFully(stream, buffer).run
+      InputStreams.readFully(stream, buffer).unsafePerformSync
     }
 
     def read(tuple: (List[PartETag], Long)): S3Action[(List[PartETag], Long)] = {
@@ -209,8 +204,11 @@ object S3 {
       }
     }
 
-  def ServerSideEncryption: ObjectMetadata =
-    DefaultObjectMetadata <| { _.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION) }
+  def ServerSideEncryption: ObjectMetadata = {
+    val o = DefaultObjectMetadata
+    o.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION)
+    o
+  }
 
   def DefaultObjectMetadata: ObjectMetadata = new ObjectMetadata()
 }

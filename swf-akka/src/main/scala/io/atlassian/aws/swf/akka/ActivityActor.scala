@@ -31,7 +31,7 @@ class ActivityActor(swf: AmazonSimpleWorkflow, activityDef: ActivityConfig, inst
         context.actorOf(Heartbeat.props(swf, self, instance.taskToken, d))
       }
 
-      function(instance).runAsync {
+      function(instance).unsafePerformAsync {
         case -\/(t) => fail(t.getMessage, t.getMessage)
         case \/-(r) => r.fold(fail, complete, ())
       }

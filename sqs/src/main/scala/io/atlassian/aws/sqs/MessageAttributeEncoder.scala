@@ -27,7 +27,10 @@ object MessageAttributeEncoder {
     implicitly[MessageAttributeEncoder[A]]
 
   private def attribute[A](f: A => MessageAttributeValue => MessageAttributeValue): MessageAttributeEncoder[A] =
-    MessageAttributeEncoder { a => (new MessageAttributeValue() <| { f(a) }).some }
+    MessageAttributeEncoder { a =>
+      val v = new MessageAttributeValue()
+      f(a)(v).some
+    }
 
   implicit def LongEncode: MessageAttributeEncoder[Long] =
     attribute { l => _.withStringValue(l.toString).withDataType(FieldMainType.Number.name) }
