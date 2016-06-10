@@ -12,17 +12,15 @@ import kadai.Invalid
 
 import scala.collection.immutable.List
 import scala.collection.JavaConverters._
+
 import scalaz.Functor
 import scalaz.std.list._
 import scalaz.std.option._
-import scalaz.syntax.id._
-import scalaz.syntax.traverse._
+import scalaz.syntax.all._
 import scalaz.syntax.std.boolean._
-import scalaz.syntax.std.option._
 
 object S3 {
   import S3Key._
-  import S3Action._
 
   val MultipartChunkSize = 5 * 1024 * 1024
 

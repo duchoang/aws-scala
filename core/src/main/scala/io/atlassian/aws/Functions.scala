@@ -4,9 +4,10 @@ import com.amazonaws.AmazonServiceException
 import kadai.Invalid
 import kadai.result.ResultT
 
+import scalaz.{ Kleisli, MonadError, Monoid, Monad }
 import scalaz.syntax.monadError._
-import scalaz.{ Catchable, Kleisli, MonadError, Monoid, Monad }
 
+/** the standard set of combinators all AwsAction specialisations get for free */
 abstract class Functions[C, W: Monoid] {
 
   type Action[A] = AwsAction[C, W, A]
@@ -54,25 +55,4 @@ abstract class Functions[C, W: Monoid] {
   /** don't use overloaded version, use invalid instead */
   def fail[A](i: Invalid): Action[A] =
     invalid(i)
-
-  //
-  // private
-  //
-
-  implicit val MonadError: MonadError[Action, Invalid] =
-    AwsActionMonad[C, W]
-
-  implicit val MonadWriterAttempt: Monad[ResultWriterW] =
-    Monad[ResultWriterW]
-
-  type WriterW[A] = WriterF[W, A]
-  type ResultWriterW[A] = ResultT[WriterW, A]
-
-  import ResultT._
-
-  implicit val CatchableAction: Catchable[Action] =
-    Kleisli.kleisliCatchable[ResultWriterW, C]
-
-  implicit class ActionOps[A](action: Action[A]) extends AwsActionOps[C, W, A](action)
-
 }

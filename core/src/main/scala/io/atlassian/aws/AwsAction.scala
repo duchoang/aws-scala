@@ -1,15 +1,19 @@
 package io.atlassian.aws
 
-import scalaz.{ Monoid, MonadReader, MonadError }
+import scalaz._
+import scalaz.syntax.id._
+import scalaz.syntax.monadError._
 import kadai.Invalid
 
+case class AwsAction[R, W: Monoid, A](run: ReaderT[EitherWriter[W, Invalid, ?], R, A]) {
+  def map[B](f: A => B): AwsAction[R, W, B] =
+    Functor[AwsAction[R, W, ?]].map(this)(f)
+
+  def flatMap[B](f: A => AwsAction[R, W, B]) =
+    Monad[AwsAction[R, W, ?]].bind(this)(f)
+}
+
 object AwsAction {
-
-  import scalaz.syntax.id._
-  import scalaz.syntax.monadError._
-
-  private implicit def M[R, W: Monoid] =
-    AwsActionMonad[R, W]
 
   def apply[R, W: Monoid, A](f: R => Attempt[A]): AwsAction[R, W, A] = {
     ask[R, W] >>= { f(_) |> attempt[R, W, A] }
@@ -33,6 +37,7 @@ object AwsAction {
   def withClient[R, W: Monoid, A](f: R => A): AwsAction[R, W, A] = {
     val ME = MonadError[AwsAction[R, W, ?], Invalid]
     import ME.monadErrorSyntax._
+
     safe(f) handleError {
       AmazonExceptions.transformInvalid andThen invalid[R, W, A]
     }
@@ -46,4 +51,10 @@ object AwsAction {
 
   def invalid[R, W: Monoid, A](i: Invalid): AwsAction[R, W, A] =
     i.raiseError[AwsAction[R, W, ?], A]
+
+  implicit def AwsActionMonad[R, W: Monoid]: Monad[AwsAction[R, W, ?]]
+    with MonadReader[AwsAction[R, W, ?], R]
+    with MonadListen[AwsAction[R, W, ?], W] // MonadTell+
+    with MonadPlus[AwsAction[R, W, ?]]
+    with MonadError[AwsAction[R, W, ?], Invalid] = new AwsActionMonad[R, W]
 }

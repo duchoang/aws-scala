@@ -5,7 +5,7 @@ import com.amazonaws._
 
 import kadai.Invalid
 
-import scalaz.Monoid
+import scalaz._
 import scalaz.syntax.id._
 import scalaz.syntax.monad._
 import scalaz.std.option._
@@ -17,9 +17,9 @@ case class HttpHeaders(headers: Map[String, String])
 object AWSRequestIdRetriever {
 
   // [A] must be whatever the aws client returns
-  def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(implicit wmonoid: Monoid[W]): AwsAction[C, W, A] = {
-    implicit val M = AwsActionMonad[C, W]
-
+  def withClient[C, W, A](f: C => A)(fromHeaders: Option[HttpHeaders => Option[W]], fromException: Option[AmazonServiceException => Option[W]])(
+    implicit M: MonadReader[AwsAction[C, W, ?], C] with MonadListen[AwsAction[C, W, ?], W] with MonadError[AwsAction[C, W, ?], Invalid], wmonoid: Monoid[W]
+  ): AwsAction[C, W, A] = {
     // holds the headers reference, lives for the lifetime of the call only
     class Handler extends RequestHandler2 {
       def execute(c: C): Attempt[(W, A)] = {
