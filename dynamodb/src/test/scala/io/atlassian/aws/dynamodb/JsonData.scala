@@ -18,7 +18,7 @@ object JsonData {
 
   val jsonNumberRepGenerator: Gen[JsonNumber] = Gen.oneOf(
     arbitrary[List[Long]].map(ln => JsonBigDecimal(BigDecimal("0" ++ ln.filter(_ >= 0).mkString))),
-    arbitrary[Double].map(d => JsonDecimal(d.toString)),
+    arbitrary[Double].map(d => JsonBigDecimal(BigDecimal(d, java.math.MathContext.DECIMAL64))),
     arbitrary[Long].map(JsonLong(_))
   )
 
