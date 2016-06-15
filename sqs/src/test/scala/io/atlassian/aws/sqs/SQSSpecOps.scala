@@ -32,7 +32,7 @@ object SQSSpecOps extends Logging {
   }
 
   def runSQSAction[A](action: SQSAction[A])(implicit client: AmazonSQSClient) =
-    action.runAction(client).run
+    action.unsafePerform(client).run
 
   def returnResult[A](check: A => Boolean)(implicit client: AmazonSQSClient) =
     new ServiceMatcher[A]({

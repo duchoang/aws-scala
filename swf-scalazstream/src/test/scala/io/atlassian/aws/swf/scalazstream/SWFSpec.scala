@@ -125,7 +125,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
 
   def createTestWorkflow = {
     val action = SWF.registerWorkflow(workflowDef)
-    action.runAction(CLIENT).run match {
+    action.unsafePerform(CLIENT).run match {
       case -\/(e) =>
         error(s"Error registering test workflow: $e")
         Failure(s"Error registering test workflow: $e")
@@ -159,7 +159,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     val workflowId = WorkflowId(UUID.randomUUID().toString)
     val latch = addLatch(workflowId)
 
-    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, DeciderCrash).runAction(CLIENT).run.toEither
+    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, DeciderCrash).unsafePerform(CLIENT).run.toEither
 
     // wait for map to be updated...
     latch.await(1, TimeUnit.MINUTES)
@@ -172,7 +172,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
     val workflowId = WorkflowId(UUID.randomUUID().toString)
     val latch: CountDownLatch = addLatch(workflowId)
 
-    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivityCrash).runAction(CLIENT).run.toEither
+    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivityCrash).unsafePerform(CLIENT).run.toEither
 
     // wait for map to be updated...
     latch.await(1, TimeUnit.MINUTES)
@@ -185,7 +185,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   def postToWorkflowHappyPath() = {
     val workflowId = WorkflowId(UUID.randomUUID().toString)
     val latch = addLatch(workflowId)
-    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivitySuccess).runAction(CLIENT).run.toEither
+    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivitySuccess).unsafePerform(CLIENT).run.toEither
 
     // wait for map to be updated...
     latch.await(1, TimeUnit.MINUTES)
@@ -198,7 +198,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   def postToWorkflowAndActivityFails() = {
     val workflowId = WorkflowId(UUID.randomUUID().toString)
     val latch = addLatch(workflowId)
-    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivityFail).runAction(CLIENT).run.toEither
+    val workflowResult = SWF.startWorkflow(testDomain, testWorkflow, workflowId, ActivityFail).unsafePerform(CLIENT).run.toEither
 
     // wait for map to be updated...
     latch.await(1, TimeUnit.MINUTES)

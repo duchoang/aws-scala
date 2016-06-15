@@ -32,30 +32,30 @@ class AwsActionSpec extends SpecificationWithJUnit with ScalaCheck with Disjunct
     Prop.forAll { msg: String =>
       withClient[String, Unit, String] {
         s => throw new RuntimeException(s)
-      }.runAction(msg).run should be_-\/ like {
+      }.unsafePerform(msg).run should be_-\/ like {
         case -\/(Invalid.Err(t)) => t.getMessage === msg
       }
     }
 
   def askInput =
-    Prop.forAll { msg: String => ask[String, Unit].runAction(msg).run should be_\/-(msg) }
+    Prop.forAll { msg: String => ask[String, Unit].unsafePerform(msg).run should be_\/-(msg) }
 
   def localChanges =
-    Prop.forAll { i: String => local[String, Unit, String](_.hashCode.toString)(ask[String, Unit]).runAction(i).run should be_\/-(i.hashCode.toString) }
+    Prop.forAll { i: String => local[String, Unit, String](_.hashCode.toString)(ask[String, Unit]).unsafePerform(i).run should be_\/-(i.hashCode.toString) }
 
   def recover =
     Prop.forAll { msg: String =>
       fail[String, Unit, String](msg).recover {
         case Invalid.Message(s) => AwsAction.ok[String, Unit, String](s)
         case _                  => fail[String, Unit, String](msg)
-      }.runAction("1").run should be_\/-(msg)
+      }.unsafePerform("1").run should be_\/-(msg)
     }
 
   def handle =
     Prop.forAll { msg: String =>
       fail[String, Unit, String](msg).handle {
         case Invalid.Message(s) => AwsAction.ok[String, Unit, String](s)
-      }.runAction("1").run should be_\/-(msg)
+      }.unsafePerform("1").run should be_\/-(msg)
     }
 
   def amazonNotFound =
@@ -67,7 +67,7 @@ class AwsActionSpec extends SpecificationWithJUnit with ScalaCheck with Disjunct
             e.setStatusCode(404)
             throw e
           }
-      }.runAction(msg).run should be_-\/ like {
+      }.unsafePerform(msg).run should be_-\/ like {
         case -\/(Invalid.Err(ServiceException(ExceptionType.NotFound, t))) => t.getErrorMessage === msg
       }
     }

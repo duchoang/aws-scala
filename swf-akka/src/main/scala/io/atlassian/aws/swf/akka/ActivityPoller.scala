@@ -42,7 +42,7 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
     case PoisonPill =>
       context.stop(self)
     case Poll =>
-      SWF.poll(ActivityQuery(taskList = taskList, identity = config.identity, domain = config.domain)).runAction(swf).fold(
+      SWF.poll(ActivityQuery(taskList = taskList, identity = config.identity, domain = config.domain)).unsafePerform(swf).fold(
         { i => warn(i); triggerPoll },
         {
           case None => triggerPoll

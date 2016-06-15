@@ -26,12 +26,10 @@ case class AwsAction[R, W, A](run: ReaderT[EitherWriter[W, Invalid, ?], R, A]) {
   final def :++>>(w: => W)(implicit W: Monoid[W]): AwsAction[R, W, A] =
     MonadListen[AwsAction[R, W, ?], W].tell(w) *> this
 
-  // TODO rename unsafe***
-  def runAction(r: R): Attempt[A] =
-    runActionWithMetaData(r)._2
+  def unsafePerform(r: R): Attempt[A] =
+    unsafePerformWithMetaData(r)._2
 
-  // TODO rename unsafe***
-  def runActionWithMetaData(r: R): (W, Attempt[A]) =
+  def unsafePerformWithMetaData(r: R): (W, Attempt[A]) =
     run.run(r).run.run.unsafePerformSync match {
       case (w, result) => (w, Attempt(result))
     }

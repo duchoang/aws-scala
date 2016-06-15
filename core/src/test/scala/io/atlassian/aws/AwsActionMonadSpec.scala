@@ -30,7 +30,7 @@ class AwsActionMonadSpec extends MutableScalaCheckSpec {
   implicit def ActionEqual[A](implicit E: Equal[A]): Equal[Action[A]] =
     new Equal[Action[A]] {
       override def equal(a1: Action[A], a2: Action[A]): Boolean =
-        a1.runActionWithMetaData(()) == a2.runActionWithMetaData(())
+        a1.unsafePerformWithMetaData(()) == a2.unsafePerformWithMetaData(())
     }
 
   implicit def ArbitraryInvalid: Arbitrary[Invalid] =

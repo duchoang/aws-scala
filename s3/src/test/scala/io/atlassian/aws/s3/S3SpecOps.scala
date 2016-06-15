@@ -48,7 +48,7 @@ trait S3SpecOps extends MustMatchers with S3Arbitraries {
   }
 
   def runS3Action[A](action: S3Action[A])(implicit client: SDKS3Client) =
-    action.runAction(client).run
+    action.unsafePerform(client).run
 
   def returnResult[A](check: A => Boolean)(implicit client: SDKS3Client) =
     new ServiceMatcher[A]({

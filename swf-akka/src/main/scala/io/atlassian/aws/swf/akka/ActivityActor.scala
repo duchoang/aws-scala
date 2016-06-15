@@ -64,5 +64,5 @@ class ActivityActor(swf: AmazonSimpleWorkflow, activityDef: ActivityConfig, inst
     }
 
   private def runSWFAction[A](a: SWFAction[A]): Invalid \/ A =
-    a.runAction(swf).run
+    a.unsafePerform(swf).run
 }

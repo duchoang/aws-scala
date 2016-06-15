@@ -52,7 +52,7 @@ trait DynamoDBActionMatchers extends Logging {
     new Matcher[DynamoDBAction[A]] {
       def apply[S <: DynamoDBAction[A]](s: Expectable[S]) = {
         import AwsAction._
-        val (metaData, _) = s.value.runActionWithMetaData(client)
+        val (metaData, _) = s.value.unsafePerformWithMetaData(client)
         result(requestIdRecorded(metaData), "AWS Request Id successfully recorded", "Expected AWS Request Id but none found", s)
       }
     }
@@ -62,7 +62,7 @@ trait DynamoDBActionMatchers extends Logging {
   class ServiceMatcher[A](check: \/[Invalid, A] => (Boolean, String))(implicit client: AmazonDynamoDB) extends Matcher[DynamoDBAction[A]] {
     def apply[S <: DynamoDBAction[A]](s: Expectable[S]) = {
       import AwsAction._
-      val (comparisonResult, message) = check(s.value.runAction(client).run)
+      val (comparisonResult, message) = check(s.value.unsafePerform(client).run)
       result(comparisonResult, message, message, s)
     }
   }

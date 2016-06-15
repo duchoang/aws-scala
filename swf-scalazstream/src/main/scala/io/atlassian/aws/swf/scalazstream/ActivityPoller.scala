@@ -35,17 +35,17 @@ class ActivityPoller(swf: AmazonSimpleWorkflow,
 
   private def heartbeat(interval: FiniteDuration, taskToken: TaskToken): Task[Unit] =
     time.awakeEvery(interval)(strategy, scheduledExecutorService).flatMap[Task, Unit] { d =>
-      SWF.heartbeat(taskToken).runAction(swf).fold(
+      SWF.heartbeat(taskToken).unsafePerform(swf).fold(
         { i => Process.fail(WrappedInvalidException.orUnderlying(i)) },
         { _ => Process.empty }
       )
     }.run
 
   private def runSWFAction[A](a: SWFAction[A]): Unit =
-    a.runAction(swf).run.fold({ i => error(i) }, { _ => () })
+    a.unsafePerform(swf).run.fold({ i => error(i) }, { _ => () })
 
   private def pollActivity: Attempt[Option[ActivityInstance]] =
-    SWF.poll(ActivityQuery(taskList = taskList, identity = identity, domain = domain)).runAction(swf)
+    SWF.poll(ActivityQuery(taskList = taskList, identity = identity, domain = domain)).unsafePerform(swf)
 
   private def fail(instance: ActivityInstance)(reason: String, detail: String): Unit =
     withDebug(s"Failing activity ${instance.activity} id ${instance.id} with reason $reason:$detail") {
