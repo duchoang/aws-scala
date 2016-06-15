@@ -7,7 +7,7 @@ import scalaz.{ Monad, \/ }
 import scalaz.syntax.all._
 import scala.collection.JavaConverters._
 import kadai.Invalid
-import argonaut._, Argonaut._, ArgonautScalaz._
+import argonaut._, Argonaut._
 
 /**
  * Use an unmarshaller to convert an AWS SQS message into a object of type A.
@@ -114,7 +114,7 @@ object Unmarshaller {
      */
     def jsonBody[A: DecodeJson]: Operation[A] =
       Operation { m =>
-        \/.fromEither(m.getBody.decodeEither[A]).leftMap(Invalid.Message) |> Attempt.apply
+        m.getBody.decodeEither[A].leftMap(Invalid.Message) |> Attempt.apply
       }
 
     implicit def OperationMonad: Monad[Operation] =

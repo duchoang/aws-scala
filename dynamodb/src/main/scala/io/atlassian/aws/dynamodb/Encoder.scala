@@ -85,7 +85,7 @@ private[dynamodb] object JsonEncoder {
         a.setNULL(true),
         b => a.setBOOL(b),
         n =>
-          if (n.asJson.isNull)
+          if (n.asJsonOrNull.isNull)
             a.setNULL(true)
           else
             a.setN(asString(n)),
@@ -109,6 +109,7 @@ private[dynamodb] object JsonEncoder {
   private def asString(n: JsonNumber): String =
     n match {
       case JsonLong(v)       => v.toString
+      case JsonDouble(v)     => v.toString
       case JsonDecimal(v)    => v
       case JsonBigDecimal(v) => v.toString
     }

@@ -1,7 +1,7 @@
 package io.atlassian.aws.swf
 package activities
 
-import argonaut._, Argonaut._, ArgonautScalaz._
+import argonaut._, Argonaut._
 import io.atlassian.aws.swf.Decision.FailWorkflowExecution
 import io.atlassian.aws.swf.WorkflowEvent.ActivityScheduled
 import kadai.Invalid

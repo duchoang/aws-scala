@@ -6,7 +6,7 @@ object Dependencies {
   object Version {
     val scalaz        = "7.2.3"
     val scalazStream  = "0.8"
-    val argonaut      = "6.2-M1"
+    val argonaut      = "6.1a"
     val aws_sdk       = "1.11.7"
     val kadai         = "5.0.0"
     val kadai_log     = "5.1.3"
@@ -23,7 +23,6 @@ object Dependencies {
       "org.scalaz"        %% "scalaz-core"        % Version.scalaz
     , "org.scalaz"        %% "scalaz-concurrent"  % Version.scalaz
     , "io.argonaut"       %% "argonaut"           % Version.argonaut
-    , "io.argonaut"       %% "argonaut-scalaz"    % Version.argonaut
     , "com.amazonaws"     %  "aws-java-sdk-core"  % Version.aws_sdk
     , "io.atlassian"      %% "kadai-core"         % Version.kadai
     , "io.atlassian"      %% "kadai-config"       % Version.kadai
