@@ -19,19 +19,20 @@ Currently the library has basic support for S3, DynamoDB, CloudFormation and SQS
 The project is split into separate modules for each type of AWS API so you can import them separately if you wish (e.g. `aws-scala-s3`, `aws-scala-dynamodb`, `aws-scala-sqs`, `aws-scala-cloudformation`).
 Alternatively, you can:
 
-    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "4.0.2"
+    libraryDependencies += "io.atlassian.aws-scala" %% "aws-scala"  % "5.0.0"
     
 If you want the `test` JAR for some useful helpers, at the moment you will need to import the individual modules and core, e.g.: 
     
     libraryDependencies ++= Seq(
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "4.0.2",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "4.0.2",
-        "io.atlassian.aws-scala" %% "aws-scala-core"  % "4.0.2"  % "test" classifier "tests",
-        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "4.0.2"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "5.0.0",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "5.0.0",
+        "io.atlassian.aws-scala" %% "aws-scala-core"  % "5.0.0"  % "test" classifier "tests",
+        "io.atlassian.aws-scala" %% "aws-scala-s3"  % "5.0.0"  % "test" classifier "tests",
         )
 
-Versions 0.1.x have a Scalaz 7.0 dependency, whereas versions 1.x onwards have a Scalaz 7.1 dependency. Versions 1.x onwards 
-are cross-compiled for Scala 2.10 and 2.11.
+Version 4.x works with Scalaz 7.1. Version 5.x will work with Scalaz 7.2. Both series are cross-compiled for Scala 2.10 and 2.11.
+
+Be sure the check the CHANGELOG.md for a list of breaking changes.
    
 ### Step 1 - Creating a client
 
@@ -178,3 +179,4 @@ To release and publish, use the standard `sbt`-ism:
 Obviously be sure the run the integration before releasing.
 
 Internally in Atlassian, we have a build and release pipeline on [Bamboo](https://engservices-bamboo.internal.atlassian.com/browse/OSSC-AWSSCALA), hopefully to be made public at some point soon.
+
