@@ -1,7 +1,7 @@
 Change log
 ===
 
-## From version 4.x to 5.0.0
+## From version 6.x to 7.0.0
 ### Breaking changes:
 * Upgrade from Scalaz 7.1 to 7.2.3.
 * Upgrade from Specs2 3.6.6 to 3.8.3.
