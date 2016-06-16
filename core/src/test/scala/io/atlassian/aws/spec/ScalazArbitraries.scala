@@ -5,7 +5,7 @@ import org.scalacheck.Arbitrary
 import scalaz._
 
 /**
- * Instances of {@link scalacheck.Arbitrary} for types of Scalaz that we need.
+ * Instances of scalacheck.Arbitrary for types of Scalaz that we need.
  * Taken from scalaz-scalacheck-binding which currently is behind on scalacheck version.
  */
 object ScalazArbitrary {
