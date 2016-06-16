@@ -3,7 +3,7 @@ package io.atlassian.aws.dynamodb
 import scalaz._, Scalaz._
 import org.scalacheck.Arbitrary._
 import org.scalacheck.Gen.{ frequency, listOfN, const => value, oneOf }
-import argonaut._, Argonaut._
+import argonaut._, Argonaut._, ArgonautScalaz._
 import org.scalacheck.{ Gen, Arbitrary }
 import scala.util.Random.shuffle
 
@@ -17,7 +17,8 @@ object JsonData {
   implicit val bigIntEq: Equal[BigInt] = Equal.equalA[BigInt]
 
   val jsonNumberRepGenerator: Gen[JsonNumber] = Gen.oneOf(
-    arbitrary[Double].map(JsonDouble(_)),
+    arbitrary[List[Long]].map(ln => JsonBigDecimal(BigDecimal("0" ++ ln.filter(_ >= 0).mkString))),
+    arbitrary[Double].map(d => JsonBigDecimal(BigDecimal(d, java.math.MathContext.DECIMAL64))),
     arbitrary[Long].map(JsonLong(_))
   )
 
@@ -28,7 +29,6 @@ object JsonData {
 
   val equivalentJsonNumberPair: Gen[EquivalentJsonNumberPair] = {
     def wrapInt(n: Int): Gen[JsonNumber] = Gen.oneOf(
-      JsonDouble(n.toDouble),
       JsonLong(n.toLong),
       JsonBigDecimal(n.toDouble)
     )
@@ -39,7 +39,6 @@ object JsonData {
     )
 
     def wrapDouble(n: Double): Gen[JsonNumber] = Gen.oneOf(
-      JsonDouble(n),
       JsonBigDecimal(BigDecimal(n))
     )
 
@@ -153,7 +152,7 @@ object JsonData {
     Arbitrary(Gen.listOf(arbTuple2[T, U].arbitrary).map(_.toMap))
 
   def jsonObjectGenerator(depth: Int = maxJsonStructureDepth): Gen[Json] = arbImmutableMap(Arbitrary(arbitrary[String]), Arbitrary(jsonValueGenerator(depth - 1))).arbitrary.map { map =>
-    jObject(JsonObject.from(map.toList))
+    jObject(JsonObject.fromTraversableOnce(map.toList))
   }
 
   val nonJsonObjectGenerator = oneOf(jsonNumberGenerator, jsonStringGenerator, jsonBoolGenerator, jsonNothingGenerator, jsonArrayGenerator())
@@ -170,7 +169,7 @@ object JsonData {
 
   def objectsOfObjectsGenerator(depth: Int = maxJsonStructureDepth): Gen[Json] = {
     if (depth > 1) {
-      listOfN(2, arbTuple2(Arbitrary(arbitrary[String]), Arbitrary(objectsOfObjectsGenerator(depth - 1))).arbitrary).map(fields => jObject(JsonObject.from(fields)))
+      listOfN(2, arbTuple2(Arbitrary(arbitrary[String]), Arbitrary(objectsOfObjectsGenerator(depth - 1))).arbitrary).map(fields => jObject(JsonObject.fromTraversableOnce(fields)))
     } else {
       oneOf(jsonNumberGenerator, jsonStringGenerator, jsonBoolGenerator, jsonNothingGenerator)
     }
@@ -219,7 +218,7 @@ object JsonData {
   implicit def ArbitraryJson: Arbitrary[Json] = Arbitrary(jsonValueGenerator())
 
   implicit def ArbitraryJsonObject: Arbitrary[JsonObject] =
-    Arbitrary(arbitrary[List[(JsonField, Json)]] map { JsonObject.from(_) })
+    Arbitrary(arbitrary[List[(JsonField, Json)]] map { JsonObject.fromTraversableOnce(_) })
 
   implicit def ArbitraryCursor: Arbitrary[Cursor] = {
     Arbitrary(arbitrary[Json] flatMap (j => {

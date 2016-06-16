@@ -6,7 +6,7 @@ object Dependencies {
   object Version {
     val scalaz        = "7.2.3"
     val scalazStream  = "0.8"
-    val argonaut      = "6.1a"
+    val argonaut      = "6.2-M1"
     val aws_sdk       = "1.11.7"
     val kadai         = "5.0.0"
     val kadai_log     = "6.0.0"
@@ -39,6 +39,7 @@ object Dependencies {
     libraryDependencies ++= Seq(
         "com.amazonaws"     %  "aws-java-sdk-dynamodb" % Version.aws_sdk
       , "io.argonaut"       %% "argonaut"           % Version.argonaut
+      , "io.argonaut"       %% "argonaut-scalaz"    % Version.argonaut
     )
   )
 
@@ -46,6 +47,7 @@ object Dependencies {
     libraryDependencies ++= Seq(
         "com.amazonaws"     %  "aws-java-sdk-sqs"      % Version.aws_sdk
       , "io.argonaut"       %% "argonaut"           % Version.argonaut
+      , "io.argonaut"       %% "argonaut-scalaz"    % Version.argonaut
     )
   )
 
