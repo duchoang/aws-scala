@@ -36,7 +36,7 @@ class Heartbeat(swf: AmazonSimpleWorkflow, owner: ActorRef, taskToken: TaskToken
 
   def receive = {
     case Poll =>
-      SWF.heartbeat(taskToken).runAction(swf).fold(
+      SWF.heartbeat(taskToken).unsafePerform(swf).fold(
         { i => owner ! HeartbeatError(i) },
         { r => if (r.isCancelRequested) owner ! Cancelled }
       )

@@ -13,25 +13,25 @@ object DynamoDBOps extends Logging {
   import DynamoDBAction._
   import Logging._
 
-  def runAction(implicit client: AmazonDynamoDB): DynamoDBAction ~> (Invalid \/ ?) =
+  def unsafePerform(implicit client: AmazonDynamoDB): DynamoDBAction ~> (Invalid \/ ?) =
     new (DynamoDBAction ~>(Invalid \/ ?)) {
       def apply[A](action: DynamoDBAction[A]) =
-        action.runAction(client).run
+        action.unsafePerform(client).run
     }
 
   def createTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDB) = {
-    runAction.apply(DynamoDB.createTable[K, V, H, R](table)) match {
+    unsafePerform.apply(DynamoDB.createTable[K, V, H, R](table)) match {
       case -\/(e) =>
         error(s"Error creating table: $e")
         Failure(s"Error creating table: $e")
       case \/-(task) =>
         debug(s"Creating table ${table.name}")
-        task.run
+        task.unsafePerformSync
         debug(s"Created table ${table.name}")
         Success
     }
   }
 
   def deleteTable[K, V, H, R](table: TableDefinition[K, V, H, R])(implicit client: AmazonDynamoDB) =
-    runAction.apply(DynamoDB.deleteTable(table))
+    unsafePerform.apply(DynamoDB.deleteTable(table))
 }

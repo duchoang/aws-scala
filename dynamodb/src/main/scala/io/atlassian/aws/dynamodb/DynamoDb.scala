@@ -7,27 +7,10 @@ import scalaz.std.list._
 import scalaz.syntax.id._
 import scalaz.syntax.traverse._
 import kadai.Invalid
+
 import scala.collection.JavaConverters._
 import Unmarshaller._
-import com.amazonaws.services.dynamodbv2.model.{
-  AttributeAction,
-  AttributeValue,
-  AttributeValueUpdate,
-  BatchWriteItemRequest,
-  ComparisonOperator,
-  ConditionalCheckFailedException,
-  CreateTableRequest,
-  DeleteItemResult,
-  DeleteTableResult,
-  ExpectedAttributeValue,
-  PutRequest,
-  ResourceNotFoundException,
-  ReturnValue,
-  TableDescription,
-  TableStatus,
-  UpdateItemRequest,
-  WriteRequest
-}
+import com.amazonaws.services.dynamodbv2.model.{ AttributeAction, AttributeValueUpdate, BatchWriteItemRequest, ComparisonOperator, ConditionalCheckFailedException, CreateTableRequest, DeleteItemResult, DeleteTableResult, ExpectedAttributeValue, PutRequest, ResourceNotFoundException, ReturnValue, TableDescription, TableStatus, UpdateItemRequest, WriteRequest }
 
 /**
  * Contains functions that perform operations on a DynamoDB table. Functions return a DynamoDBAction that can be run by
@@ -132,7 +115,7 @@ object DynamoDB {
   def query[KR, V](q: QueryImpl)(ck: Column[KR], cv: Column[V]): DynamoDBAction[Page[KR, V]] =
     DynamoDBAction.withClient {
       _.query(q.asQueryRequest)
-    } flatMap { res =>
+    }.flatMap { res =>
       DynamoDBAction.attempt {
         res.getItems.asScala.toList.traverse[Attempt, V] {
           cv.unmarshall.unmarshall
@@ -208,7 +191,7 @@ object DynamoDB {
   private[dynamodb] def describeTable(name: String): DynamoDBAction[TableDescription] =
     withClient {
       _.describeTable(name)
-    } map {
+    }.map {
       _.getTable
     }
 

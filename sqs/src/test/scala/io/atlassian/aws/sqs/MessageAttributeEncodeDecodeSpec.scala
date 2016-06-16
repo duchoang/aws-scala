@@ -11,6 +11,7 @@ import scalaz.syntax.id._
 class MessageAttributeEncodeDecodeSpec extends ScalaCheckSpec {
   import MessageAttributeDecoder._
   import MessageAttributeEncoder._
+  import io.atlassian.aws.spec.Arbitraries._
 
   def is = s2"""
     EncodeAttributeValue/DecodeAttributeValue should

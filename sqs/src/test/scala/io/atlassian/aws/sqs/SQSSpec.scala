@@ -20,7 +20,11 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
   val IS_LOCAL = !arguments.commandLine.contains("aws-integration")
   val REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
 
-  implicit val CLIENT = AmazonClient.default[AmazonSQSClient] <| { _.setRegion(AmazonRegion.orDefault(REGION)) }
+  implicit val CLIENT = {
+    val c = AmazonClient.default[AmazonSQSClient]
+    c.setRegion(AmazonRegion.orDefault(REGION))
+    c
+  }
 
   def is = skipAllIf(IS_LOCAL) ^ stopOnFail ^
     s2"""

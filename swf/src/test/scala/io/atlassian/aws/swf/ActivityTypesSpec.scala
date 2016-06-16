@@ -1,7 +1,7 @@
 package io.atlassian.aws.swf
 
 import org.specs2.mock.Mockito
-import org.specs2.{ScalaCheck, SpecificationWithJUnit}
+import org.specs2.{ ScalaCheck, SpecificationWithJUnit }
 
 class ActivutyTypesSpec extends SpecificationWithJUnit with ScalaCheck with Mockito {
 
@@ -12,7 +12,6 @@ class ActivutyTypesSpec extends SpecificationWithJUnit with ScalaCheck with Mock
     run the success function if the result is SuccessfulActivity    ${Result.success("OK").fold(f, s, e) === "success OK"}
     run the empty function if the result is Empty                   ${Result.empty.fold(f, s, e) === "empty"}
   """
-
 
   private def f(reason: String, detail: String) = s"fail $reason $detail"
 

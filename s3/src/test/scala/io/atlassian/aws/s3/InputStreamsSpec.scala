@@ -24,7 +24,7 @@ class InputStreamsSpec extends SpecificationWithJUnit with ScalaCheck with S3Arb
       val data = new Array[Byte](len.i)
       val dataStream = new ByteArrayInputStream(data)
       val array = new Array[Byte](scala.util.Random.nextInt(2 * len.i) + 1)
-      readFully(dataStream, array).run === ReadBytes.Chunk(Math.min(array.length, len.i))
+      readFully(dataStream, array).unsafePerformSync === ReadBytes.Chunk(Math.min(array.length, len.i))
   }
 
   def readFullyDoesntStackOverflow = {
@@ -34,6 +34,6 @@ class InputStreamsSpec extends SpecificationWithJUnit with ScalaCheck with S3Arb
         super.read(buffer, offset, Math.min(10, buffer.length - offset))
     }
     val array = new Array[Byte](3)
-    readFully(dataStream, array).run === ReadBytes.Chunk(Math.min(array.length, data.length))
+    readFully(dataStream, array).unsafePerformSync === ReadBytes.Chunk(Math.min(array.length, data.length))
   }
 }

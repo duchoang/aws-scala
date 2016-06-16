@@ -48,10 +48,10 @@ class Decider(config: DeciderConfig, swf: AmazonSimpleWorkflow) extends Actor wi
   }
 
   private def poll: Attempt[Option[DecisionInstance]] =
-    SWF.poll(DecisionQuery(config.workflow.domain, config.workflow.workflowConfig.defaultTaskList, config.identity)).runAction(swf)
+    SWF.poll(DecisionQuery(config.workflow.domain, config.workflow.workflowConfig.defaultTaskList, config.identity)).unsafePerform(swf)
 
   private def complete(taskToken: TaskToken, context: String, decisions: List[Decision]): Attempt[Unit] =
-    SWF.completeDecision(taskToken, context, decisions).runAction(swf)
+    SWF.completeDecision(taskToken, context, decisions).unsafePerform(swf)
 
   private def triggerPoll =
     context.system.scheduler.scheduleOnce(config.pollDelay, self, Poll)

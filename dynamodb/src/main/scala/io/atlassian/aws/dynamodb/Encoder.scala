@@ -27,7 +27,10 @@ object Encoder {
     implicitly[Encoder[A]]
 
   private def attribute[A](f: A => AttributeValue => AttributeValue): Encoder[A] =
-    Encoder { a => (new AttributeValue() <| { f(a) }).some }
+    Encoder { a =>
+      val n = new AttributeValue()
+      f(a)(n).some
+    }
 
   implicit val BooleanEncode: Encoder[Boolean] =
     attribute { b => _.withBOOL(b) }
@@ -77,30 +80,30 @@ private[dynamodb] object JsonEncoder {
 
   def encode: Encoder[Json] =
     Encoder { json =>
-      new AttributeValue() <| { a =>
-        json.fold(
-          a.setNULL(true),
-          b => a.setBOOL(b),
-          n =>
-            if (n.asJsonOrNull.isNull)
-              a.setNULL(true)
-            else
-              a.setN(asString(n)),
-          s => a.setS { DynamoString(s).unwrap },
-          array =>
-            a.setL {
-              array.flatMap { j =>
-                encode.encode(j)
-              }.asJava
-            },
-          obj =>
-            a.setM {
-              obj.toMap.flatMap {
-                case (f, j) =>
-                  encode.encode(j).map { encoded => f -> encoded }
-              }.asJava
-            })
-      } |> { _.some }
+      val a = new AttributeValue()
+      json.fold(
+        a.setNULL(true),
+        b => a.setBOOL(b),
+        n =>
+          if (n.asJsonOrNull.isNull)
+            a.setNULL(true)
+          else
+            a.setN(asString(n)),
+        s => a.setS { DynamoString(s).unwrap },
+        array =>
+          a.setL {
+            array.flatMap { j =>
+              encode.encode(j)
+            }.asJava
+          },
+        obj =>
+          a.setM {
+            obj.toMap.flatMap {
+              case (f, j) =>
+                encode.encode(j).map { encoded => f -> encoded }
+            }.asJava
+          })
+      a.some
     }
 
   private def asString(n: JsonNumber): String =

@@ -3,7 +3,7 @@ package sqs
 
 import com.amazonaws.services.sqs.model.Message
 import org.joda.time.DateTime
-import scalaz.Monad
+import scalaz.{ Monad, \/ }
 import scalaz.syntax.all._
 import scala.collection.JavaConverters._
 import kadai.Invalid

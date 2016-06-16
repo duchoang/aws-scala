@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package s3
 
-import java.io.{ File, ByteArrayInputStream, InputStream }
+import java.io.{ ByteArrayInputStream, File, InputStream }
 import java.util.ArrayList
 
 import com.amazonaws.regions.Region
@@ -12,26 +12,25 @@ import kadai.Invalid
 
 import scala.collection.immutable.List
 import scala.collection.JavaConverters._
-import scalaz.concurrent.Task
 
+import scalaz.Functor
 import scalaz.std.list._
 import scalaz.std.option._
-import scalaz.syntax.id._
-import scalaz.syntax.traverse._
+import scalaz.syntax.all._
 import scalaz.syntax.std.boolean._
-import scalaz.syntax.std.option._
 
 object S3 {
   import S3Key._
-  import S3Action._
 
   val MultipartChunkSize = 5 * 1024 * 1024
 
   def get(location: ContentLocation, range: Range = Range.All): S3Action[S3Object] =
     S3Action.withClient {
-      _ getObject new GetObjectRequest(location.bucket.unwrap, location.key.unwrap) <| {
-        req => range.get.foreach { case (from, to) => req.setRange(from, to) }
-      }
+      _.getObject({
+        val req = new GetObjectRequest(location.bucket.unwrap, location.key.unwrap)
+        range.get.foreach { case (from, to) => req.setRange(from, to) }
+        req
+      })
     }
 
   def safeGet(location: ContentLocation, range: Range = Range.All): S3Action[Option[S3Object]] =
@@ -54,6 +53,7 @@ object S3 {
 
   /**
    * Uploads stream of data to S3 using multi-part uploads if the length is not known.
+   *
    * @return length of content that was uploaded
    */
   def putStreamWithMultipart(location: ContentLocation, stream: InputStream, length: Option[Long] = None, metaData: ObjectMetadata = DefaultObjectMetadata, createFolders: Boolean = true): S3Action[ContentLength] =
@@ -92,7 +92,7 @@ object S3 {
       }
 
     def readChunk: S3Action[ReadBytes] = S3Action.safe {
-      InputStreams.readFully(stream, buffer).run
+      InputStreams.readFully(stream, buffer).unsafePerformSync
     }
 
     def read(tuple: (List[PartETag], Long)): S3Action[(List[PartETag], Long)] = {
@@ -117,6 +117,7 @@ object S3 {
    * Creates a folder in an S3 bucket. A folder is just an empty 'file' with a / on the end of the name. However, if you
    * want to create a folder in a bucket that enforces encryption, you need to create it using the appropriate
    * metadata, which this function can do.
+   *
    * @param bucket Bucket name
    * @param folder Folder name (without trailing slash)
    * @param metaData Folder metadata (default enforces encryption)
@@ -129,6 +130,7 @@ object S3 {
 
   /**
    * Copy contents at the oldBucket and oldKey to a newBucket and newKey.
+   *
    * @param from The source bucket and key
    * @param to The destination bucket and key
    * @param meta The function will copy the existing metadata of the source object unless you specify newMetaData which will be used instead.
@@ -200,8 +202,11 @@ object S3 {
       }
     }
 
-  def ServerSideEncryption: ObjectMetadata =
-    DefaultObjectMetadata <| { _.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION) }
+  def ServerSideEncryption: ObjectMetadata = {
+    val o = DefaultObjectMetadata
+    o.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION)
+    o
+  }
 
   def DefaultObjectMetadata: ObjectMetadata = new ObjectMetadata()
 }

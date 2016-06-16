@@ -7,8 +7,9 @@ import org.scalacheck.{ Gen, Arbitrary }
 import org.scalacheck.Arbitrary._
 import scalaz.Equal, scalaz.std.AllInstances._
 
-object TestData extends Arbitraries with MoreEqualsInstances {
+object TestData extends MoreEqualsInstances {
   import Encoder._
+  import Arbitraries._
 
   object Mapping {
     val key: NamedColumn[HashKey] = HashKey.named

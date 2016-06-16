@@ -7,23 +7,18 @@ import java.net.URL
 import scala.io.Source
 import scalaz.syntax.id._
 
-import CFAction._
-
 object CloudFormation {
+
   def createOrUpdateStackFrom(file: File)(name: StackName): CFAction[StackOperationId] =
     stackExists(name).flatMap {
-      case false =>
-        createStackFrom(file)(name)
-      case true =>
-        updateStackFrom(file)(name)
+      case false => createStackFrom(file)(name)
+      case true  => updateStackFrom(file)(name)
     }
 
   def createOrUpdateStackFrom(url: URL)(name: StackName): CFAction[StackOperationId] =
     stackExists(name).flatMap {
-      case false =>
-        createStackFrom(url)(name)
-      case true =>
-        updateStackFrom(url)(name)
+      case false => createStackFrom(url)(name)
+      case true  => updateStackFrom(url)(name)
     }
 
   def createStackFrom(file: File)(name: StackName): CFAction[StackOperationId] =
@@ -65,8 +60,8 @@ object CloudFormation {
     }
 
   def deleteStack(name: StackName): CFAction[Unit] =
-    CFAction.withClient {
-      _.deleteStack(new DeleteStackRequest().withStackName(name.unwrap))
+    CFAction.withClient { c =>
+      c.deleteStack(new DeleteStackRequest().withStackName(name.unwrap)); ()
     }
 
   def describeStack(name: StackName): CFAction[Option[Stack]] =

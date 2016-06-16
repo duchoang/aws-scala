@@ -1,6 +1,6 @@
 package io.atlassian.aws.dynamodb
 
-import io.atlassian.aws.spec.ScalaCheckSpec
+import io.atlassian.aws.spec.{ Arbitraries, ScalaCheckSpec }
 import org.joda.time.{ DateTime, Instant }
 import org.junit.runner.RunWith
 import org.scalacheck.{ Arbitrary, Prop }
@@ -14,7 +14,7 @@ import scalaz.std.tuple._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 object ColumnSpec extends ScalaCheckSpec {
-
+  import Arbitraries._
   def is = s2"""
     Columns should 
       round trip:

@@ -1,19 +1,18 @@
 package io.atlassian.aws
 
+import io.atlassian.aws.spec.{ Arbitraries, MutableScalaCheckSpec, ScalazProperties }
 import kadai.Invalid
 import org.junit.runner.RunWith
-import org.specs2.scalaz.Spec
-import org.specs2.ScalaCheck
-import org.scalacheck.{ Gen, Arbitrary }
+import org.scalacheck.{ Arbitrary, Gen }
+
 import scalaz.concurrent.Future
-import scalaz.{ EitherT, ReaderT, Equal, WriterT }
-import scalaz.scalacheck.ScalazProperties
+import scalaz.{ EitherT, Equal, ReaderT, WriterT }
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
-class AwsActionMonadSpec extends Spec with ScalaCheck {
+class AwsActionMonadSpec extends MutableScalaCheckSpec {
 
+  import Arbitraries._
   import ScalazProperties._
-  import Invalid.InvalidMonoid
   import scalaz.std.anyVal.intInstance
   import org.scalacheck.Arbitrary._
   import Invalid.syntax._
@@ -22,10 +21,7 @@ class AwsActionMonadSpec extends Spec with ScalaCheck {
   type W = Int
 
   type Action[A] = AwsAction[R, W, A]
-  implicit val ActionMonad = new AwsActionMonad[R, W]()(intInstance)
 
-  type WriterW[A] = WriterT[Future, W, A]
-  type ActionWithLeftSide[L, A] = ReaderT[EitherT[WriterW, L, ?], R, A]
 
   implicit def AwsActionArbitrary[A](implicit A: Arbitrary[A]): Arbitrary[Action[A]] = Arbitrary {
     A.arbitrary map { AwsAction.ok[R, W, A] }
@@ -33,9 +29,8 @@ class AwsActionMonadSpec extends Spec with ScalaCheck {
 
   implicit def ActionEqual[A](implicit E: Equal[A]): Equal[Action[A]] =
     new Equal[Action[A]] {
-      implicit class ActionOps(action: Action[A]) extends AwsActionOps[R, W, A](action)
       override def equal(a1: Action[A], a2: Action[A]): Boolean =
-        a1.runActionWithMetaData(()) == a2.runActionWithMetaData(())
+        a1.unsafePerformWithMetaData(()) == a2.unsafePerformWithMetaData(())
     }
 
   implicit def ArbitraryInvalid: Arbitrary[Invalid] =
@@ -48,5 +43,5 @@ class AwsActionMonadSpec extends Spec with ScalaCheck {
 
   checkAll("AwsActionMonad Monad laws", monad.laws[Action])
   checkAll("AwsActionMonad MonadPlus laws", monadPlus.laws[Action])
-  checkAll("AwsActionMonad MonadError laws", monadError.laws[ActionWithLeftSide, Invalid])
+  checkAll("AwsActionMonad MonadError laws", monadError.laws[Action, Invalid])
 }

@@ -1,7 +1,7 @@
 package io.atlassian.aws
 package dynamodb
 
-import scalaz.{ Coyoneda, Equal, Free, \/, \/-, -\/, ~> }
+import scalaz.{ Equal, Free, \/, \/-, -\/, ~> }
 import kadai.Invalid
 import org.specs2.matcher.{ Expectable, Matcher }
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient

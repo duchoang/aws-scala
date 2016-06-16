@@ -57,14 +57,14 @@ private[dynamodb] case class QueryImpl(table: String,
                                        consistency: ReadConsistency,
                                        limit: Option[Int]) {
   def asQueryRequest: QueryRequest = {
-    new QueryRequest()
-      .withTableName(table)
-      .withKeyConditions(keyConditions.asJava)
-      .withScanIndexForward(ScanDirection.asBool(scanDirection))
-      .withConsistentRead(ReadConsistency.asBool(consistency)) <|
-      { req =>
-        limit.foreach { req.setLimit(_) }
-        exclusiveStartKey.foreach { esk => req.setExclusiveStartKey(esk.asJava) }
-      }
+    val req =
+      new QueryRequest()
+        .withTableName(table)
+        .withKeyConditions(keyConditions.asJava)
+        .withScanIndexForward(ScanDirection.asBool(scanDirection))
+        .withConsistentRead(ReadConsistency.asBool(consistency))
+    limit.foreach { req.setLimit(_) }
+    exclusiveStartKey.foreach { esk => req.setExclusiveStartKey(esk.asJava) }
+    req
   }
 }

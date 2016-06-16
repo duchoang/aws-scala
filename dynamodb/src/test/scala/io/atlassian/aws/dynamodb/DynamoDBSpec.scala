@@ -19,7 +19,7 @@ import scalaz.syntax.id._, scalaz.std.AllInstances._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDynamoDB with DynamoDBActionMatchers {
-  import TestData._, Attempt._, DynamoDBAction._
+  import TestData._, Attempt._, DynamoDBAction._, spec.Arbitraries._
 
   val NUM_TESTS =
     if (IS_LOCAL) 100
@@ -195,7 +195,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         val valuesToSave = window.map { i =>
           k.copy(seq = i.toLong) -> valueToSave.copy(length = i.toLong)
         }.toMap
-        DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column).runAction(DYNAMO_CLIENT).run
+        DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column).unsafePerform(DYNAMO_CLIENT).run
       }
 
       val hashKey = HashKey(k.a, k.b, k.c)
@@ -268,7 +268,9 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
         } else {
           emptySet[JMap[String, AttributeValue]]
         }
-        new QueryResult() <| { _.setItems(items) }
+        val r = new QueryResult()
+        r.setItems(items)
+        r
       }
     })
     val action: DynamoDBAction[Page[TestTable.R, TestTable.V]] =
