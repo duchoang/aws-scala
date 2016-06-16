@@ -6,10 +6,10 @@ object Dependencies {
   object Version {
     val scalaz        = "7.2.3"
     val scalazStream  = "0.8"
-    val argonaut      = "6.2-M1"
+    val argonaut      = "6.1a"
     val aws_sdk       = "1.11.7"
     val kadai         = "5.0.0"
-    val kadai_log     = "5.1.3"
+    val kadai_log     = "6.0.0"
     val akka          = "2.3.9"
     val specs2        = "3.8.3"
     val scalacheck    = "1.13.1"
@@ -22,12 +22,9 @@ object Dependencies {
     libraryDependencies ++= Seq(
       "org.scalaz"        %% "scalaz-core"        % Version.scalaz
     , "org.scalaz"        %% "scalaz-concurrent"  % Version.scalaz
-    , "io.argonaut"       %% "argonaut"           % Version.argonaut
-    , "io.argonaut"       %% "argonaut-scalaz"    % Version.argonaut
     , "com.amazonaws"     %  "aws-java-sdk-core"  % Version.aws_sdk
     , "io.atlassian"      %% "kadai-core"         % Version.kadai
     , "io.atlassian"      %% "kadai-config"       % Version.kadai
-    , "io.atlassian"      %% "kadai-logging-json" % Version.kadai_log
     , "io.atlassian"      %% "kadai-concurrent"   % Version.kadai
     )
   )
@@ -40,13 +37,15 @@ object Dependencies {
 
   lazy val dynamodb = Seq(
     libraryDependencies ++= Seq(
-    "com.amazonaws"     %  "aws-java-sdk-dynamodb" % Version.aws_sdk
+        "com.amazonaws"     %  "aws-java-sdk-dynamodb" % Version.aws_sdk
+      , "io.argonaut"       %% "argonaut"           % Version.argonaut
     )
   )
 
   lazy val sqs = Seq(
     libraryDependencies ++= Seq(
-    "com.amazonaws"     %  "aws-java-sdk-sqs"      % Version.aws_sdk
+        "com.amazonaws"     %  "aws-java-sdk-sqs"      % Version.aws_sdk
+      , "io.argonaut"       %% "argonaut"           % Version.argonaut
     )
   )
 
@@ -58,7 +57,8 @@ object Dependencies {
 
   lazy val swf = Seq(
     libraryDependencies ++= Seq(
-    "com.amazonaws"     %  "aws-java-sdk-simpleworkflow"      % Version.aws_sdk
+        "com.amazonaws"     %  "aws-java-sdk-simpleworkflow"      % Version.aws_sdk
+      , "io.atlassian"      %% "kadai-logging-json" % Version.kadai_log
     )
   )
 
