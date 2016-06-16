@@ -38,7 +38,7 @@ object JsonData {
       JsonBigDecimal(n.toDouble)
     )
 
-    def wrapDouble(n: Double): Gen[JsonNumber] = Gen.oneOf(
+    def wrapDouble(n: Double): Gen[JsonNumber] = Gen.const(
       JsonBigDecimal(BigDecimal(n))
     )
 
