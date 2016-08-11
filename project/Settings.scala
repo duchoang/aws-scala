@@ -8,7 +8,7 @@ object Settings {
   val testSettings = testOptions in Test += Tests.Argument("console", "junitxml")
 
   val scala210 = "2.10.5"
-  val scala211 = "2.11.7"
+  val scala211 = "2.11.8"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -33,6 +33,7 @@ object Settings {
         , "-Ywarn-numeric-widen"
         , "-Ywarn-value-discard"
       )
+      , ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) }
       , javacOptions ++= Seq("-encoding", "UTF-8", "-source", "1.6", "-target", "1.6")
       , javacOptions in doc := Seq("-encoding", "UTF-8")
       , credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
@@ -46,7 +47,9 @@ object Settings {
           .setPreference(AlignSingleLineCaseStatements, true)
           .setPreference(AlignParameters, true)
       , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.6.3")
-      , resolvers += "Scalaz Bintray Repo" at "https://dl.bintray.com/scalaz/releases"
+      , resolvers ++= Seq(
+          "atlassian-public" at "https://maven.atlassian.com/content/groups/public/"
+        )
       , licenses := Seq("Apache2" -> url("https://bitbucket.org/atlassian/aws-scala/raw/master/LICENSE"))
       , homepage := Some(url("https://bitbucket.org/atlassian/aws-scala"))
       , pomExtra := (
