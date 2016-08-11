@@ -13,7 +13,7 @@ object Dependencies {
     val akka           = "2.3.9"
     val specs2         = "3.8.4-scalaz-7.1"
     val scalacheck     = "1.13.2"
-    val scalacheckBind = "0.0.1"
+    val scalazcheck    = "0.0.4"
     val junit          = "4.12"
     val scodecBits     = "1.1.0"
 
@@ -23,7 +23,7 @@ object Dependencies {
     libraryDependencies ++= Seq(
       "org.scalaz"        %% "scalaz-core"                 % Version.scalaz
     , "org.scalaz"        %% "scalaz-concurrent"           % Version.scalaz
-    , "io.atlassian"      %% "scalazscalacheckproperties"  % Version.scalacheckBind
+    , "io.atlassian"      %% "scalazcheck"                 % Version.scalazcheck
     , "io.argonaut"       %% "argonaut"                    % Version.argonaut
     , "com.amazonaws"     %  "aws-java-sdk-core"           % Version.aws_sdk
     , "io.atlassian"      %% "kadai-core"                  % Version.kadai
