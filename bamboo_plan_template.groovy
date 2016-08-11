@@ -49,22 +49,15 @@ export SBT_OPTS="-Dsbt.log.noformat=true -J-XX:MaxPermSize=512M -sbt-dir /opt/ba
             repository(name:'AWS Scala')
          }
 
-         task(type:'script',description:'Set up remote tracking for push',
-                 scriptBody:'''
-#!/bin/bash
-
-git remote set-url origin git@bitbucket.org:atlassian/aws-scala.git
-git fetch origin -v
-git branch --set-upstream $bamboo_planRepository_branch origin/$bamboo_planRepository_branch
-
-''')
-
          task(type:'script',description:'SBT',scriptBody:'''
 #!/bin/bash
 
 USER=$(fgrep "user=" ~/.ivy2/.credentials | cut -d= -f2)
 PWD=$(fgrep "password=" ~/.ivy2/.credentials | cut -d= -f2)
 
+git remote set-url origin git@bitbucket.org:atlassian/aws-scala.git
+git fetch origin -v
+git branch --set-upstream-to origin/$bamboo_planRepository_branch $bamboo_planRepository_branch
 
 #https://extranet.atlassian.com/jira/browse/BUILDENG-2995
 export JAVA_HOME=${bamboo.capability.system.jdk.JDK 1.8}
