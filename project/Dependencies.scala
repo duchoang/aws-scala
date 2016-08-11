@@ -11,7 +11,7 @@ object Dependencies {
     val kadai          = "4.0.1"
     val kadai_log      = "5.1.2"
     val akka           = "2.3.9"
-    val specs2         = "3.8.4-scalaz-7.1"
+    val specs2         = "3.8.4.1-scalaz-7.1"
     val scalacheck     = "1.13.2"
     val scalazcheck    = "0.0.4"
     val junit          = "4.12"
