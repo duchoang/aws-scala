@@ -95,7 +95,7 @@ trait AmazonClientOps {
     val a = AmazonClient[A].constructor(
       config.credential.getOrElse(Credential.default).run,
       {
-        val c = new ClientConfiguration()
+        val c = new ClientConfiguration().withUserAgentSuffix("atlassian-aws-scala")
         config.connectionTimeoutMs.foreach { c.setConnectionTimeout }
         config.maxConnections.foreach { c.setMaxConnections }
         config.maxErrorRetry.foreach { c.setMaxErrorRetry }

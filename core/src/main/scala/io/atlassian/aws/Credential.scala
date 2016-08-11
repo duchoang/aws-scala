@@ -1,7 +1,6 @@
 package io.atlassian.aws
 
-import com.amazonaws.auth.{ DefaultAWSCredentialsProviderChain, AWSCredentialsProvider, BasicAWSCredentials }
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.auth.{ DefaultAWSCredentialsProviderChain, AWSCredentialsProvider, BasicAWSCredentials, AWSStaticCredentialsProvider }
 import com.typesafe.config.ConfigException.BadValue
 import com.typesafe.config.Config
 import kadai.config.{ Configuration, ConfigReader }
@@ -28,7 +27,7 @@ case class Credential private (run: AWSCredentialsProvider)
 
 object Credential {
   def static(accessKey: String, secretKey: String): Credential =
-    Credential { new StaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)) }
+    Credential { new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)) }
 
   def default: Credential =
     Credential { defaultCredentialsProvider }
