@@ -4,30 +4,32 @@ import Keys._
 object Dependencies {
 
   object Version {
-    val scalaz        = "7.1.9"
-    val scalazStream  = "0.8.2"
-    val argonaut      = "6.1"
-    val aws_sdk       = "1.10.5.1"
-    val kadai         = "4.0.1"
-    val kadai_log     = "5.1.2"
-    val akka          = "2.3.9"
-    val specs2        = "3.8.4-scalaz-7.1"
-    val scalacheck    = "1.13.2"
-    val junit         = "4.12"
-    val scodecBits    = "1.1.0"
+    val scalaz         = "7.1.9"
+    val scalazStream   = "0.8.2"
+    val argonaut       = "6.1"
+    val aws_sdk        = "1.10.5.1"
+    val kadai          = "4.0.1"
+    val kadai_log      = "5.1.2"
+    val akka           = "2.3.9"
+    val specs2         = "3.8.4-scalaz-7.1"
+    val scalacheck     = "1.13.2"
+    val scalacheckBind = "0.0.1"
+    val junit          = "4.12"
+    val scodecBits     = "1.1.0"
 
   }
 
   lazy val common = Seq(
     libraryDependencies ++= Seq(
-      "org.scalaz"        %% "scalaz-core"        % Version.scalaz
-    , "org.scalaz"        %% "scalaz-concurrent"  % Version.scalaz
-    , "io.argonaut"       %% "argonaut"           % Version.argonaut
-    , "com.amazonaws"     %  "aws-java-sdk-core"  % Version.aws_sdk
-    , "io.atlassian"      %% "kadai-core"         % Version.kadai
-    , "io.atlassian"      %% "kadai-config"       % Version.kadai
-    , "io.atlassian"      %% "kadai-logging-json" % Version.kadai_log
-    , "io.atlassian"      %% "kadai-concurrent"   % Version.kadai
+      "org.scalaz"        %% "scalaz-core"                 % Version.scalaz
+    , "org.scalaz"        %% "scalaz-concurrent"           % Version.scalaz
+    , "io.atlassian"      %% "scalazscalacheckproperties"  % Version.scalacheckBind
+    , "io.argonaut"       %% "argonaut"                    % Version.argonaut
+    , "com.amazonaws"     %  "aws-java-sdk-core"           % Version.aws_sdk
+    , "io.atlassian"      %% "kadai-core"                  % Version.kadai
+    , "io.atlassian"      %% "kadai-config"                % Version.kadai
+    , "io.atlassian"      %% "kadai-logging-json"          % Version.kadai_log
+    , "io.atlassian"      %% "kadai-concurrent"            % Version.kadai
     )
   )
 
@@ -72,7 +74,7 @@ object Dependencies {
       "org.scalaz.stream" %% "scalaz-stream"      % Version.scalazStream
     )
   )
-  
+
   lazy val akka = Seq(
     libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-actor"       % Version.akka exclude("com.chuusai", "shapeless_2.10.4")

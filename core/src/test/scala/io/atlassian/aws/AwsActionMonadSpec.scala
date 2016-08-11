@@ -2,21 +2,29 @@ package io.atlassian.aws
 
 import kadai.Invalid
 import org.junit.runner.RunWith
-import org.specs2.scalaz.Spec
 import org.specs2.ScalaCheck
-import org.scalacheck.{ Gen, Arbitrary }
+import org.specs2.Specification
+import org.scalacheck.{ Arbitrary, Cogen, Gen }
+
 import scalaz.concurrent.Future
-import scalaz.{ EitherT, ReaderT, Equal, WriterT }
-import scalaz.scalacheck.ScalazProperties
+import scalaz.{ EitherT, Equal, ReaderT, WriterT }
+import scalaz.scalacheck.ScalazProperties._
+import scalaz.std.anyVal._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
-class AwsActionMonadSpec extends Spec with ScalaCheck {
-
-  import ScalazProperties._
+class AwsActionMonadSpec extends Specification with ScalaCheck {
   import Invalid.InvalidMonoid
   import scalaz.std.anyVal.intInstance
   import org.scalacheck.Arbitrary._
   import Invalid.syntax._
+
+  def is = s2"""
+  AwsAction specification
+
+  obeys Monad laws                             ${monad.laws[Action]}
+  obeys MonadPlus laws                         ${monadPlus.laws[Action]}
+  obeys MonadError laws                        ${monadError.laws[ActionWithLeftSide, Invalid]}
+  """
 
   type R = Unit
   type W = Int
@@ -46,7 +54,5 @@ class AwsActionMonadSpec extends Spec with ScalaCheck {
       )
     }
 
-  checkAll("AwsActionMonad Monad laws", monad.laws[Action])
-  checkAll("AwsActionMonad MonadPlus laws", monadPlus.laws[Action])
-  checkAll("AwsActionMonad MonadError laws", monadError.laws[ActionWithLeftSide, Invalid])
+  implicit def InvalidCogen: Cogen[Invalid] = Cogen[String].contramap(_.toString)
 }
