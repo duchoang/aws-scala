@@ -82,7 +82,7 @@ object Dependencies {
   )
 
   lazy val test = libraryDependencies ++= Seq(
-      "org.specs2"          %% "specs2-core"        % Version.specs2     % "test" excludeAll(ExclusionRule(organization ="org.scalaz"))
+      "org.specs2"          %% "specs2-core"        % Version.specs2     % "test"
     , "org.specs2"          %% "specs2-junit"       % Version.specs2     % "test"
     , "org.specs2"          %% "specs2-scalacheck"  % Version.specs2     % "test"
     , "org.specs2"          %% "specs2-mock"        % Version.specs2     % "test"
