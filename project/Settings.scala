@@ -18,7 +18,7 @@ object Settings {
       Seq[Def.Setting[_]] (
         organization := "io.atlassian.aws-scala"
       , scalaVersion := scala211
-      , crossScalaVersions := Seq(scala211, scala210)
+      , crossScalaVersions := Seq(scala211)
       , scalacOptions := Seq(
           "-deprecation"
         , "-unchecked"
