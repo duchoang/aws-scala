@@ -29,7 +29,10 @@ trait Modules {
 
   lazy val sqs =
     Project(id = "sqs", base = file("sqs"), settings = standardSettingsAndDependencies) dependsOn (core % depTest)
-  
+
+  lazy val sns =
+    Project(id = "sns", base = file("sns"), settings = standardSettingsAndDependencies) dependsOn (core % depTest)
+
   lazy val swf =
     Project(id = "swf", base = file("swf"), settings = standardSettingsAndDependencies) dependsOn (core % depTest)
   
@@ -41,8 +44,8 @@ trait Modules {
 
   lazy val all =
     Project(id = "all", base = file("."), settings = standardSettings) dependsOn ( // needs both dependsOn and aggregate to produce dependencies in the pom
-      core, cloudformation, dynamodb, rds, s3, sqs, swf, swfAkka, swfScalazStream
+      core, cloudformation, dynamodb, rds, s3, sqs, sns, swf, swfAkka, swfScalazStream
     ) aggregate (
-      core, cloudformation, dynamodb, rds, s3, sqs, swf, swfAkka, swfScalazStream
+      core, cloudformation, dynamodb, rds, s3, sqs, sns, swf, swfAkka, swfScalazStream
     )
 }

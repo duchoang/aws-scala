@@ -7,7 +7,7 @@ object Dependencies {
     val scalaz         = "7.1.9"
     val scalazStream   = "0.8.2"
     val argonaut       = "6.1"
-    val aws_sdk        = "1.10.5.1"
+    val aws_sdk        = "1.11.32"
     val kadai          = "4.0.1"
     val kadai_log      = "5.1.2"
     val akka           = "2.3.9"
@@ -48,6 +48,12 @@ object Dependencies {
   lazy val sqs = Seq(
     libraryDependencies ++= Seq(
     "com.amazonaws"     %  "aws-java-sdk-sqs"      % Version.aws_sdk
+    )
+  )
+
+  lazy val sns = Seq(
+    libraryDependencies ++= Seq(
+      "com.amazonaws"     %  "aws-java-sdk-sns"      % Version.aws_sdk
     )
   )
 

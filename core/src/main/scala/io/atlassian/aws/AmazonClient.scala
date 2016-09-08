@@ -12,6 +12,10 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.regions.ServiceAbbreviations
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
 
+/**
+  * @deprecated this is being removed in favour of extending AmazonClientBase for each service, thus avoiding core
+  *            depending on all the AWS SDK libraries.
+  */
 object AmazonClient extends AmazonClientOps {
   private[aws]type Constructor[A] = (AWSCredentialsProvider, ClientConfiguration, RequestMetricCollector) => A
 
