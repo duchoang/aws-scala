@@ -66,7 +66,7 @@ object CloudFormation {
 
   def deleteStack(name: StackName): CFAction[Unit] =
     CFAction.withClient {
-      _.deleteStack(new DeleteStackRequest().withStackName(name.unwrap))
+      _.deleteStack(new DeleteStackRequest().withStackName(name.unwrap)) |> { _ => () }
     }
 
   def describeStack(name: StackName): CFAction[Option[Stack]] =
