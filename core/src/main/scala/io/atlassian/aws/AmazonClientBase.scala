@@ -23,7 +23,7 @@ abstract class AmazonClientBase[A <: AmazonWebServiceClient] {
                               metricsCollector: Option[RequestMetricCollector] = None): A =
     constructor(
       config.credential.getOrElse(Credential.default).run,
-      new ClientConfiguration() <| { c =>
+      new ClientConfiguration().withUserAgentSuffix("atlassian-aws-scala") <| { c =>
         config.connectionTimeoutMs.foreach { c.setConnectionTimeout }
         config.maxConnections.foreach { c.setMaxConnections }
         config.maxErrorRetry.foreach { c.setMaxErrorRetry }
