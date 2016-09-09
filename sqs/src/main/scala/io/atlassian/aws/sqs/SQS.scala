@@ -32,7 +32,7 @@ object SQS {
     }
 
   def deleteQueue(url: QueueURL): SQSAction[Unit] =
-    SQSAction.withClient { _.deleteQueue(url.unwrap) }
+    SQSAction.withClient { _.deleteQueue(url.unwrap) |> { _ => () } }
 
   def send[A: Marshaller](url: QueueURL, message: A, delay: Duration = 0.seconds): SQSAction[SendResult] =
     SQSAction.withClient {
@@ -62,7 +62,7 @@ object SQS {
 
   def delete(url: QueueURL, handle: ReceiptHandle): SQSAction[Unit] =
     SQSAction.withClient {
-      _.deleteMessage(new DeleteMessageRequest().withQueueUrl(url.unwrap).withReceiptHandle(handle.unwrap))
+      _.deleteMessage(new DeleteMessageRequest().withQueueUrl(url.unwrap).withReceiptHandle(handle.unwrap)) |> { _ => () }
     }
 
   def delete(url: QueueURL, handles: List[ReceiptHandle]): SQSAction[DeleteResult] = {
@@ -90,7 +90,7 @@ object SQS {
           .withQueueUrl(url.unwrap)
           .withReceiptHandle(handle.unwrap)
           .withVisibilityTimeout(newVisibilityFromNow.toSeconds.toInt)
-      )
+      ) |> { _ => () }
     }
   }
 }
