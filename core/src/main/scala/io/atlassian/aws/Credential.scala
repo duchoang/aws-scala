@@ -1,7 +1,6 @@
 package io.atlassian.aws
 
 import com.amazonaws.auth.{AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicAWSCredentials, DefaultAWSCredentialsProviderChain}
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.typesafe.config.ConfigException.BadValue
 import com.typesafe.config.Config
 import kadai.config.{ConfigReader, Configuration}

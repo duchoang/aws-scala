@@ -103,7 +103,7 @@ trait AmazonClientOps {
   def fromClientConfigurationDef[A <: AmazonWebServiceClient: AmazonClient](config: AmazonClientConnectionDef)(metricsCollector: Option[RequestMetricCollector]): A =
     AmazonClient[A].constructor(
       config.credential.getOrElse(Credential.default).run,
-      new ClientConfiguration() <| { c =>
+      new ClientConfiguration().withUserAgentSuffix("atlassian-aws-scala") <| { c =>
         config.connectionTimeoutMs.foreach { c.setConnectionTimeout }
         config.maxConnections.foreach { c.setMaxConnections }
         config.maxErrorRetry.foreach { c.setMaxErrorRetry }
