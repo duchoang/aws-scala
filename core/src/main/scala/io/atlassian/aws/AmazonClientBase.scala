@@ -20,18 +20,24 @@ abstract class AmazonClientBase[A <: AmazonWebServiceClient] {
     */
   def withClientConfiguration(config: AmazonClientConnectionDef,
                               fallback: Option[AmazonClientConnectionDef] = None,
-                              metricsCollector: Option[RequestMetricCollector] = None): A =
-    constructor(
+                              metricsCollector: Option[RequestMetricCollector] = None): A = {
+    val a = AmazonClient[A].constructor(
       config.credential.getOrElse(Credential.default).run,
-      new ClientConfiguration().withUserAgentSuffix("atlassian-aws-scala") <| { c =>
+      {
+        val c = new ClientConfiguration().withUserAgentSuffix("atlassian-aws-scala")
         config.connectionTimeoutMs.foreach { c.setConnectionTimeout }
         config.maxConnections.foreach { c.setMaxConnections }
         config.maxErrorRetry.foreach { c.setMaxErrorRetry }
         config.socketTimeoutMs.foreach { c.setSocketTimeout }
         config.proxyHost.foreach { c.setProxyHost }
         config.proxyPort.foreach { c.setProxyPort }
+        c
       },
-      metricsCollector.orNull) <| { a => config.region.foreach { a.setRegion } } <| { a => config.endpointUrl.foreach { a.setEndpoint } }
+      metricsCollector.orNull)
+    config.region.foreach { a.setRegion }
+    config.endpointUrl.foreach { a.setEndpoint }
+    a
+  }
 
   /**
     * Creates a client of the requested type. Configuration options can be passed in as config parameter. Any gaps in the
