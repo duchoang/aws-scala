@@ -21,7 +21,7 @@ abstract class AmazonClientBase[A <: AmazonWebServiceClient] {
   def withClientConfiguration(config: AmazonClientConnectionDef,
                               fallback: Option[AmazonClientConnectionDef] = None,
                               metricsCollector: Option[RequestMetricCollector] = None): A = {
-    val a = AmazonClient[A].constructor(
+    val a = constructor(
       config.credential.getOrElse(Credential.default).run,
       {
         val c = new ClientConfiguration().withUserAgentSuffix("atlassian-aws-scala")
