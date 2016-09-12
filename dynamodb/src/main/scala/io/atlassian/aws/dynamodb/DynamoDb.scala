@@ -14,7 +14,7 @@ import com.amazonaws.services.dynamodbv2.model.{ AttributeAction, AttributeValue
 
 /**
  * Contains functions that perform operations on a DynamoDB table. Functions return a DynamoDBAction that can be run by
- * providing an instance of an AmazonDynamoDBClient (see AmazonClient for
+ * providing an instance of an AmazonDynamoDBClient (see DynamoDBClient for
  * convenient constructor functions).
  *
  * This class is generally not intended to be used directly, but used through the Table algebra with column definitions.
