@@ -3,7 +3,7 @@ package io.atlassian.aws.sns
 import argonaut.EncodeJson
 
 /**
-  * Type class for marshalling objects into a message body and subject suitable for passing to AWS SQS client.
+  * Type class for marshalling objects into a message body and subject suitable for passing to AWS SNS client.
   * @tparam A The type of the object to marshall.
   */
 trait Marshaller[A] {
