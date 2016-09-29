@@ -2,7 +2,7 @@ package io.atlassian.aws
 
 import com.amazonaws.auth.{ AWSCredentialsProvider, DefaultAWSCredentialsProviderChain }
 import com.amazonaws.metrics.RequestMetricCollector
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
+import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDBClient, AmazonDynamoDBStreamsClient }
 import com.amazonaws.services.rds.AmazonRDSClient
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient
 import com.amazonaws.services.sqs.AmazonSQSClient
@@ -69,6 +69,10 @@ object AmazonClient extends AmazonClientOps {
   implicit object DynamoDBClient extends AmazonClient[AmazonDynamoDBClient](
     constructor = new AmazonDynamoDBClient(_, _, _),
     serviceName = ServiceAbbreviations.Dynamodb
+  )
+
+  implicit object DynamoDBStreamsClient extends AmazonClient[AmazonDynamoDBStreamsClient](
+    constructor = new AmazonDynamoDBStreamsClient(_, _, _)
   )
 
   implicit object S3Client extends AmazonClient[AmazonS3Client](
