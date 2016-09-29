@@ -36,19 +36,18 @@ Be sure the check the CHANGELOG.md for a list of breaking changes.
    
 ### Step 1 - Creating a client
 
-The `io.atlassian.aws.AmazonClient` object has some useful functions for creating clients. So to create an S3 client you can do:
+Each package has a `XXXClient` object has some useful functions for creating clients (e.g. DynamoDBClient). So to create an S3 client you can do:
 
-    import com.amazonaws.services.s3.AmazonS3Client                 // Yes this is ugly, someone please fix
-    import io.atlassian.aws.AmazonClient
+    import io.atlassian.aws.s3.S3Client
     
-    val defaultClient = AmazonClient[AmazonS3Client].default        // Create a default client i.e. like  new AmazonS3Client
+    val defaultClient = S3Client.default        // Create a default client i.e. like  new AmazonS3Client
     
-    val withEndpoint = AmazonClient[AmazonS3Client].withEndpoint("http://foo.com")  // Create a default client with the specified endpoint. This is probably most useful for creating a DynamoDB client talking to a local Dynamo DB
+    val withEndpoint = S3Client.withEndpoint("http://foo.com")  // Create a default client with the specified endpoint. This is probably most useful for creating a DynamoDB client talking to a local Dynamo DB
     
     val config = AmazonClientConnectionDef(...)
     val fallbackConfig = Some(AmazonClientConnectionDef(...))
     
-    val withConfig = AmazonClient[AmazonS3Client].withClientConfiguration(config, fallbackConfig)   // Create an S3 client with config from `config`, filling in any unset config items using the fallback config. 
+    val withConfig = S3Client.withClientConfiguration(config, fallbackConfig)   // Create an S3 client with config from `config`, filling in any unset config items using the fallback config. 
 
 `AmazonClientConnectionDef` can be created programmatically or loaded via [kadai-config](https://bitbucket.org/atlassian/kadai). There is an `Accessor` already, so you just need to `import AmazonClientConnectionDef._` e.g.:
 

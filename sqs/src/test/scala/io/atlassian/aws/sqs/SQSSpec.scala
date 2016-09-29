@@ -21,7 +21,7 @@ class SQSSpec(val arguments: Arguments) extends ScalaCheckSpec {
   val REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
 
   implicit val CLIENT = {
-    val c = AmazonClient.default[AmazonSQSClient]
+    val c = SQSClient.default
     c.setRegion(AmazonRegion.orDefault(REGION))
     c
   }
