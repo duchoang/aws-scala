@@ -72,7 +72,8 @@ object AmazonClient extends AmazonClientOps {
   )
 
   implicit object DynamoDBStreamsClient extends AmazonClient[AmazonDynamoDBStreamsClient](
-    constructor = new AmazonDynamoDBStreamsClient(_, _, _)
+    constructor = new AmazonDynamoDBStreamsClient(_, _, _),
+    serviceName = ServiceAbbreviations.DynamodbStreams
   )
 
   implicit object S3Client extends AmazonClient[AmazonS3Client](
