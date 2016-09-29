@@ -10,7 +10,6 @@ import com.amazonaws.{ ResponseMetadata, AmazonWebServiceRequest }
 import com.amazonaws.services.simpleworkflow.{ AmazonSimpleWorkflowClient, model, AmazonSimpleWorkflow }
 import io.atlassian.aws.swf.Decision.CompleteWorkflowExecution
 import io.atlassian.aws.swf.WorkflowEvent.{ ActivityScheduled, ActivityCompleted, WorkflowExecutionStarted }
-import io.atlassian.aws.{ swf, AmazonRegion, AmazonClient }
 import io.atlassian.aws.spec.ScalaCheckSpec
 import io.atlassian.aws.swf.{ Decision, WorkflowDefinition, SWF, DecisionInstance }
 import kadai.concurrent.ThreadFactories
@@ -43,7 +42,7 @@ class SWFSpec(val arguments: Arguments) extends ScalaCheckSpec with Logging {
   val REGION = arguments.commandLine.value("region").getOrElse(Option(System.getenv("AWS_REGION")).getOrElse("ap-southeast-2"))
 
   implicit val CLIENT = {
-    val c = AmazonClient.default[AmazonSimpleWorkflowClient]
+    val c = SWFClient.default
     c.setRegion(AmazonRegion.orDefault(REGION))
     c
   }
