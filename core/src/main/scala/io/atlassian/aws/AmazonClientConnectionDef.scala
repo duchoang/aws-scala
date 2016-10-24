@@ -12,6 +12,10 @@ case class AmazonClientConnectionDef(socketTimeoutMs: Option[Int],
                                      connectionTimeoutMs: Option[Int],
                                      maxErrorRetry: Option[Int],
                                      maxConnections: Option[Int],
+                                     connectionTtl: Option[Long],
+                                     useGzip: Option[Boolean],
+                                     clientExecutionTimeout: Option[Int],
+                                     maxIdleTimeoutMs: Option[Long],
                                      proxyHost: Option[String],
                                      proxyPort: Option[Int],
                                      region: Option[Region],
@@ -31,6 +35,10 @@ case class AmazonClientConnectionDef(socketTimeoutMs: Option[Int],
       connectionTimeoutMs = this.connectionTimeoutMs.orElse(fallback.connectionTimeoutMs),
       maxErrorRetry = this.maxErrorRetry.orElse(fallback.maxErrorRetry),
       maxConnections = this.maxConnections.orElse(fallback.maxConnections),
+      connectionTtl = this.connectionTtl.orElse(fallback.connectionTtl),
+      useGzip = this.useGzip.orElse(fallback.useGzip),
+      clientExecutionTimeout = this.clientExecutionTimeout.orElse(fallback.clientExecutionTimeout),
+      maxIdleTimeoutMs = this.maxIdleTimeoutMs.orElse((fallback.maxIdleTimeoutMs)),
       proxyHost = this.proxyHost.orElse(fallback.proxyHost),
       proxyPort = this.proxyPort.orElse(fallback.proxyPort),
       region = this.region.orElse(fallback.region),
@@ -53,7 +61,7 @@ object AmazonClientConnectionDef {
   import AmazonRegion._
 
   val default: AmazonClientConnectionDef =
-    AmazonClientConnectionDef(None, None, None, None, None, None, None, None, None)
+    AmazonClientConnectionDef(None, None, None, None, None, None, None, None, None, None, None, None, None)
 
   implicit object AmazonClientConnectionAccessor extends Accessor[AmazonClientConnectionDef] {
     def apply(c: Config, s: String) =
@@ -63,6 +71,10 @@ object AmazonClientConnectionDef {
           connectionTimeoutMs = config.option[Int]("connection-timeout-ms"),
           maxErrorRetry = config.option[Int]("max-error-retry"),
           maxConnections = config.option[Int]("max-connections"),
+          connectionTtl = config.option[Long]("connection-expiry-ttl"),
+          useGzip = config.option[Boolean]("use-gzip"),
+          clientExecutionTimeout = config.option[Int]("client-execution-timeout"),
+          maxIdleTimeoutMs = config.option[Long]("max-idle-timeout-ms"),
           proxyHost = config.option[String]("proxy-host"),
           proxyPort = config.option[Int]("proxy-port"),
           region = config.option[Region]("region"),
@@ -82,12 +94,16 @@ object AmazonClientConnectionDef {
          |Connection timeout(ms): ${c.connectionTimeoutMs},
          |Max Error Retry: ${c.maxErrorRetry},
          |Max Connections: ${c.maxConnections},
+         |Connection TTL" ${c.connectionTtl},
+         |Use Gzip" ${c.useGzip},
+         |Client execution timeout: ${c.clientExecutionTimeout},
+         |Max idle timeout(ms): ${c.maxIdleTimeoutMs},
          |Proxy Host/port: ${c.proxyHost}:${c.proxyPort},
          |Region: ${c.region},
          |Endpoint URL: ${c.endpointUrl}""".stripMargin)
 
   implicit def AmazonClientConnectionDefEncodeJson: EncodeJson[AmazonClientConnectionDef] =
-    jencode8L((a: AmazonClientConnectionDef) => (a.region, a.proxyHost, a.proxyPort, a.socketTimeoutMs, a.connectionTimeoutMs, a.maxErrorRetry, a.maxConnections, a.endpointUrl))(
-      "region", "proxy-host", "proxy-port", "socket-timeout-ms", "connection-timeout-ms", "max-error-retry", "max-connections", "endpoint-url"
+    jencode12L((a: AmazonClientConnectionDef) => (a.region, a.proxyHost, a.proxyPort, a.socketTimeoutMs, a.connectionTimeoutMs, a.maxErrorRetry, a.maxConnections, a.connectionTtl, a.useGzip, a.clientExecutionTimeout, a.maxIdleTimeoutMs, a.endpointUrl))(
+      "region", "proxy-host", "proxy-port", "socket-timeout-ms", "connection-timeout-ms", "max-error-retry", "max-connections", "connection-expiry-ttl", "use-gzip", "client-execution-timeout", "max-idle-timeout-ms", "endpoint-url"
     )
 }

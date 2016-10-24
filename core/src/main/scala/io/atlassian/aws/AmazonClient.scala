@@ -111,6 +111,10 @@ trait AmazonClientOps {
       new ClientConfiguration().withUserAgentSuffix("atlassian-aws-scala") <| { c =>
         config.connectionTimeoutMs.foreach { c.setConnectionTimeout }
         config.maxConnections.foreach { c.setMaxConnections }
+        config.connectionTtl.foreach { c.setConnectionTTL }
+        config.useGzip.foreach { c.setUseGzip }
+        config.clientExecutionTimeout.foreach { c.setClientExecutionTimeout }
+        config.maxIdleTimeoutMs.foreach { c.setConnectionMaxIdleMillis }
         config.maxErrorRetry.foreach { c.setMaxErrorRetry }
         config.socketTimeoutMs.foreach { c.setSocketTimeout }
         config.proxyHost.foreach { c.setProxyHost }
