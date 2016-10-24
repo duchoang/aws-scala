@@ -53,14 +53,18 @@ Each package has a `XXXClient` object has some useful functions for creating cli
 
 Config settings:
 
-      aws-client {             # Connection settings for all AWS Clients used in the server. Can be overridden with specific settings for relevant components
-        connection-timeout-ms = # Connection timeout in ms
-        region =               # aws region name.
-        proxy-host =           # Proxy host to go through to access AWS resources
-        proxy-port =           # Port of proxy host to go through to access AWS resources
-        socket-timeout-ms =    # com.amazonaws.ClientConfiguration#setSocketTimeout
-        max-error-retry =      # com.amazonaws.ClientConfiguration#setMaxErrorRetry
-        max-connections =      # com.amazonaws.ClientConfiguration#setMaxConnections
+      aws-client {                 # Connection settings for all AWS Clients used in the server. Can be overridden with specific settings for relevant components
+        connection-timeout-ms =    # Connection timeout in ms
+        region =                   # aws region name.
+        proxy-host =               # Proxy host to go through to access AWS resources
+        proxy-port =               # Port of proxy host to go through to access AWS resources
+        socket-timeout-ms =        # com.amazonaws.ClientConfiguration#setSocketTimeout
+        max-error-retry =          # com.amazonaws.ClientConfiguration#setMaxErrorRetry
+        max-connections =          # com.amazonaws.ClientConfiguration#setMaxConnections
+        connection-expiry-ttl =    # com.amazonaws.ClientConfiguration#setConnectionTTL
+        use-gzip =                 # com.amazonaws.ClientConfiguration#setUseGzip
+        max-idle-timeout-ms =      # com.amazonaws.ClientConfiguration#setConnectionMaxIdleMillis
+        client-execution-timeout = # com.amazonaws.ClientConfiguration#setClientExecutionTimeout
       }
 
     import AmazonClientConnectionDef._
