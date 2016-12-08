@@ -1,16 +1,18 @@
 package io.atlassian.aws
 
-import com.amazonaws.auth.{ AWSCredentialsProvider, DefaultAWSCredentialsProviderChain }
+import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
 import com.amazonaws.metrics.RequestMetricCollector
-import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDBClient, AmazonDynamoDBStreamsClient }
+import com.amazonaws.services.dynamodbv2.{AmazonDynamoDBClient, AmazonDynamoDBStreamsClient}
 import com.amazonaws.services.rds.AmazonRDSClient
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient
 import com.amazonaws.services.sqs.AmazonSQSClient
-import com.amazonaws.{ AmazonWebServiceClient, ClientConfiguration }
+import com.amazonaws.{AmazonWebServiceClient, ClientConfiguration}
+
 import scalaz.syntax.id._
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.regions.ServiceAbbreviations
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
+import com.amazonaws.services.sns.AmazonSNSClient
 
 /**
   * @deprecated this is being removed in favour of extending AmazonClientBase for each service, thus avoiding core
@@ -99,6 +101,11 @@ object AmazonClient extends AmazonClientOps {
   implicit object RDSClient extends AmazonClient[AmazonRDSClient](
     constructor = new AmazonRDSClient(_, _, _),
     serviceName = ServiceAbbreviations.RDS
+  )
+
+  implicit object SNSClient extends AmazonClient[AmazonSNSClient](
+    constructor = new AmazonSNSClient(_, _, _),
+    serviceName = ServiceAbbreviations.SNS
   )
 }
 
