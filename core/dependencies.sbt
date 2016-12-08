@@ -11,3 +11,5 @@ Dependencies.dynamodb
 Dependencies.rds
 
 Dependencies.swf
+
+Dependencies.sns
