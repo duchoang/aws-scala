@@ -22,7 +22,7 @@ if [ -z "${TIMEOUT_CMD}" ]; then
   exit 1
 fi
 
-JAR_HREF=http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest
+JAR_HREF=https://s3-us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_latest.tar.gz
 SCRIPT_DIR=`dirname "$0"`
 DYNAMO_DB_LIB_HOME="$SCRIPT_DIR/dynamodb"
 TIMEOUT_SECONDS=20
