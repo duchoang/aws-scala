@@ -188,7 +188,7 @@ object DynamoDB {
           Map(
             table -> keys.map {
               case (k) => new WriteRequest().withDeleteRequest {
-                new DeleteRequest()().withKey {
+                new DeleteRequest().withKey {
                   kc.marshall.toFlattenedMap(k).asJava
                 }
               }
