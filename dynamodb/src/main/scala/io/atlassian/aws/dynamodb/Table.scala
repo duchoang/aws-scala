@@ -55,6 +55,16 @@ trait Table extends Queries {
   def batchPut(vals: Map[K, V]): DBAction[Map[K, V]] =
     BatchPutOp(vals)
 
+  /**
+    * Perform a batch delete operation using the given keys. DynamoDB has the following restrictions:
+    *   - we can only batch delete 25 items at a time
+    *
+    * @param keys the keys to delete in the batch
+    * @return Map of key -> values that failed to be deleted
+    */
+  def batchDelete(keys: List[K]): DBAction[Map[K, V]] =
+    BatchDeleteOp(keys)
+
   //
   // Ops
   //
@@ -71,6 +81,7 @@ trait Table extends Queries {
     case class DeleteOp(key: K) extends DBOp[Unit]
     case class QueryOp(query: Query) extends DBOp[Page[R, V]]
     case class BatchPutOp(keyValues: Map[K, V]) extends DBOp[Map[K, V]]
+    case class BatchDeleteOp(keys: List[K]) extends DBOp[Map[K, V]]
     case object TableExistsOp extends DBOp[Boolean]
   }
 

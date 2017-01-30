@@ -178,6 +178,29 @@ object DynamoDB {
     }
 
   /**
+    * Perform a batch delete operation using the given key -> value pairs. DynamoDB has the following restrictions:
+    *   - we can only batch put 25 items at a time
+    */
+  def batchDelete[K, V](keys: List[K])(table: String, kc: Column[K], vc: Column[V]): DynamoDBAction[Map[K, V]] =
+    withClient {
+      _.batchWriteItem {
+        new BatchWriteItemRequest().withRequestItems {
+          Map(
+            table -> keys.map {
+              case (k) => new WriteRequest().withDeleteRequest {
+                new DeleteRequest()().withKey {
+                  kc.marshall.toFlattenedMap(k).asJava
+                }
+              }
+            }.asJava
+          ).asJava
+        }
+      }.getUnprocessedItems.asScala.get(table).map {
+        _.asScala.map { req => Column.unmarshall(kc, vc)(req.getDeleteRequest.getKey.asScala.toMap).toOption }.flatten.toMap
+      }.getOrElse { Map() }
+    }
+
+  /**
    * Creates a table for the given entity. The table name comes from the entity and is transformed by the
    * tableNameTransformer (e.g. to create tables for different environments)
    */
@@ -252,6 +275,7 @@ object DynamoDB {
           case QueryOp(q)           => queryImpl(q)
           case TableExistsOp        => tableExists(t.name)
           case BatchPutOp(kvs)      => batchPut(kvs)(t.name, t.key, t.value)
+          case BatchDeleteOp(keys)  => batchDelete(keys)(t.name, t.key, t.value)
         }
 
       def queryImpl: kv.Query => DynamoDBAction[Page[kv.R, kv.V]] = {
