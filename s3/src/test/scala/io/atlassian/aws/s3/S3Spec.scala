@@ -76,14 +76,14 @@ class S3Spec(arguments: Arguments) extends SpecificationWithJUnit with ScalaChec
   def createFoldersWorks = Prop.forAll {
     (folders: S3Folders, key: S3Key) =>
       {
-        import scala.collection.JavaConversions._
+        import scala.collection.JavaConverters._
         val s3Key = S3Key(TEST_FOLDER :: folders.folders, key)
         val s3KeyWithoutLastElement = s3Key.prefix
         (for {
           _ <- S3.createFoldersFor(ContentLocation(BUCKET, s3Key))
           keys <- S3.listKeys(BUCKET, s3KeyWithoutLastElement)
         } yield keys) must returnResult { keys =>
-          keys.getObjectSummaries.toList.map { _.getKey } must contain(s3KeyWithoutLastElement)
+          keys.getObjectSummaries.asScala.map { _.getKey } must contain(s3KeyWithoutLastElement)
         }
       }
   }.set(minTestsOk = 10)

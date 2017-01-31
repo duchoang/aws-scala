@@ -7,8 +7,8 @@ object Settings {
 
   val testSettings = testOptions in Test += Tests.Argument("console", "junitxml")
 
-  val scala210 = "2.10.6"
   val scala211 = "2.11.8"
+  val scala212 = "2.12.1"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -17,8 +17,8 @@ object Settings {
       defaultScalariformSettings ++
       Seq[Def.Setting[_]] (
         organization := "io.atlassian.aws-scala"
-      , scalaVersion := scala211
-      , crossScalaVersions := Seq(scala211, scala210)
+      , scalaVersion := scala212
+      , crossScalaVersions := Seq(scala212, scala211)
       , scalacOptions := Seq(
           "-deprecation"
         , "-unchecked"
@@ -26,14 +26,14 @@ object Settings {
         , "-language:_"
         , "-Xfatal-warnings"
         , "-Xlog-free-terms"
-        , "-target:jvm-1.6"
+        , "-target:jvm-1.8"
         , "-Xlint"
         , "-Yno-adapted-args"
         , "-Ywarn-dead-code"
         , "-Ywarn-numeric-widen"
         , "-Ywarn-value-discard"
       )
-      , javacOptions ++= Seq("-encoding", "UTF-8", "-source", "1.6", "-target", "1.6")
+      , javacOptions ++= Seq("-encoding", "UTF-8", "-source", "1.8", "-target", "1.8")
       , javacOptions in doc := Seq("-encoding", "UTF-8")
       , credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
       , mappings in (Compile, packageBin) ++= Seq(
@@ -45,7 +45,7 @@ object Settings {
       , ScalariformKeys.preferences := ScalariformKeys.preferences.value
           .setPreference(AlignSingleLineCaseStatements, true)
           .setPreference(AlignParameters, true)
-      , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.8.0" cross CrossVersion.binary)
+      , addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3" cross CrossVersion.binary)
       , resolvers += "Scalaz Bintray Repo" at "https://dl.bintray.com/scalaz/releases"
       , licenses := Seq("Apache2" -> url("https://bitbucket.org/atlassian/aws-scala/raw/master/LICENSE"))
       , homepage := Some(url("https://bitbucket.org/atlassian/aws-scala"))

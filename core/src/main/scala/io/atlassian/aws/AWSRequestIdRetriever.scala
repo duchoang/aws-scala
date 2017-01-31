@@ -10,7 +10,7 @@ import scalaz.syntax.id._
 import scalaz.syntax.monad._
 import scalaz.std.option._
 import scalaz.syntax.std.option._
-import scala.collection.convert.decorateAsScala._
+import scala.collection.JavaConverters._
 
 case class HttpHeaders(headers: Map[String, String])
 

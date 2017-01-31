@@ -4,17 +4,17 @@ import Keys._
 object Dependencies {
 
   object Version {
-    val scalaz        = "7.2.3"
-    val scalazStream  = "0.8a"
-    val argonaut      = "6.1a"
+    val scalaz        = "7.2.7"
+    val scalazStream  = "0.8.6"
+    val argonaut      = "6.2-RC2"
     val aws_sdk       = "1.11.32"
-    val kadai         = "5.0.0"
-    val kadai_log     = "6.0.0"
-    val akka          = "2.3.9"
-    val specs2        = "3.8.3"
-    val scalacheck    = "1.13.1"
+    val kadai         = "6.0.0"
+    val kadai_log     = "7.0.0"
+    val akka          = "2.4.16"
+    val specs2        = "3.8.7"
+    val scalacheck    = "1.13.4"
     val junit         = "4.12"
-    val scodecBits    = "1.0.6"
+    val scodecBits    = "1.1.4"
 
   }
 

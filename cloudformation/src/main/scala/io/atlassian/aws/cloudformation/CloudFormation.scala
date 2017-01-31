@@ -66,8 +66,8 @@ object CloudFormation {
 
   def describeStack(name: StackName): CFAction[Option[Stack]] =
     CFAction.withClient {
-      import collection.JavaConversions._
-      _.describeStacks(new DescribeStacksRequest().withStackName(name.unwrap)).getStacks.headOption
+      import collection.JavaConverters._
+      _.describeStacks(new DescribeStacksRequest().withStackName(name.unwrap)).getStacks.asScala.headOption
     }
 
   def stackExists(name: StackName): CFAction[Boolean] =

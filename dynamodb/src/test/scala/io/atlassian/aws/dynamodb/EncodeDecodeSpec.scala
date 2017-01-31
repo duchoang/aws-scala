@@ -17,6 +17,7 @@ import scalaz.std.anyVal._
 import org.joda.time.DateTime
 import argonaut._
 import Argonaut._
+import ArgonautScalaz._
 
 @RunWith(classOf[org.specs2.runner.JUnitRunner])
 class EncodeDecodeSpec extends ScalaCheckSpec {
@@ -79,7 +80,7 @@ class EncodeDecodeSpec extends ScalaCheckSpec {
     Equal[Json].contramap { _.unwrap }
 
   case class Foo(s: String, i: Int)
-  implicit val CodecFoo = casecodec2(Foo.apply, Foo.unapply)("s", "i")
+  implicit val CodecFoo: CodecJson[Foo] = casecodec2(Foo.apply, Foo.unapply)("s", "i")
   implicit val EqualFoo: Equal[Foo] = Equal.equalA
   implicit val ArbitraryFoo: Arbitrary[Foo] =
     Arbitrary {

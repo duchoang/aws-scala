@@ -114,7 +114,7 @@ object Unmarshaller {
      */
     def jsonBody[A: DecodeJson]: Operation[A] =
       Operation { m =>
-        m.getBody.decodeEither[A].leftMap(Invalid.Message) |> Attempt.apply
+        m.getBody.decodeWithMessage[Attempt[A], A](Attempt.ok[A], Attempt.fail)
       }
 
     implicit def OperationMonad: Monad[Operation] =
