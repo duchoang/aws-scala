@@ -26,7 +26,8 @@ import com.amazonaws.services.dynamodbv2.model.{
   TableDescription,
   TableStatus,
   UpdateItemRequest,
-  WriteRequest
+  WriteRequest,
+  DeleteRequest
 }
 
 /**
