@@ -48,6 +48,7 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
     update with a deleted field works             $updateWithDeletedFieldWorks
     update with incorrect value fails             $updateWithIncorrectValueFails
     have a working delete                         $deleteWorks
+    have a working batch delete                   $batchDeleteWorks
     handle non-existent keys on delete            $deleteWorksForNonExistentKey
     have a working describeTable                  $describeTableWorks
     have a describeTable that handles unknown tables $describeTableHandlesUnknownTable
@@ -242,6 +243,25 @@ class DynamoDBSpec(val arguments: Arguments) extends ScalaCheckSpec with LocalDy
       } yield result) must returnResult { page =>
         page.result must equal(List(v1, v2)) and
           (page.next must beNone)
+      }
+    }.set(minTestsOk = NUM_TESTS)
+
+  def batchDeleteWorks =
+    Prop.forAll { (k: Key, v: Value) =>
+
+      val valuesToSave = (1 to 10).map { i =>
+        k.copy(seq = i.toLong) -> v.copy(length = i.toLong)
+      }.toMap
+
+      val hashKey = HashKey(k.a, k.b, k.c)
+      val query = QueryImpl.forHash[HashKey](hashKey)(table.name, HashKey.named)
+
+      (for {
+        _ <- DynamoDB.batchPut(valuesToSave)(table.name, Key.column, Value.column)
+        _ <- DynamoDB.batchDelete(valuesToSave.keys.toList)(table.name, Key.column, Value.column)
+        result <- DynamoDB.query(query)(RangeKey.named.column, Value.column)
+      } yield result) must returnResult { page =>
+        page.result.isEmpty && page.next.isEmpty
       }
     }.set(minTestsOk = NUM_TESTS)
 
